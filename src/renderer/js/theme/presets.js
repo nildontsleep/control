@@ -5,7 +5,8 @@ export const LOOK_KEYS = ['theme', 'accent', 'customAccent', 'ambient', 'scene',
 
 const base = { theme: 'auto', accent: 'pink', customAccent: '#7c5cff', ambient: true, scene: 'none', sceneSpeed: 100, sceneBlur: 0, radius: 100, uiScale: 100, translucency: 100, oledLevel: 25 };
 
-const look = (patch) => ({ ...base, ...patch, accent: 'custom' });
+// Les ambiances habillent la fenêtre elles-mêmes : pas de teinte de pochette par-dessus (réactivable dans « Couleurs »).
+const look = (patch) => ({ ...base, ambient: false, ...patch, accent: 'custom' });
 
 export const DEFAULT_PRESET = 'control';
 
