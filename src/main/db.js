@@ -65,6 +65,56 @@ const MIGRATIONS = [
   CREATE INDEX idx_plays_at ON plays(played_at);
   CREATE INDEX idx_plays_track ON plays(track_id);
   `,
+  `
+  -- Films, séries et animés : cache des catalogues, progression, liste et temps de visionnage.
+  CREATE TABLE media_cache (
+    key TEXT PRIMARY KEY,
+    payload TEXT NOT NULL,
+    expires_at INTEGER NOT NULL
+  );
+
+  CREATE TABLE watch_progress (
+    id INTEGER PRIMARY KEY,
+    media_type TEXT NOT NULL,
+    media_id TEXT NOT NULL,
+    season INTEGER NOT NULL DEFAULT -1,
+    episode INTEGER NOT NULL DEFAULT -1,
+    position REAL NOT NULL DEFAULT 0,
+    duration REAL NOT NULL DEFAULT 0,
+    finished INTEGER NOT NULL DEFAULT 0,
+    title TEXT NOT NULL DEFAULT '',
+    poster TEXT,
+    backdrop TEXT,
+    year INTEGER,
+    genres TEXT NOT NULL DEFAULT '[]',
+    first_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    UNIQUE (media_type, media_id, season, episode)
+  );
+  CREATE INDEX idx_wp_updated ON watch_progress(updated_at);
+
+  CREATE TABLE watchlist (
+    media_type TEXT NOT NULL,
+    media_id TEXT NOT NULL,
+    title TEXT NOT NULL,
+    poster TEXT,
+    backdrop TEXT,
+    year INTEGER,
+    rating REAL,
+    added_at INTEGER NOT NULL,
+    PRIMARY KEY (media_type, media_id)
+  );
+
+  CREATE TABLE watch_time (
+    day TEXT NOT NULL,
+    media_type TEXT NOT NULL,
+    media_id TEXT NOT NULL,
+    season INTEGER NOT NULL DEFAULT -1,
+    episode INTEGER NOT NULL DEFAULT -1,
+    seconds REAL NOT NULL DEFAULT 0,
+    PRIMARY KEY (day, media_type, media_id, season, episode)
+  );
+  `,
 ];
 
 function open(file) {

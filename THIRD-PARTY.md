@@ -1,6 +1,6 @@
 # Composants tiers
 
-nil cam embarque les ressources suivantes.
+control embarque les ressources suivantes.
 
 ## Lucide (icônes)
 

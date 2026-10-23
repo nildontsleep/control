@@ -2,7 +2,6 @@
 <html lang="fr" data-theme="dark">
 <head>
   <meta charset="utf-8">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: app: https:; media-src 'self' blob: app:; font-src 'self'; connect-src 'self' app: blob:">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>control</title>
   <link rel="icon" href="assets/icon.png">
@@ -12,6 +11,7 @@
   <link rel="stylesheet" href="styles/settings.css">
   <link rel="stylesheet" href="styles/app.css">
   <link rel="stylesheet" href="styles/views.css">
+  <link rel="stylesheet" href="styles/watch.css">
   <link rel="stylesheet" href="styles/player.css">
   <script type="module" src="js/app.js"></script>
 </head>
@@ -33,7 +33,6 @@
     <section id="nowPlaying" class="np" aria-hidden="true">
       <div class="np-bg"></div>
       <div class="np-shade"></div>
-      <canvas id="npViz" class="np-viz"></canvas>
       <header class="np-top"></header>
       <div class="np-body">
         <div class="np-main">

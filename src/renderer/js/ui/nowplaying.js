@@ -5,7 +5,7 @@ import { icon } from '../icons.js';
 import { t } from '../i18n.js';
 import { fmtTime } from '../format.js';
 import { settings, update, subscribe } from '../settings.js';
-import { player, on as onPlayer, getAnalyser, EQ_BANDS, EQ_PRESETS } from '../player.js';
+import { player, on as onPlayer, EQ_BANDS, EQ_PRESETS } from '../player.js';
 import { navigate } from '../router.js';
 import { coverEl, coverUrl } from './cover.js';
 import { createTrackList } from './tracklist.js';
@@ -23,7 +23,6 @@ export function createNowPlaying(root) {
   const scope = createScope();
   const bg = root.querySelector('.np-bg');
   const art = root.querySelector('#npArt');
-  const viz = root.querySelector('#npViz');
   const top = root.querySelector('.np-top');
   const info = root.querySelector('#npInfo');
   const seekBox = root.querySelector('#npSeek');
@@ -200,40 +199,6 @@ export function createNowPlaying(root) {
     volIcon.innerHTML = icon(settings.muted || settings.volume === 0 ? 'volume-x' : settings.volume < 0.4 ? 'volume-1' : 'volume-2', 18, 1.9);
   }
 
-  // Visualiseur discret au bas de l'écran.
-  const vctx = viz.getContext('2d');
-  const bins = new Uint8Array(128);
-  function drawViz() {
-    if (!open) return;
-    requestAnimationFrame(drawViz);
-    const analyser = getAnalyser();
-    const w = viz.clientWidth;
-    const hgt = viz.clientHeight;
-    if (w < 120 || hgt < 20) return; // masqué (vidéo) ou trop étroit
-    const dpr = window.devicePixelRatio || 1;
-    if (viz.width !== Math.round(w * dpr)) {
-      viz.width = Math.round(w * dpr);
-      viz.height = Math.round(hgt * dpr);
-    }
-    vctx.clearRect(0, 0, viz.width, viz.height);
-    if (!analyser || !player.playing || !settings.animations) return;
-    analyser.getByteFrequencyData(bins);
-    const n = 48;
-    const gap = 6 * dpr;
-    const bw = (viz.width - gap * (n - 1)) / n;
-    const accent = getComputedStyle(document.documentElement).getPropertyValue('--accent-rgb').trim().replace(/ /g, ',') || '255,55,95';
-    for (let i = 0; i < n; i++) {
-      const v = bins[Math.floor((i / n) ** 1.6 * 100)] / 255;
-      const bh = Math.max(4 * dpr, v * viz.height * 0.72);
-      vctx.fillStyle = `rgba(${accent},${0.1 + v * 0.22})`;
-      const x = i * (bw + gap);
-      const r = Math.max(0, Math.min(bw / 2, 6 * dpr));
-      vctx.beginPath();
-      vctx.roundRect(x, viz.height - bh, bw, bh, [r, r, 0, 0]);
-      vctx.fill();
-    }
-  }
-
   function loop() {
     if (!open) return;
     requestAnimationFrame(loop);
@@ -260,7 +225,6 @@ export function createNowPlaying(root) {
       renderPanel();
       refreshScope(scope);
       requestAnimationFrame(loop);
-      requestAnimationFrame(drawViz);
     },
     close() {
       open = false;

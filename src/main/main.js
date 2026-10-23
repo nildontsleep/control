@@ -12,6 +12,7 @@ const { open: openDb } = require('./db');
 const { Library } = require('./library');
 const { Tools } = require('./tools');
 const { Downloads } = require('./downloads');
+const { MediaService, frameOrigins, imageOrigins } = require('./media');
 
 // ─── Mode portable : les données restent à côté de l'exécutable ──────────────
 const PORTABLE_DIR = process.env.PORTABLE_EXECUTABLE_DIR;
@@ -36,6 +37,7 @@ let store;
 let library;
 let tools;
 let downloads;
+let media;
 let mainWin = null;
 let quitting = false;
 let boundsTimer = null;
@@ -184,6 +186,23 @@ async function serveFile(request, file, type) {
   return new Response(Readable.toWeb(fs.createReadStream(file)), { status: 200, headers: { ...headers, 'content-length': String(stat.size) } });
 }
 
+/** En-tête CSP de la page : les iframes ne peuvent venir que du lecteur vidrift. */
+function contentSecurityPolicy() {
+  const images = ['\'self\'', 'data:', 'blob:', 'app:', 'https:', ...imageOrigins()].join(' ');
+  return [
+    "default-src 'self'",
+    "script-src 'self'",
+    "style-src 'self' 'unsafe-inline'",
+    `img-src ${images}`,
+    "media-src 'self' blob: app:",
+    "font-src 'self'",
+    "connect-src 'self' app: blob:",
+    `frame-src ${frameOrigins().join(' ')}`,
+    "object-src 'none'",
+    "base-uri 'none'",
+  ].join('; ');
+}
+
 function registerProtocol() {
   protocol.handle('app', async (request) => {
     const url = new URL(request.url);
@@ -212,13 +231,19 @@ function registerProtocol() {
 
     const file = path.normalize(path.join(RENDERER_DIR, pathname));
     if (!file.startsWith(RENDERER_DIR + path.sep)) return notFound();
+    if (pathname === '/index.html') {
+      return new Response(await fs.promises.readFile(file), {
+        headers: { 'content-type': 'text/html; charset=utf-8', 'content-security-policy': contentSecurityPolicy() },
+      });
+    }
     return net.fetch(pathToFileURL(file).toString());
   });
 }
 
 function setupPermissions() {
   const allowed = new Set(['media', 'fullscreen', 'clipboard-sanitized-write']);
-  const fromApp = (u) => typeof u === 'string' && u.startsWith('app://nilcam');
+  const players = frameOrigins();
+  const fromApp = (u) => typeof u === 'string' && (u.startsWith('app://nilcam') || players.some((o) => u.startsWith(o)));
   session.defaultSession.setPermissionRequestHandler((wc, permission, callback, details) => {
     callback(allowed.has(permission) && fromApp(details.requestingUrl || wc.getURL()));
   });
@@ -414,11 +439,13 @@ app.whenReady().then(() => {
   tools = new Tools({ binDir: path.join(userData, 'bin'), tmpDir: path.join(userData, 'tmp'), emit: broadcast });
   downloads = new Downloads({ tools, library, store, file: path.join(userData, 'downloads.json'), emit: broadcast });
   downloads.defaultDir = defaultDownloadDir();
+  media = new MediaService({ db, store, emit: broadcast });
 
   Menu.setApplicationMenu(null);
   registerProtocol();
   setupPermissions();
   setupIpc();
+  media.register(ipcMain);
   createWindow();
 
   library.scan(scanRoots());

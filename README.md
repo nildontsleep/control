@@ -4,7 +4,7 @@
 
 <h1 align="center">control</h1>
 
-<p align="center">Lecteur musique et vidéo pour Windows, avec téléchargements yt-dlp intégrés.<br>
+<p align="center">Lecteur musique et vidéo pour Windows, avec téléchargements yt-dlp intégrés, films, séries et animés.<br>
 Un design façon macOS : verre dépoli, pochettes qui teintent la fenêtre, animations à ressort.</p>
 
 <p align="center">
@@ -12,9 +12,11 @@ Un design façon macOS : verre dépoli, pochettes qui teintent la fenêtre, anim
   <img src="docs/now-playing.jpg" width="49%" alt="À l’écoute">
   <img src="docs/albums.jpg" width="49%" alt="Albums">
   <img src="docs/downloads.jpg" width="49%" alt="Téléchargements">
+  <img src="docs/watch.jpg" width="49%" alt="Films et séries">
+  <img src="docs/anime.jpg" width="49%" alt="Animés">
 </p>
 
-<sub>Captures réalisées avec une bibliothèque de test générée pour l’occasion.</sub>
+<sub>Captures réalisées avec une bibliothèque de test et un catalogue fictif générés pour l’occasion (les affiches sont des illustrations).</sub>
 
 ## Télécharger
 
@@ -32,13 +34,14 @@ L’exécutable n’est pas signé : au premier lancement, SmartScreen peut affi
 1. **Ajoute ta musique** : bouton *Ajouter mon dossier Musique* au premier lancement, ou glisse des fichiers et des dossiers dans la fenêtre. Les dossiers ajoutés sont surveillés : un nouveau fichier apparaît tout seul au bout de quelques secondes.
 2. **Télécharge** (facultatif) : onglet *Téléchargements* → *Installer* (yt-dlp, ffmpeg et deno sont téléchargés une seule fois), puis colle un lien.
 3. **Écoute** : double-clic sur un morceau, ou `Espace`.
+4. **Regarde** (facultatif) : les *Animés* fonctionnent tout de suite. Pour les *Films & séries*, colle une clé TMDB gratuite (carte au premier affichage, ou *Réglages* → *Streaming*, voir plus bas).
 
 ## Ce qu’il y a dedans
 
 **Lecteur**
 - Audio (MP3, FLAC, M4A, AAC, OGG, Opus, WAV) et vidéo (MP4, MKV, WebM, MOV) dans la même app.
 - File d’attente modifiable par glisser-déposer, aléatoire, répétition (tout / un seul), vitesse de lecture.
-- **Égaliseur 10 bandes** avec 10 préréglages, et un visualiseur discret.
+- **Égaliseur 10 bandes** avec 10 préréglages.
 - Touches multimédia du clavier et panneau multimédia de Windows (pochette, titre, position).
 - Reprise de la session au lancement (file d’attente, morceau, position).
 - Écran **À l’écoute** plein fenêtre sur fond de pochette floutée ; la vidéo y passe en grand, avec une interface qui se masque d’elle-même.
@@ -61,6 +64,13 @@ L’exécutable n’est pas signé : au premier lancement, SmartScreen peut affi
 - File avec progression, vitesse, temps restant, annulation et nouvel essai ; les playlists créent une playlist dans l’appli.
 - **Mise à jour automatique de yt-dlp** une fois par jour (YouTube casse régulièrement les anciennes versions).
 - *Cookies du navigateur* en option, pour les vidéos qui demandent de se connecter ou de prouver qu’on n’est pas un robot.
+
+**Films, séries et animés**
+- Accueil *Films & séries* (tendances, au cinéma, populaires, les mieux notés, séries en cours de diffusion, genres) et accueil *Animés* (tendances, saison en cours, populaires, films), avec un bandeau de mise en avant, des rangées à défilement et « Tout voir ».
+- Fiches détaillées : synopsis, note, genres, distribution, bande-annonce, liste des saisons et des épisodes, titres liés ou recommandés, date du prochain épisode pour les animés.
+- Lecture dans l’appli avec [vidrift](https://vidrift.net) (lecteur intégré, plein écran géré par la fenêtre) : **reprise automatique** là où tu t’es arrêté, épisode précédent / suivant, doublage anglais en option pour les animés.
+- **Continuer à regarder**, historique, **Ma liste**, et recherche en ligne dans la barre de gauche (elle cherche aussi bien dans ta bibliothèque que dans les catalogues).
+- Métadonnées : [TMDB](https://www.themoviedb.org) pour les films et séries (clé gratuite à coller dans les réglages), [AniList](https://anilist.co) pour les animés (aucune clé). Les catalogues sont mis en cache et restent consultables quelques heures sans réseau.
 
 **Apparence**
 - Thème clair, sombre ou automatique, 8 couleurs d’accentuation macOS et une couleur libre.
@@ -93,7 +103,6 @@ Dans une liste : `↑` `↓` pour se déplacer, `Maj` ou `Ctrl` pour sélectionn
 
 ## À venir
 
-- **Films, séries et animés** (métadonnées TMDB / AniList, lecture via [vidrift](https://vidrift.net), reprise et historique).
 - **Éditeur de tags** type mp3tag (par lot, renommage des fichiers, pochettes en ligne).
 - **Statistiques d’écoute** (les lectures sont déjà enregistrées) et récap annuel.
 - Paroles synchronisées, fondu enchaîné, mini-lecteur flottant.
@@ -118,11 +127,14 @@ src/main/           processus principal : fenêtre, protocole app://, SQLite, sc
   library.js        scan incrémental, tags (music-metadata), pochettes, playlists, écoutes
   tools.js          téléchargement de yt-dlp, ffmpeg et deno au premier lancement
   downloads.js      file de téléchargements et analyse des liens
+  media/            films, séries, animés : TMDB, AniList, cache, progression, ma liste
 src/renderer/       interface (modules ES, sans framework ni bundler)
   js/player.js      moteur de lecture : file, égaliseur, MediaSession, comptage d’écoutes
   js/data.js        bibliothèque en mémoire, albums et artistes dérivés, playlists intelligentes
   js/ui/            liste virtualisée, barre de lecture, « À l’écoute », menus, feuilles
-  js/views/         Morceaux, Albums, Artistes, Vidéos, Playlist, Recherche, Téléchargements
+  js/views/         Morceaux, Albums, Artistes, Vidéos, Playlist, Recherche, Téléchargements,
+                    Films & séries, Animés, fiche, lecture, Ma liste
+  js/media/         accès aux catalogues, cartes et rangées, adresse du lecteur vidrift
 build/              icônes de l’application
 ```
 
@@ -131,6 +143,9 @@ Le design (jetons de couleur, contrôles, menus, info-bulles) est repris de [nil
 ### À savoir
 
 - Télécharger depuis YouTube enfreint ses conditions d’utilisation : à utiliser pour un usage personnel, à tes propres risques.
+- control n’héberge ni ne stocke aucune vidéo de film, série ou animé : le lecteur [vidrift](https://vidrift.net) est affiché tel quel dans la fenêtre (publicités comprises), et c’est à toi de vérifier que son usage est légal chez toi. Si le lecteur ne charge pas, essaie l’autre serveur dans *Réglages* → *Streaming*.
+- La clé TMDB reste dans les réglages de ton ordinateur. Ce produit utilise l’API TMDB mais n’est ni approuvé ni certifié par TMDB.
+- Les captures d’écran du dépôt utilisent un catalogue fictif : aucune affiche réelle n’y figure.
 - Les données (bibliothèque SQLite, réglages, pochettes, outils) sont dans `%APPDATA%\control` (installé) ou dans `control data` à côté de l’exe (portable).
 
 Icônes [Lucide](https://lucide.dev) et police [Inter](https://rsms.me/inter) : voir [THIRD-PARTY.md](THIRD-PARTY.md).

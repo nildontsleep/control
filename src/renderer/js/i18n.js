@@ -129,6 +129,55 @@ const fr = {
   'toast.exported': 'Playlist exportée ({n} morceaux)', 'toast.imported': 'Playlist importée : {n} morceaux sur {total} retrouvés', 'toast.saved': 'Enregistré',
   'toast.cannotPlay': 'Lecture impossible : {title}', 'toast.scanDone_one': '1 fichier ajouté', 'toast.scanDone_other': '{n} fichiers ajoutés',
   'toast.droppedNone': 'Aucun fichier audio ou vidéo reconnu',
+  'nav.watch': 'Regarder', 'nav.movies': 'Films & séries', 'nav.anime': 'Animés', 'nav.mylist': 'Ma liste',
+  'movies.subtitle': 'Les films et séries du moment, via TMDB.', 'anime.subtitle': 'Les animés du moment, via AniList.',
+  'tab.all': 'Tout', 'tab.movie': 'Films', 'tab.tv': 'Séries',
+  'kind.movie': 'Film', 'kind.tv': 'Série', 'kind.anime': 'Animé',
+
+  'shelf.continue': 'Continuer à regarder', 'shelf.myList': 'Ma liste', 'shelf.seeAll': 'Tout voir', 'shelf.all': 'Tout voir',
+  'shelf.prev': 'Précédent', 'shelf.next': 'Suivant',
+  'shelf.trending': 'Tendances', 'shelf.moviePopular': 'Films populaires', 'shelf.tvPopular': 'Séries populaires',
+  'shelf.movieTop': 'Films les mieux notés', 'shelf.tvTop': 'Séries les mieux notées', 'shelf.nowPlaying': 'Au cinéma',
+  'shelf.upcoming': 'Bientôt au cinéma', 'shelf.onTheAir': 'Séries en cours de diffusion',
+  'shelf.season': 'Cette saison', 'shelf.popular': 'Populaires', 'shelf.top': 'Les mieux notés', 'shelf.movies': 'Films d’animation',
+
+  'hero.moreInfo': 'Plus d’infos', 'list.add': 'Ma liste', 'list.inList': 'Dans ma liste', 'list.remove': 'Retirer de ma liste',
+  'menu.openTitle': 'Ouvrir la fiche', 'resume.left': '{t} restantes', 'resume.remove': 'Retirer de la reprise',
+  'toast.listAdded': '« {title} » ajouté à ma liste', 'toast.listRemoved': '« {title} » retiré de ma liste',
+
+  'title.resume': 'Reprendre', 'title.next': 'Épisode suivant', 'title.again': 'Revoir depuis le début', 'title.trailer': 'Bande-annonce',
+  'title.seasons_one': '{n} saison', 'title.seasons_other': '{n} saisons', 'title.episodes_one': '{n} épisode', 'title.episodes_other': '{n} épisodes',
+  'title.directedBy': 'Réalisé par', 'title.createdBy': 'Créé par', 'title.studio': 'Studio', 'title.nextEpisode': 'Prochain épisode',
+  'title.episodesHeading': 'Épisodes', 'title.cast': 'Distribution', 'title.related': 'Saisons et suites', 'title.recommended': 'Recommandés', 'title.similar': 'Dans le même style',
+  'ep.short': 'Ép.', 'ep.word': 'Épisode', 'season.word': 'Saison', 'ep.resumeAt': 'Reprendre à {t}',
+  'rel.prequel': 'Préquelle', 'rel.sequel': 'Suite', 'rel.parent': 'Série principale', 'rel.summary': 'Résumé', 'rel.side': 'Histoire annexe', 'rel.spinoff': 'Dérivé', 'rel.alt': 'Version alternative',
+  'dub.sub': 'VO sous-titrée', 'dub.en': 'Doublage anglais',
+
+  'watch.back': 'Retour', 'watch.prev': 'Précédent', 'watch.next': 'Suivant', 'watch.sheet': 'Fiche', 'watch.untitled': 'Lecture',
+  'watch.note': 'Le lecteur est fourni par vidrift : control n’héberge aucune vidéo. Sa progression est enregistrée ici pour reprendre là où vous vous êtes arrêté.',
+
+  'mylist.subtitle': 'Vos titres enregistrés et votre historique.', 'mylist.emptyTitle': 'Rien pour l’instant',
+  'mylist.emptyText': 'Ajoutez des titres à votre liste depuis leur fiche, ils apparaîtront ici avec votre historique.',
+  'hist.title': 'Historique', 'hist.clear': 'Effacer l’historique', 'hist.clearTitle': 'Effacer l’historique de visionnage ?',
+  'hist.clearText': 'La progression de tous les titres et le temps de visionnage seront supprimés. Votre liste est conservée.',
+  'hist.cleared': 'Historique effacé', 'hist.watched': 'Vu',
+
+  'search.online': 'Recherche dans les films, séries et animés…', 'search.nokey': 'Ajoutez une clé TMDB pour chercher aussi dans les films et séries.', 'search.addKey': 'Ajouter une clé',
+
+  'err.title': 'Impossible de charger', 'err.nokey': 'Ajoutez votre clé TMDB pour afficher les films et séries.',
+  'err.auth': 'Clé TMDB refusée : vérifiez-la dans Réglages → Streaming.', 'err.network': 'Impossible de joindre le serveur. Vérifiez votre connexion.',
+  'err.ratelimit': 'Trop de requêtes pour le moment. Réessayez dans une minute.', 'err.notfound': 'Ce titre est introuvable.', 'err.unknown': 'Une erreur est survenue.',
+  'action.retry': 'Réessayer',
+
+  'key.title': 'Une clé TMDB pour commencer', 'key.text': 'Les films et séries viennent de TMDB, qui demande une clé gratuite (2 minutes). Les animés fonctionnent déjà, sans clé.',
+  'key.placeholder': 'Clé API ou jeton d’accès TMDB', 'key.get': 'Obtenir une clé gratuite', 'key.anime': 'Voir les animés', 'key.test': 'Tester et enregistrer',
+  'key.testing': 'Vérification…', 'key.saved': 'Clé enregistrée', 'key.invalid': 'Clé refusée par TMDB.', 'key.removed': 'Clé supprimée', 'key.show': 'Afficher', 'key.hide': 'Masquer',
+
+  'set.tab.streaming': 'Streaming', 'set.tmdb': 'Films et séries (TMDB)', 'set.tmdbHint': 'La clé reste sur cet ordinateur, dans les réglages de l’application.',
+  'set.animeGroup': 'Animés', 'set.animeTitles': 'Titres des animés', 'set.dubDefault': 'Doublage anglais par défaut', 'set.dubHint': 'Sinon : version originale sous-titrée.',
+  'set.playerGroup': 'Lecteur', 'set.server': 'Serveur vidrift', 'set.serverHint': 'Essayez l’autre si le lecteur ne charge pas.',
+  'set.streamNote': 'control n’héberge ni ne stocke aucune vidéo : le lecteur vidrift est intégré tel quel, avec sa publicité. Les catalogues viennent de TMDB et AniList.',
+  'set.clearCache': 'Vider le cache des catalogues', 'set.cacheCleared': 'Cache vidé',
 };
 
 const en = {
@@ -260,6 +309,55 @@ const en = {
   'toast.exported': 'Playlist exported ({n} songs)', 'toast.imported': 'Playlist imported: {n} of {total} songs found', 'toast.saved': 'Saved',
   'toast.cannotPlay': 'Cannot play: {title}', 'toast.scanDone_one': '1 file added', 'toast.scanDone_other': '{n} files added',
   'toast.droppedNone': 'No audio or video files recognized',
+  'nav.watch': 'Watch', 'nav.movies': 'Movies & TV', 'nav.anime': 'Anime', 'nav.mylist': 'My List',
+  'movies.subtitle': 'What is trending in movies and TV, via TMDB.', 'anime.subtitle': 'What is trending in anime, via AniList.',
+  'tab.all': 'All', 'tab.movie': 'Movies', 'tab.tv': 'TV Shows',
+  'kind.movie': 'Movie', 'kind.tv': 'TV Show', 'kind.anime': 'Anime',
+
+  'shelf.continue': 'Continue Watching', 'shelf.myList': 'My List', 'shelf.seeAll': 'See All', 'shelf.all': 'See All',
+  'shelf.prev': 'Previous', 'shelf.next': 'Next',
+  'shelf.trending': 'Trending', 'shelf.moviePopular': 'Popular Movies', 'shelf.tvPopular': 'Popular TV Shows',
+  'shelf.movieTop': 'Top Rated Movies', 'shelf.tvTop': 'Top Rated TV Shows', 'shelf.nowPlaying': 'In Theaters',
+  'shelf.upcoming': 'Coming Soon', 'shelf.onTheAir': 'Currently Airing',
+  'shelf.season': 'This Season', 'shelf.popular': 'Popular', 'shelf.top': 'Top Rated', 'shelf.movies': 'Anime Movies',
+
+  'hero.moreInfo': 'More Info', 'list.add': 'My List', 'list.inList': 'In My List', 'list.remove': 'Remove from My List',
+  'menu.openTitle': 'Open details', 'resume.left': '{t} left', 'resume.remove': 'Remove from Continue Watching',
+  'toast.listAdded': '“{title}” added to My List', 'toast.listRemoved': '“{title}” removed from My List',
+
+  'title.resume': 'Resume', 'title.next': 'Next Episode', 'title.again': 'Watch Again', 'title.trailer': 'Trailer',
+  'title.seasons_one': '{n} season', 'title.seasons_other': '{n} seasons', 'title.episodes_one': '{n} episode', 'title.episodes_other': '{n} episodes',
+  'title.directedBy': 'Directed by', 'title.createdBy': 'Created by', 'title.studio': 'Studio', 'title.nextEpisode': 'Next episode',
+  'title.episodesHeading': 'Episodes', 'title.cast': 'Cast', 'title.related': 'Seasons & Sequels', 'title.recommended': 'Recommended', 'title.similar': 'More Like This',
+  'ep.short': 'Ep.', 'ep.word': 'Episode', 'season.word': 'Season', 'ep.resumeAt': 'Resume at {t}',
+  'rel.prequel': 'Prequel', 'rel.sequel': 'Sequel', 'rel.parent': 'Main series', 'rel.summary': 'Recap', 'rel.side': 'Side story', 'rel.spinoff': 'Spin-off', 'rel.alt': 'Alternative',
+  'dub.sub': 'Subtitled', 'dub.en': 'English dub',
+
+  'watch.back': 'Back', 'watch.prev': 'Previous', 'watch.next': 'Next', 'watch.sheet': 'Details', 'watch.untitled': 'Now watching',
+  'watch.note': 'The player is provided by vidrift: control hosts no video. Your progress is saved here so you can pick up where you left off.',
+
+  'mylist.subtitle': 'Your saved titles and your history.', 'mylist.emptyTitle': 'Nothing yet',
+  'mylist.emptyText': 'Add titles to your list from their page; they show up here along with your history.',
+  'hist.title': 'History', 'hist.clear': 'Clear history', 'hist.clearTitle': 'Clear watch history?',
+  'hist.clearText': 'Progress for every title and your watch time will be deleted. Your list is kept.',
+  'hist.cleared': 'History cleared', 'hist.watched': 'Watched',
+
+  'search.online': 'Searching movies, TV and anime…', 'search.nokey': 'Add a TMDB key to also search movies and TV shows.', 'search.addKey': 'Add a key',
+
+  'err.title': 'Could not load', 'err.nokey': 'Add your TMDB key to show movies and TV shows.',
+  'err.auth': 'TMDB key rejected: check it in Settings → Streaming.', 'err.network': 'Could not reach the server. Check your connection.',
+  'err.ratelimit': 'Too many requests right now. Try again in a minute.', 'err.notfound': 'This title could not be found.', 'err.unknown': 'Something went wrong.',
+  'action.retry': 'Try again',
+
+  'key.title': 'A TMDB key to get started', 'key.text': 'Movies and TV shows come from TMDB, which asks for a free key (2 minutes). Anime already works, no key needed.',
+  'key.placeholder': 'TMDB API key or access token', 'key.get': 'Get a free key', 'key.anime': 'Browse anime', 'key.test': 'Test and save',
+  'key.testing': 'Checking…', 'key.saved': 'Key saved', 'key.invalid': 'Key rejected by TMDB.', 'key.removed': 'Key removed', 'key.show': 'Show', 'key.hide': 'Hide',
+
+  'set.tab.streaming': 'Streaming', 'set.tmdb': 'Movies and TV (TMDB)', 'set.tmdbHint': 'The key stays on this computer, in the app settings.',
+  'set.animeGroup': 'Anime', 'set.animeTitles': 'Anime titles', 'set.dubDefault': 'English dub by default', 'set.dubHint': 'Otherwise: original audio with subtitles.',
+  'set.playerGroup': 'Player', 'set.server': 'vidrift server', 'set.serverHint': 'Try the other one if the player does not load.',
+  'set.streamNote': 'control hosts and stores no video: the vidrift player is embedded as-is, ads included. Catalogs come from TMDB and AniList.',
+  'set.clearCache': 'Clear catalog cache', 'set.cacheCleared': 'Cache cleared',
 };
 
 const DICTS = { fr, en };

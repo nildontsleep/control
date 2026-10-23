@@ -53,6 +53,11 @@ export function navigate(name, param = null, { replace = false } = {}) {
   render(route);
 }
 
+/** Met à jour le paramètre de la page courante sans la redessiner (ex. : épisode changé dans le lecteur). */
+export function setParam(param) {
+  if (position >= 0) history[position] = { ...history[position], param };
+}
+
 export function back() {
   if (!canBack()) return;
   position -= 1;

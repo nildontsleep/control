@@ -28,6 +28,14 @@ export const DEFAULTS = {
   albumSize: 190,
   lastView: { name: 'songs', param: null },
 
+  // Films, séries et animés
+  media: {
+    tmdbKey: '',
+    animeTitles: 'romaji',
+    streamBase: 'https://embed.vidrift.net',
+    dub: false,
+  },
+
   // Téléchargements
   dl: {
     kind: 'audio',

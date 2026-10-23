@@ -37,9 +37,8 @@ const state = {
   failures: 0,
 };
 
-// ─── Graphe audio (égaliseur + analyseur) ────────────────────────────────────
+// ─── Graphe audio (égaliseur) ────────────────────────────────────
 let audioCtx = null;
-let analyser = null;
 let eqFilters = [];
 let preamp = null;
 
@@ -59,12 +58,9 @@ function ensureAudioGraph() {
       f.Q.value = 1.1;
       return f;
     });
-    analyser = audioCtx.createAnalyser();
-    analyser.fftSize = 256;
-    analyser.smoothingTimeConstant = 0.82;
     let node = source.connect(preamp);
     for (const f of eqFilters) node = node.connect(f);
-    node.connect(analyser).connect(audioCtx.destination);
+    node.connect(audioCtx.destination);
     applyEq();
   } catch (err) {
     console.warn('Graphe audio indisponible :', err);
@@ -80,8 +76,6 @@ export function applyEq() {
   const peak = enabled ? Math.max(0, ...gains.map(Number)) : 0;
   preamp.gain.value = 10 ** (-peak * 0.6 / 20);
 }
-
-export const getAnalyser = () => analyser;
 
 // ─── État ────────────────────────────────────────────────────────────────────
 export const player = {

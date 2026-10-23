@@ -25,6 +25,11 @@ import { videosView } from './views/videos.js';
 import { playlistView } from './views/playlist.js';
 import { searchView } from './views/search.js';
 import { downloadsView } from './views/downloads.js';
+import { moviesView, animeView } from './views/watch.js';
+import { titleView } from './views/title.js';
+import { watchingView } from './views/watching.js';
+import { shelfView } from './views/shelf.js';
+import { mylistView } from './views/mylist.js';
 
 const control = window.control;
 const root = document.documentElement;
@@ -92,6 +97,12 @@ function buildShell() {
   registerView('playlist', playlistView);
   registerView('search', searchView);
   registerView('downloads', downloadsView);
+  registerView('watch', moviesView);
+  registerView('anime', animeView);
+  registerView('title', titleView);
+  registerView('watching', watchingView);
+  registerView('shelf', shelfView);
+  registerView('mylist', mylistView);
 
   nowPlaying = createNowPlaying($('#nowPlaying'));
   sidebar = createSidebar($('#sidebar'), { openSettings: () => openSettings() });
@@ -103,15 +114,17 @@ function buildShell() {
   onRoute((route) => {
     paintNav();
     app.dataset.view = route.name;
-    if (!['search', 'downloads'].includes(route.name)) update({ lastView: { name: route.name, param: route.param } }, { persist: true });
+    if (!['search', 'downloads', 'title', 'watching', 'shelf'].includes(route.name)) update({ lastView: { name: route.name, param: route.param } }, { persist: true });
     if (route.name !== 'search') sidebar.setSearch('');
   });
 }
 
 // ─── Données ─────────────────────────────────────────────────────────────────
+// Pages qui ne dépendent pas de la bibliothèque musicale : inutile (et nuisible pour le lecteur vidéo) de les redessiner.
+const LIBRARY_FREE = new Set(['downloads', 'watching', 'title', 'watch', 'anime', 'shelf', 'mylist']);
 const refreshView = debounce(() => {
   const route = currentRoute();
-  if (route && route.name !== 'downloads') refresh();
+  if (route && !LIBRARY_FREE.has(route.name)) refresh();
 }, 120);
 
 function wireLibrary() {
@@ -203,6 +216,8 @@ function wireKeys() {
       return;
     }
     if (typing) return;
+    // Pendant un film ou un épisode, le clavier appartient au lecteur vidéo : pas de raccourcis musique.
+    if (currentRoute()?.name === 'watching') return;
 
     if (ctrl && key === 'ArrowRight') { e.preventDefault(); player.next(); return; }
     if (ctrl && key === 'ArrowLeft') { e.preventDefault(); player.prev(); return; }
@@ -275,13 +290,13 @@ async function init() {
   setAmbient(player.track?.cover || null);
 
   const last = settings.lastView;
-  const valid = new Set(['songs', 'albums', 'artists', 'videos', 'album', 'artist', 'playlist']);
+  const valid = new Set(['songs', 'albums', 'artists', 'videos', 'album', 'artist', 'playlist', 'watch', 'anime', 'mylist']);
   if (last && valid.has(last.name)) navigate(last.name, last.param);
   else navigate('songs');
 
   subscribe((patch, source) => {
     if (['theme', 'accent', 'customAccent', 'ambient', 'animations', 'compact'].some((k) => k in patch)) applyTheme();
-    if ('compact' in patch) refresh();
+    if ('compact' in patch && !LIBRARY_FREE.has(currentRoute()?.name)) refresh();
     if ('language' in patch && source !== 'remote' && resolveLanguage(settings.language) !== currentLanguage()) setTimeout(() => location.reload(), 120);
   });
   requestAnimationFrame(() => root.classList.add('ready'));

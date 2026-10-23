@@ -6,7 +6,8 @@ import { t, currentLanguage } from '../i18n.js';
 import { settings, update, subscribe, resetAll } from '../settings.js';
 import { lib } from '../data.js';
 import { ACCENTS } from '../color.js';
-import { openSheet } from './sheet.js';
+import { openSheet, confirmSheet } from './sheet.js';
+import { media } from '../media/api.js';
 import { toast } from './feedback.js';
 import {
   createScope, withScope, refreshScope, toggle, segmented, popup, swatches, button, row, group, badge, live,
@@ -36,6 +37,7 @@ export function openSettings(initial = 'general') {
   const TABS = [
     { id: 'general', icon: 'settings' },
     { id: 'library', icon: 'hard-drive' },
+    { id: 'streaming', icon: 'clapperboard' },
     { id: 'downloads', icon: 'cloud-download' },
     { id: 'about', icon: 'info' },
   ];
@@ -90,6 +92,60 @@ export function openSettings(initial = 'general') {
             button(t('set.scanNow'), { icon: 'refresh-cw', small: true, onClick: async () => { toast(t('set.scanning'), 'refresh-cw'); await library.scan(); } }))),
         ], { footer: t('set.foldersHint') }),
         group(t('set.inLibrary'), [stats]),
+      ];
+    },
+
+    streaming() {
+      const input = h('input.text-input.key-input', { type: 'password', value: settings.media?.tmdbKey || '', placeholder: t('key.placeholder'), spellcheck: 'false', autocomplete: 'off' });
+      const status = h('div.key-status');
+      const reveal = h('button.link-btn', { type: 'button', text: t('key.show'), onclick: () => {
+        const hidden = input.type === 'password';
+        input.type = hidden ? 'text' : 'password';
+        reveal.textContent = hidden ? t('key.hide') : t('key.show');
+      } });
+      const saveKey = async () => {
+        const key = input.value.trim();
+        if (!key) {
+          update({ media: { tmdbKey: '' } });
+          status.textContent = t('key.removed');
+          status.className = 'key-status';
+          return;
+        }
+        status.textContent = t('key.testing');
+        status.className = 'key-status';
+        try {
+          await media.testKey(key);
+          update({ media: { tmdbKey: key } });
+          status.textContent = t('key.saved');
+          status.className = 'key-status ok';
+        } catch (err) {
+          status.textContent = err.code === 'auth' ? t('key.invalid') : t('err.network');
+          status.className = 'key-status bad';
+        }
+      };
+      input.addEventListener('keydown', (e) => { if (e.key === 'Enter') saveKey(); });
+      const servers = ['https://embed.vidrift.net', 'https://embed.vidrift.in'].map((v) => ({ value: v, label: v.replace('https://', '') }));
+      return [
+        group(t('set.tmdb'), [
+          h('div.row.row-block', {}, h('div.key-form', {}, input, button(t('key.test'), { kind: 'primary', small: true, onClick: saveKey })), h('div.key-meta', {}, status, reveal)),
+        ], { footer: t('set.tmdbHint'), action: button(t('key.get'), { small: true, kind: 'plain', icon: 'external-link', onClick: () => app.openExternal('https://www.themoviedb.org/settings/api') }) }),
+        group(t('set.animeGroup'), [
+          row(t('set.animeTitles'), segmented('media.animeTitles', [{ value: 'romaji', label: 'Romaji' }, { value: 'english', label: t('lang.en') }], { compact: true }), { badge: badge('languages', B.blue) }),
+          row(t('set.dubDefault'), toggle('media.dub'), { hint: t('set.dubHint'), badge: badge('captions', B.purple) }),
+        ]),
+        group(t('set.playerGroup'), [
+          row(t('set.server'), popup('media.streamBase', servers), { hint: t('set.serverHint'), badge: badge('globe', B.teal) }),
+        ], { footer: t('set.streamNote') }),
+        group(t('set.data'), [
+          h('div.row.row-block', {}, h('div.row-buttons', {},
+            button(t('set.clearCache'), { icon: 'refresh-cw', small: true, onClick: async () => { await media.clearCache(); toast(t('set.cacheCleared'), 'check'); } }),
+            button(t('hist.clear'), { icon: 'trash-2', small: true, kind: 'danger', onClick: async () => {
+              const { ok } = await confirmSheet({ title: t('hist.clearTitle'), message: t('hist.clearText'), confirmLabel: t('hist.clear'), destructive: true });
+              if (!ok) return;
+              await window.control.watch.clear();
+              toast(t('hist.cleared'), 'trash-2');
+            } }))),
+        ]),
       ];
     },
 

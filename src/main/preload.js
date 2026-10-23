@@ -85,6 +85,30 @@ contextBridge.exposeInMainWorld('control', {
     onReset: listen('dl:reset'),
   },
 
+  env: ipcRenderer.sendSync('app:env'),
+
+  media: {
+    home: invoke('media:home'),
+    list: invoke('media:list'),
+    details: invoke('media:details'),
+    season: invoke('media:season'),
+    search: invoke('media:search'),
+    testKey: invoke('media:test-key'),
+    clearCache: invoke('media:clear-cache'),
+  },
+
+  watch: {
+    save: invoke('watch:save'),
+    show: invoke('watch:show'),
+    continue: invoke('watch:continue'),
+    history: invoke('watch:history'),
+    remove: invoke('watch:remove'),
+    clear: invoke('watch:clear'),
+    list: invoke('watchlist:list'),
+    toggle: invoke('watchlist:toggle'),
+    onChange: listen('watch:changed'),
+  },
+
   app: {
     info: invoke('app:info'),
     openDataDir: send('app:open-data-dir'),

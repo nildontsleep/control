@@ -20,6 +20,20 @@ const NAV = [
   { id: 'videos', icon: 'film' },
 ];
 
+/** Entrée de la barre latérale à surligner pour une page donnée. */
+function sectionOf(route) {
+  const param = String(route.param ?? '');
+  switch (route.name) {
+    case 'playlist': return `playlist:${route.param}`;
+    case 'album': return 'albums';
+    case 'artist': return 'artists';
+    case 'title': return param.startsWith('anime:') ? 'anime' : 'watch';
+    case 'watching': return param.startsWith('anime|') ? 'anime' : 'watch';
+    case 'shelf': return param.startsWith('anime:') ? 'anime' : 'watch';
+    default: return route.name;
+  }
+}
+
 export function createSidebar(root, { openSettings }) {
   let activeDownloads = 0;
   const search = h('input.sb-search-input', { type: 'search', placeholder: t('search.placeholder'), spellcheck: 'false', autocomplete: 'off' });
@@ -65,6 +79,10 @@ export function createSidebar(root, { openSettings }) {
     navBox.replaceChildren(
       h('div.sb-heading', { text: t('nav.library') }),
       ...NAV.map((n) => navItem({ id: n.id, icon: n.icon, label: t(`nav.${n.id}`) })),
+      h('div.sb-heading', { text: t('nav.watch') }),
+      navItem({ id: 'watch', icon: 'clapperboard', label: t('nav.movies') }),
+      navItem({ id: 'anime', icon: 'tv-minimal', label: t('nav.anime') }),
+      navItem({ id: 'mylist', icon: 'bookmark', label: t('nav.mylist') }),
       h('div.sb-heading', { text: t('nav.get') }),
       navItem({ id: 'downloads', icon: 'cloud-download', label: t('nav.downloads'), badge: downloadsBadge }),
     );
@@ -116,7 +134,7 @@ export function createSidebar(root, { openSettings }) {
 
   function paintActive() {
     const route = currentRoute();
-    const key = !route ? '' : route.name === 'playlist' ? `playlist:${route.param}` : route.name === 'album' ? 'albums' : route.name === 'artist' ? 'artists' : route.name;
+    const key = !route ? '' : sectionOf(route);
     for (const el of root.querySelectorAll('.sb-item')) el.classList.toggle('active', el.dataset.route === key);
   }
 
