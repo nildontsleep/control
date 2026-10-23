@@ -5,7 +5,6 @@ import { icon } from '../icons.js';
 import { t } from '../i18n.js';
 import { fmtLong } from '../format.js';
 import { playlistById, playlistRows } from '../data.js';
-import { player } from '../player.js';
 import { navigate } from '../router.js';
 import { createTrackList } from '../ui/tracklist.js';
 import { mosaic } from '../ui/cards.js';
@@ -98,6 +97,5 @@ export function playlistView(root, id, { scroller }) {
       : emptyState({ icon: 'list-music', title: t('pl.emptyTitle'), text: smart ? t('pl.emptySmart') : t('pl.emptyText') }),
     h('div.page-foot'),
   );
-  void player;
   return { destroy: () => list.destroy() };
 }

@@ -3,7 +3,7 @@
 import { h } from '../dom.js';
 import { t } from '../i18n.js';
 import { player } from '../player.js';
-import { lib } from '../data.js';
+import { lib, loadPlaylists } from '../data.js';
 import { navigate } from '../router.js';
 import { toast } from './feedback.js';
 import { openMenu } from './menu.js';
@@ -35,6 +35,7 @@ export async function createPlaylistWith(tracks = []) {
   });
   if (!name) return null;
   const id = await playlists.create(name, 'manual', null, tracks.map((x) => x.id));
+  await loadPlaylists();
   toast(tracks.length ? t('toast.playlistCreatedWith', { name, n: tracks.length }) : t('toast.playlistCreated', { name }), 'list-music');
   return id;
 }

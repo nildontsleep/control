@@ -209,6 +209,7 @@ export function createNowPlaying(root) {
     const analyser = getAnalyser();
     const w = viz.clientWidth;
     const hgt = viz.clientHeight;
+    if (w < 120 || hgt < 20) return; // masqué (vidéo) ou trop étroit
     const dpr = window.devicePixelRatio || 1;
     if (viz.width !== Math.round(w * dpr)) {
       viz.width = Math.round(w * dpr);
@@ -226,7 +227,7 @@ export function createNowPlaying(root) {
       const bh = Math.max(4 * dpr, v * viz.height * 0.72);
       vctx.fillStyle = `rgba(${accent},${0.1 + v * 0.22})`;
       const x = i * (bw + gap);
-      const r = Math.min(bw / 2, 6 * dpr);
+      const r = Math.max(0, Math.min(bw / 2, 6 * dpr));
       vctx.beginPath();
       vctx.roundRect(x, viz.height - bh, bw, bh, [r, r, 0, 0]);
       vctx.fill();

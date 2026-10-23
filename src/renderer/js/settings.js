@@ -35,6 +35,7 @@ export const DEFAULTS = {
     audioQuality: '320',
     videoQuality: '1080',
     concurrency: 2,
+    cookies: '',
     createPlaylist: true,
     autoUpdate: true,
   },

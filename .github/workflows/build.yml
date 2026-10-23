@@ -1,0 +1,92 @@
+name: Build Windows
+
+on:
+  push:
+    branches: ['**']
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  windows:
+    name: Windows — portable + installateur
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Installer les dépendances
+        run: npm ci
+
+      - name: Construire l’exécutable portable et l’installateur
+        run: npm run dist
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+
+      - name: Fichiers générés
+        shell: pwsh
+        run: Get-ChildItem dist -File | Format-Table Name, @{ n = 'Taille (Mo)'; e = { [math]::Round($_.Length / 1MB, 1) } }
+
+      - name: Envoyer la version portable
+        uses: actions/upload-artifact@v6
+        with:
+          name: control-portable
+          path: dist/*-portable.exe
+          if-no-files-found: error
+
+      - name: Envoyer l’installateur
+        uses: actions/upload-artifact@v6
+        with:
+          name: control-installateur
+          path: dist/*-setup.exe
+          if-no-files-found: error
+
+      # Une release est publiée pour chaque tag v*, et sur la branche par défaut
+      # dès que la version de package.json n’a pas encore de release.
+      - name: Lire la version
+        id: version
+        shell: bash
+        run: |
+          version=$(node -p "require('./package.json').version")
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          if git rev-parse -q --verify "refs/tags/v$version" >/dev/null; then
+            echo "tagged=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "tagged=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Publier la release
+        if: >-
+          startsWith(github.ref, 'refs/tags/v') ||
+          (github.event_name == 'push' &&
+           github.ref_name == github.event.repository.default_branch &&
+           steps.version.outputs.tagged == 'false')
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || format('v{0}', steps.version.outputs.version) }}
+          target_commitish: ${{ github.sha }}
+          name: control ${{ steps.version.outputs.version }}
+          make_latest: true
+          files: |
+            dist/*-portable.exe
+            dist/*-setup.exe
+          body: |
+            ## Télécharger
+
+            - **`control-${{ steps.version.outputs.version }}-setup.exe`** : installateur (raccourcis Bureau et menu Démarrer, désinstallation propre).
+            - **`control-${{ steps.version.outputs.version }}-portable.exe`** : version portable, rien à installer ; les réglages, la bibliothèque et les outils sont rangés dans un dossier `control data` à côté du fichier.
+
+            L’application n’est pas signée : au premier lancement, Windows SmartScreen peut afficher « Windows a protégé votre ordinateur ». Cliquez sur **Informations complémentaires**, puis **Exécuter quand même**.

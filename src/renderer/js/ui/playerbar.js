@@ -70,7 +70,7 @@ export function createPlayerBar(root, { openNowPlaying, openQueue }) {
 
   function paintTrack() {
     const track = player.track;
-    root.classList.toggle('empty', !track);
+    root.classList.toggle('no-track', !track);
     art.replaceChildren(track ? coverEl(track, { small: true }) : h('div.cover.placeholder', {}, h('span.cover-icon', { html: icon('music-2', 20, 1.6) })));
     title.textContent = track ? track.title : t('player.nothing');
     sub.textContent = track ? [track.artist, track.album].filter(Boolean).join(' — ') : t('player.nothingSub');

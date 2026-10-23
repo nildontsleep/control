@@ -18,5 +18,67 @@
   "devDependencies": {
     "electron": "44.7.0",
     "electron-builder": "26.15.3"
+  },
+  "homepage": "https://github.com/nildontsleep/control",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nildontsleep/control.git"
+  },
+  "build": {
+    "appId": "com.nildontsleep.control",
+    "productName": "control",
+    "copyright": "Copyright © 2026 nildontsleep",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "src/**/*",
+      "package.json",
+      "THIRD-PARTY.md"
+    ],
+    "electronLanguages": [
+      "fr",
+      "en-US"
+    ],
+    "win": {
+      "icon": "build/icon.ico",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "control",
+      "uninstallDisplayName": "control",
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "installerHeaderIcon": "build/icon.ico",
+      "multiLanguageInstaller": true,
+      "installerLanguages": [
+        "fr_FR",
+        "en_US"
+      ],
+      "runAfterFinish": true,
+      "artifactName": "control-${version}-setup.${ext}"
+    },
+    "portable": {
+      "artifactName": "control-${version}-portable.${ext}"
+    }
   }
 }

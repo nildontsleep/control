@@ -8,6 +8,7 @@ const { spawn } = require('node:child_process');
 const { run } = require('./tools');
 
 const TAB = '\t';
+const NOISE = String.raw`(?i)\s*[\(\[]\s*(official\s+(music\s+)?(video|audio|lyric\s+video)|lyrics?(\s+video)?|audio|video|hd|hq|4k(\s+remaster(ed)?)?|remaster(ed)?(\s+\d{4})?)\s*[\)\]]`;
 const na = (v) => (v === undefined || v === 'NA' || v === 'None' || v === '' ? null : v);
 const num = (v) => {
   const n = Number(na(v));
@@ -73,6 +74,8 @@ class Downloads {
     if (!ytdlp) throw new Error('yt-dlp n’est pas installé.');
     const args = ['-J', '--flat-playlist', '--no-warnings', '--encoding', 'utf-8', '--ignore-config'];
     if (isMix(url)) args.push('--no-playlist');
+    const cookies = this.store.get('dl', {})?.cookies;
+    if (cookies) args.push('--cookies-from-browser', cookies);
     args.push('--', url);
     const text = await run(ytdlp, args, { timeout: 90000, env: this.tools.env() });
     const data = JSON.parse(text);
@@ -193,7 +196,7 @@ class Downloads {
   args(job, outDir) {
     const a = [
       '--ignore-config', '--no-colors', '--newline', '--no-mtime', '--windows-filenames', '--no-warnings',
-      '--ignore-errors', '--encoding', 'utf-8',
+      '--ignore-errors', '--encoding', 'utf-8', '--progress',
       '-o', path.join(outDir, `${job.isPlaylist ? '%(playlist_title&{}/|)s' : ''}%(title).150B.%(ext)s`),
       '--progress-template', ['download:CTRLPROG', '%(progress.status)s', '%(progress.downloaded_bytes)s', '%(progress.total_bytes)s', '%(progress.total_bytes_estimate)s', '%(progress.speed)s', '%(progress.eta)s', '%(info.playlist_index)s', '%(info.n_entries)s', '%(info.title)s'].join(TAB),
       '--progress-template', ['postprocess:CTRLPOST', '%(progress.status)s', '%(info.title)s'].join(TAB),
@@ -205,11 +208,17 @@ class Downloads {
     if (job.kind === 'audio') {
       a.push('-f', 'bestaudio/best', '-x', '--audio-format', job.format);
       if (job.format === 'mp3' && /^\d+$/.test(job.quality)) a.push('--audio-quality', `${job.quality}K`);
-      if (job.parseTitle) a.push('--parse-metadata', 'title:%(artist)s - %(title)s');
+      if (job.parseTitle) {
+        a.push('--parse-metadata', 'title:%(artist)s - %(title)s');
+        // « (Official Video) », « [Lyrics] », « (4K Remaster) » : du bruit dans le titre.
+        a.push('--replace-in-metadata', 'title', NOISE, '');
+      }
     } else {
       const cap = /^\d+$/.test(job.quality) ? `res:${job.quality},` : '';
       a.push('-S', `${cap}vcodec:h264,acodec:aac`, '--merge-output-format', 'mp4', '--embed-chapters');
     }
+    const cookies = this.store.get('dl', {})?.cookies;
+    if (cookies) a.push('--cookies-from-browser', cookies);
     const ffmpeg = this.tools.path('ffmpeg');
     if (ffmpeg) a.push('--ffmpeg-location', path.dirname(ffmpeg));
     const deno = this.tools.path('deno');
@@ -312,7 +321,8 @@ class Downloads {
         speed: null,
         eta: null,
         playlistId,
-        error: skipped ? `${skipped} titre(s) n’ont pas pu être téléchargés.` : null,
+        skipped,
+        error: skipped ? (errors.pop() || null) : null,
       });
     } else {
       this.#update(job, { status: 'error', speed: null, eta: null, error: errors.pop() || `yt-dlp s’est arrêté (code ${code}).` });

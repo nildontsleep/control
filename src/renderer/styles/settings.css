@@ -200,3 +200,123 @@
   gap: 4px;
 }
 
+
+/* ─── Feuille de réglages ───────────────────────────────────────────────── */
+.settings-sheet {
+  height: min(660px, calc(100vh - 64px));
+}
+
+.settings-sheet .sheet-body {
+  padding: 0;
+  gap: 0;
+  overflow: hidden;
+}
+
+.settings-tabs {
+  flex: none;
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+  padding: 14px 14px 10px;
+  border-bottom: 0.5px solid var(--separator);
+}
+
+.settings-tab {
+  min-width: 96px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 9px 14px 7px;
+  border-radius: 11px;
+  font-size: 11.5px;
+  font-weight: 560;
+  color: var(--text-2);
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.settings-tab:hover {
+  background: var(--fill);
+  color: var(--text);
+}
+
+.settings-tab.on {
+  background: rgb(var(--accent-rgb) / 0.18);
+  color: var(--accent);
+}
+
+.settings-tab-icon {
+  display: grid;
+}
+
+.settings-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 2px 22px 24px;
+}
+
+.folder-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.folder-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 8px 8px 10px;
+  border-radius: 9px;
+  background: var(--fill);
+}
+
+.folder-row .folder-path {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  background: none;
+  font-size: 12.5px;
+}
+
+.folder-icon {
+  display: grid;
+  color: var(--accent);
+}
+
+.folder-empty {
+  padding: 8px 4px;
+  color: var(--text-3);
+}
+
+.stats {
+  display: flex;
+  gap: 10px;
+}
+
+.stat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 10px 6px;
+  border-radius: 12px;
+  background: var(--fill);
+}
+
+.stat strong {
+  font-size: 22px;
+  font-weight: 750;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.stat span {
+  font-size: 11.5px;
+  color: var(--text-2);
+}
+
+.tool-rows .row {
+  min-height: 46px;
+}

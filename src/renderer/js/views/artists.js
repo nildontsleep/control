@@ -4,7 +4,6 @@ import { h } from '../dom.js';
 import { t } from '../i18n.js';
 import { fmtLong } from '../format.js';
 import { lib, cmp } from '../data.js';
-import { player } from '../player.js';
 import { createTrackList } from '../ui/tracklist.js';
 import { artistCard } from '../ui/cards.js';
 import { coverEl } from '../ui/cover.js';
@@ -34,7 +33,7 @@ export function artistView(root, key, { scroller }) {
   const items = artist.tracks.map((track) => ({ track }));
   const list = createTrackList({ items, layout: 'artist', scroller });
   const total = artist.tracks.length;
-  root.append(
+  root.append(...[
     h('header.hero.round', {},
       h('div.hero-art', {}, coverEl({ cover: artist.cover, title: artist.name, isArtist: true }, { className: 'hero-cover', round: true })),
       h('div.hero-text', {},
@@ -45,7 +44,6 @@ export function artistView(root, key, { scroller }) {
     artist.albums.length ? section(t('nav.albums'), albumGrid(artist.albums, { showArtist: false })) : null,
     section(t('artist.songs'), list.el),
     h('div.page-foot'),
-  );
-  void player;
+  ].filter(Boolean));
   return { destroy: () => list.destroy() };
 }

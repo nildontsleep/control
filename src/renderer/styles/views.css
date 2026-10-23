@@ -751,7 +751,7 @@
   background: var(--fill);
 }
 
-.info-thumb.empty {
+.info-thumb.blank {
   display: grid;
   place-items: center;
   color: var(--text-3);
@@ -903,7 +903,7 @@
   background: var(--fill);
 }
 
-.dl-thumb.empty {
+.dl-thumb.blank {
   display: grid;
   place-items: center;
   color: var(--text-3);

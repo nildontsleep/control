@@ -182,6 +182,11 @@ function wireDrop() {
 
 // ─── Clavier ─────────────────────────────────────────────────────────────────
 function wireKeys() {
+  // Un bouton cliqué garde le focus : Espace réactiverait alors ce bouton au lieu de lancer la lecture.
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest?.('button');
+    if (btn && !btn.closest('.sheet, .menu')) setTimeout(() => btn.blur());
+  });
   document.addEventListener('keydown', (e) => {
     if (isSheetOpen() || isMenuOpen()) return;
     const tag = e.target?.tagName;
@@ -250,10 +255,13 @@ async function init() {
   wireDownloads();
   control.library.scan();
 
+  let lastTrackId = null;
   onPlayer('track', (track) => {
     setAmbient(track?.cover || null);
     document.title = track ? `${track.title}${track.artist ? ` — ${track.artist}` : ''}` : 'control';
-    pendingVideo = track?.kind === 'video';
+    // Une vidéo qui démarre ouvre « À l'écoute » ; un simple rechargement de la bibliothèque, non.
+    if (track?.id !== lastTrackId) pendingVideo = track?.kind === 'video';
+    lastTrackId = track?.id ?? null;
   });
   onPlayer('error', (track) => toast(t('toast.cannotPlay', { title: track.title }), 'triangle-alert'));
   onPlayer('state', () => {

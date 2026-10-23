@@ -34,6 +34,16 @@ const dlBinding = (key) => ({
   def: undefined,
 });
 
+/** Traduit les erreurs courantes de yt-dlp en conseils compréhensibles. */
+export function friendlyError(raw) {
+  const text = String(raw || '');
+  if (/confirm you.?re not a bot|sign in to confirm|HTTP Error 429/i.test(text)) return t('dl.errBot');
+  if (/confirm your age|age.restricted|inappropriate for some users/i.test(text)) return t('dl.errAge');
+  if (/video unavailable|is unavailable|private video|removed|not available in your country|blocked it/i.test(text)) return t('dl.errUnavailable');
+  if (/unable to download|getaddrinfo|timed out|network|connection/i.test(text)) return t('dl.errNetwork');
+  return text;
+}
+
 function jobRow(job) {
   const pct = Math.round((job.progress || 0) * 100);
   const el = h('div.dl-job', { dataset: { id: job.id, status: job.status } });
@@ -47,14 +57,13 @@ function jobRow(job) {
     }
     if (job.status === 'processing') return t('dl.processing');
     if (job.status === 'queued') return t('dl.queued');
-    if (job.status === 'done') return job.error || t('dl.doneTracks', { n: job.files.length });
+    if (job.status === 'done') return job.skipped ? t('dl.partial', { n: job.skipped, reason: friendlyError(job.error) }) : t('dl.doneTracks', { n: job.files.length });
     if (job.status === 'canceled') return t('dl.canceled');
-    return job.error || t('dl.failed');
+    return friendlyError(job.error) || t('dl.failed');
   };
-  const thumb = job.thumbnail
-    ? h('img.dl-thumb', { src: job.thumbnail, alt: '', referrerpolicy: 'no-referrer' })
-    : h('div.dl-thumb.empty', { html: icon(job.kind === 'video' ? 'film' : 'music-2', 20, 1.6) });
-  thumb.addEventListener?.('error', () => thumb.replaceWith(h('div.dl-thumb.empty', { html: icon('music-2', 20, 1.6) })));
+  const blank = () => h('div.dl-thumb.blank', { html: icon(job.kind === 'video' ? 'film' : 'music-2', 20, 1.6) });
+  const thumb = job.thumbnail ? h('img.dl-thumb', { src: job.thumbnail, alt: '', referrerpolicy: 'no-referrer' }) : blank();
+  thumb.addEventListener('error', () => thumb.replaceWith(blank()));
   const actions = [];
   if (['queued', 'downloading', 'processing'].includes(job.status)) actions.push(h('button.icon-btn', { type: 'button', 'data-tip': t('common.cancel'), html: icon('x', 16, 2), onclick: () => api.cancel(job.id) }));
   if (['error', 'canceled'].includes(job.status)) actions.push(h('button.icon-btn', { type: 'button', 'data-tip': t('dl.retry'), html: icon('refresh-cw', 15, 2), onclick: () => api.retry(job.id) }));
@@ -160,7 +169,7 @@ export function downloadsView(root) {
     const res = await api.info(url);
     if (urlInput.value.trim() !== url) return;
     if (!res.ok) {
-      renderInfo({ error: (res.error || '').split('\n').pop() || t('dl.analyzeFailed') });
+      renderInfo({ error: friendlyError((res.error || '').split('\n').pop()) || t('dl.analyzeFailed') });
       return;
     }
     info = { ...res.info, url };
@@ -174,8 +183,11 @@ export function downloadsView(root) {
     if (state.loading) return infoBox.replaceChildren(h('div.dl-hint', {}, h('span.spinner.small', {}, ...Array.from({ length: 12 }, (_, i) => h('i', { style: { '--i': i } }))), h('span', { text: t('dl.analyzing') })));
     if (state.error) return infoBox.replaceChildren(h('div.dl-hint.error', {}, h('span.hint-icon', { html: icon('circle-alert', 15, 2) }), h('span', { text: state.error })));
     const isPl = state.type === 'playlist';
+    const blank = () => h('div.info-thumb.blank', { html: icon('music-2', 26, 1.5) });
+    const thumb = state.thumbnail ? h('img.info-thumb', { src: state.thumbnail, alt: '', referrerpolicy: 'no-referrer' }) : blank();
+    thumb.addEventListener?.('error', () => thumb.replaceWith(blank()));
     const card = h('div.info-card', {},
-      state.thumbnail ? h('img.info-thumb', { src: state.thumbnail, alt: '', referrerpolicy: 'no-referrer' }) : h('div.info-thumb.empty', { html: icon('music-2', 26, 1.5) }),
+      thumb,
       h('div.info-text', {},
         h('div.info-kind', { text: isPl ? t('dl.playlistKind', { n: state.count }) : t('dl.videoKind') }),
         h('div.info-title', { text: state.title }),
@@ -188,7 +200,7 @@ export function downloadsView(root) {
   function renderOptions() {
     const isPl = info?.type === 'playlist';
     const audio = settings.dl.kind === 'audio';
-    optionsBox.replaceChildren(
+    optionsBox.replaceChildren(...[
       segmented(dlBinding('kind'), [{ value: 'audio', label: t('dl.audio'), icon: 'music-2' }, { value: 'video', label: t('dl.video'), icon: 'film' }], { compact: true }),
       audio ? popup(dlBinding('audioFormat'), AUDIO_FORMATS) : null,
       audio && settings.dl.audioFormat === 'mp3' ? popup(dlBinding('audioQuality'), AUDIO_QUALITIES) : null,
@@ -196,7 +208,7 @@ export function downloadsView(root) {
       isPl ? h('label.opt-check', {}, toggle(dlBinding('createPlaylist')), h('span', { text: t('dl.createPlaylist') })) : null,
       h('span.spacer'),
       button(isPl ? t('dl.downloadAll', { n: info.count }) : t('dl.download'), { icon: 'arrow-down-to-line', kind: 'primary', onClick: start }),
-    );
+    ].filter(Boolean));
   }
 
   async function start() {
@@ -229,12 +241,12 @@ export function downloadsView(root) {
       queueBox.replaceChildren(h('div.dl-empty', {}, h('span', { html: icon('cloud-download', 28, 1.4) }), h('p', { text: t('dl.emptyQueue') })));
       return;
     }
-    queueBox.replaceChildren(
+    queueBox.replaceChildren(...[
       active.length ? h('h2.block-title', { text: t('dl.inProgress') }) : null,
       ...active.map(jobRow),
       finished.length ? h('div.block-head', {}, h('h2.block-title', { text: t('dl.finished') }), button(t('dl.clear'), { small: true, kind: 'plain', onClick: () => api.clear() })) : null,
       ...finished.map(jobRow),
-    );
+    ].filter(Boolean));
   }
 
   function patchJob(job) {

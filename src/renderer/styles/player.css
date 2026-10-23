@@ -85,8 +85,8 @@ body.np-open .playerbar {
   text-underline-offset: 2px;
 }
 
-.playerbar.empty .pb-art,
-.playerbar.empty .pb-title {
+.playerbar.no-track .pb-art,
+.playerbar.no-track .pb-title {
   opacity: 0.5;
 }
 
@@ -402,7 +402,8 @@ body.np-open .playerbar {
   display: block;
 }
 
-.np.has-video .np-art {
+.np.has-video .np-art,
+.np.has-video .np-viz {
   display: none;
 }
 

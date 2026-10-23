@@ -3,10 +3,10 @@
 import { h } from '../dom.js';
 import { icon } from '../icons.js';
 import { t } from '../i18n.js';
-import { SMART_FIELDS, SMART_OPS, SMART_PRESETS, evalSmart } from '../data.js';
+import { SMART_FIELDS, SMART_OPS, SMART_PRESETS, evalSmart, loadPlaylists } from '../data.js';
 import { navigate } from '../router.js';
 import { openSheet } from './sheet.js';
-import { popup, button } from './controls.js';
+import { popup, button, createScope, withScope, refreshScope } from './controls.js';
 import { toast } from './feedback.js';
 
 const api = window.control.playlists;
@@ -57,13 +57,14 @@ export function openSmartEditor(playlist = null, { preset = 'mostPlayed', name =
     preview();
   }
 
-  const matchPopup = popup({ get: () => spec.match, set: (v) => { spec.match = v; preview(); } }, [
+  const fixed = createScope();
+  const matchPopup = withScope(fixed, () => popup({ get: () => spec.match, set: (v) => { spec.match = v; preview(); refreshScope(fixed); } }, [
     { value: 'all', label: t('smart.matchAll') },
     { value: 'any', label: t('smart.matchAny') },
-  ]);
+  ]));
   const sortKeys = ['title', 'artist', 'playCount', 'addedAt', 'lastPlayed', 'year', 'random'];
-  const sortPopup = popup({ get: () => spec.sort.key, set: (v) => { spec.sort.key = v; if (v === 'title' || v === 'artist') spec.sort.dir = 'asc'; else spec.sort.dir = 'desc'; } },
-    sortKeys.map((k) => ({ value: k, label: t(`sort.${k}`) })));
+  const sortPopup = withScope(fixed, () => popup({ get: () => spec.sort.key, set: (v) => { spec.sort.key = v; spec.sort.dir = v === 'title' || v === 'artist' ? 'asc' : 'desc'; refreshScope(fixed); } },
+    sortKeys.map((k) => ({ value: k, label: t(`sort.${k}`) }))));
   const limitInput = h('input.text-input.small', { type: 'number', min: '0', value: String(spec.limit || 0), 'data-tip': t('smart.limitHint') });
   limitInput.addEventListener('input', () => { spec.limit = Math.max(0, Number(limitInput.value) || 0); preview(); });
 
@@ -77,7 +78,7 @@ export function openSmartEditor(playlist = null, { preset = 'mostPlayed', name =
         title = t(`preset.${key}`);
         nameInput.value = title;
       }
-      matchPopup.firstChild.textContent = spec.match === 'any' ? t('smart.matchAny') : t('smart.matchAll');
+      refreshScope(fixed);
       render();
     },
   })));
@@ -91,6 +92,7 @@ export function openSmartEditor(playlist = null, { preset = 'mostPlayed', name =
       toast(t('toast.saved'), 'check');
     } else {
       const id = await api.create(finalName, 'smart', spec);
+      await loadPlaylists();
       navigate('playlist', id);
     }
     handle.close();

@@ -3,7 +3,7 @@
 import { h } from '../dom.js';
 import { icon } from '../icons.js';
 import { t } from '../i18n.js';
-import { lib, onLibrary, playlistById } from '../data.js';
+import { lib, onLibrary, playlistById, loadPlaylists } from '../data.js';
 import { navigate, currentRoute, onRoute, back } from '../router.js';
 import { trafficLights } from './traffic.js';
 import { openMenu } from './menu.js';
@@ -129,6 +129,7 @@ export function createSidebar(root, { openSettings }) {
       { label: t('pl.import'), icon: 'import', action: async () => {
         const res = await playlistsApi.import();
         if (res) {
+          await loadPlaylists();
           toast(t('toast.imported', { n: res.matched, total: res.total }), 'check');
           navigate('playlist', res.id);
         }

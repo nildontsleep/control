@@ -124,6 +124,11 @@ export function openSettings(initial = 'general') {
             get: () => settings.dl.concurrency,
             set: (v) => update({ dl: { concurrency: v } }),
           }, [1, 2, 3, 4].map((n) => ({ value: n, label: String(n) })), { compact: true })),
+          row(t('set.cookies'), popup({
+            get: () => settings.dl.cookies || '',
+            set: (v) => update({ dl: { cookies: v } }),
+          }, [{ value: '', label: t('cookies.none') }, ...['firefox', 'chrome', 'edge', 'brave', 'opera', 'vivaldi', 'chromium'].map((b) => ({ value: b, label: b[0].toUpperCase() + b.slice(1) }))]),
+          { hint: t('set.cookiesHint'), badge: badge('globe', B.blue) }),
           row(t('set.autoUpdate'), toggle({
             get: () => settings.dl.autoUpdate !== false,
             set: (v) => update({ dl: { autoUpdate: v } }),
@@ -182,7 +187,7 @@ export function openSettings(initial = 'general') {
       btn.addEventListener('click', () => { tabId = tab.id; render(); });
       return btn;
     }));
-    body.replaceChildren(...withScope(scope, () => builders[tabId]()));
+    body.replaceChildren(...withScope(scope, () => builders[tabId]()).filter(Boolean));
     body.scrollTop = 0;
   }
 

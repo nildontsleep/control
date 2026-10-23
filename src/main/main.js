@@ -7,9 +7,9 @@ const path = require('node:path');
 const fs = require('node:fs');
 const { Readable } = require('node:stream');
 const { pathToFileURL } = require('node:url');
-const { Store, deepMerge, isObj } = require('./store');
+const { Store, isObj } = require('./store');
 const { open: openDb } = require('./db');
-const { Library, isMediaFile } = require('./library');
+const { Library } = require('./library');
 const { Tools } = require('./tools');
 const { Downloads } = require('./downloads');
 
