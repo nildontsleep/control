@@ -10,7 +10,8 @@ import { navigate } from '../router.js';
 import { player } from '../player.js';
 import { segmented, button, createScope, withScope, refreshScope } from '../ui/controls.js';
 import { coverEl } from '../ui/cover.js';
-import { openWrapped } from '../ui/wrapped.js';
+import { openWrapped, periodRange, periodLabel, parseMonthKey } from '../ui/wrapped.js';
+import { openMenu } from '../ui/menu.js';
 import { pageHead, emptyState } from './shared.js';
 import { fmtDuration, dayLabel, shortDay } from '../stats/format.js';
 
@@ -34,6 +35,11 @@ function chartTip() {
   if (!tipEl) {
     tipEl = h('div.chart-tip');
     document.body.append(tipEl);
+    // Si la page change sous le pointeur, aucun « pointerleave » ne vient : on la cache aussi au clic, à la touche et au défilement.
+    const hide = () => tipEl.classList.remove('show');
+    document.addEventListener('pointerdown', hide, true);
+    document.addEventListener('keydown', hide, true);
+    document.addEventListener('wheel', hide, { passive: true, capture: true });
   }
   return tipEl;
 }
@@ -166,7 +172,7 @@ export function statsView(root) {
     { value: 'all', label: t('stats.pAll') },
   ], { compact: true }));
 
-  const wrappedBtn = button(t('stats.wrappedShort'), { icon: 'sparkles', kind: 'primary', onClick: () => startWrapped() });
+  const wrappedBtn = button(t('stats.wrappedShort'), { icon: 'sparkles', kind: 'primary', onClick: () => openRecapMenu() });
   wrappedBtn.hidden = true;
 
   root.append(
@@ -174,17 +180,38 @@ export function statsView(root) {
     body);
 
   let years = [];
-  const refreshWrappedButton = (list) => {
-    years = list;
-    const year = list[0];
-    wrappedBtn.hidden = !year;
-    if (year) wrappedBtn.querySelector('span:last-child').textContent = t('stats.wrapped', { year });
+  let months = [];
+  const refreshWrappedButton = (data) => {
+    years = data.years;
+    months = data.months || [];
+    wrappedBtn.hidden = !years.length;
   };
 
-  async function startWrapped(year = years[0]) {
-    if (!year) return;
-    const res = await api.get({ from: `${year}-01-01`, to: `${year}-12-31` });
-    if (res.ok) openWrapped(year, res.data, { years, onYear: (y) => startWrapped(y) });
+  async function startWrapped(period) {
+    const res = await api.get(periodRange(period));
+    if (!res.ok) return;
+    openWrapped(period, res.data, {
+      years,
+      months,
+      load: async (range) => {
+        const r = await api.get(range);
+        if (!r.ok) throw new Error(r.message);
+        return r.data;
+      },
+    });
+  }
+
+  /** Un récap par année et un par mois d'activité. */
+  function openRecapMenu() {
+    const items = years.slice(0, 3).map((year) => ({ label: t('stats.wrapped', { year }), icon: 'sparkles', action: () => startWrapped({ kind: 'year', year }) }));
+    if (months.length) {
+      items.push({ separator: true }, { header: t('stats.byMonth') });
+      for (const key of months.slice(0, 12)) {
+        const period = parseMonthKey(key);
+        items.push({ label: periodLabel(period), icon: 'calendar', action: () => startWrapped(period) });
+      }
+    }
+    openMenu(wrappedBtn, items, { align: 'end', minWidth: 200 });
   }
 
   async function load() {
@@ -197,7 +224,7 @@ export function statsView(root) {
       body.replaceChildren(emptyState({ icon: 'triangle-alert', title: t('err.title'), text: res.message }));
       return;
     }
-    refreshWrappedButton(res.data.years);
+    refreshWrappedButton(res.data);
     paint(res.data, range);
   }
 

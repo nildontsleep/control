@@ -8,7 +8,7 @@ import { settings, update, subscribe as onSettings } from '../settings.js';
 import { navigate } from '../router.js';
 import { player } from '../player.js';
 import { lib } from '../data.js';
-import { segmented, popup, toggle, button } from '../ui/controls.js';
+import { segmented, popup, toggle, button, createScope, withScope, refreshScope } from '../ui/controls.js';
 import { toast } from '../ui/feedback.js';
 import { pageHead } from './shared.js';
 
@@ -106,6 +106,9 @@ export function downloadsView(root) {
   const toolsBox = h('div.dl-tools');
   const queueBox = h('div.dl-queue');
   const optionsBox = h('div.dl-options');
+  const resultsBox = h('div.dl-results');
+  let query = '';
+  const sourceScope = createScope();
 
   // ─── Outils ────────────────────────────────────────────────────────────────
   function renderTools() {
@@ -154,10 +157,19 @@ export function downloadsView(root) {
   }
 
   // ─── Analyse d'un lien ─────────────────────────────────────────────────────
+  const isUrl = (value) => /^https?:\/\//i.test(value);
+
   async function analyze() {
     const url = urlInput.value.trim();
     info = null;
-    if (!/^https?:\/\//i.test(url)) {
+    // Du texte qui n'est pas un lien : on cherche le titre sur YouTube ou SoundCloud.
+    if (url.length >= 2 && !isUrl(url) && !/^[a-z]+:\/\//i.test(url)) {
+      renderInfo(null);
+      return search(url);
+    }
+    query = '';
+    renderResults(null);
+    if (!isUrl(url)) {
       renderInfo(url ? { error: t('dl.invalidUrl') } : null);
       return;
     }
@@ -175,6 +187,76 @@ export function downloadsView(root) {
     info = { ...res.info, url };
     // La musique d'une chaîne « Topic » a déjà ses tags : pas besoin de découper le titre.
     renderInfo(info);
+  }
+
+  // ─── Recherche (YouTube, SoundCloud) ───────────────────────────────────────
+  async function search(text) {
+    query = text;
+    if (!toolStatus?.ytdlp.installed) {
+      renderResults({ error: t('dl.needTools') });
+      return;
+    }
+    renderResults({ loading: true });
+    const source = settings.dl.searchSource === 'youtube' ? 'youtube' : 'soundcloud';
+    const res = await api.search(source, text);
+    if (query !== text || urlInput.value.trim() !== text) return;
+    if (!res.ok) {
+      renderResults({ error: friendlyError((res.error || '').split('\n').pop()) || t('dl.searchFailed') });
+      return;
+    }
+    renderResults({ items: res.results, source });
+  }
+
+  async function startResult(item) {
+    await api.add({
+      url: item.url,
+      title: item.title,
+      thumbnail: item.thumbnail,
+      isPlaylist: false,
+      count: 1,
+      kind: settings.dl.kind,
+      format: settings.dl.audioFormat,
+      quality: settings.dl.kind === 'audio' ? settings.dl.audioQuality : settings.dl.videoQuality,
+      // SoundCloud donne déjà artiste et titre séparés ; sur YouTube, « Artiste - Titre » est à découper.
+      parseTitle: item.source === 'youtube',
+      createPlaylist: false,
+    });
+    toast(t('dl.added'), 'arrow-down-to-line');
+  }
+
+  function renderResults(state) {
+    resultsBox.hidden = !state;
+    if (!state) {
+      resultsBox.replaceChildren();
+      optionsBox.hidden = !info?.type;
+      return;
+    }
+    const source = withScope(sourceScope, () => segmented({
+      get: () => (settings.dl.searchSource === 'youtube' ? 'youtube' : 'soundcloud'),
+      set: (v) => { update({ dl: { searchSource: v } }); refreshScope(sourceScope); if (query) search(query); },
+    }, [{ value: 'soundcloud', label: 'SoundCloud' }, { value: 'youtube', label: 'YouTube' }], { compact: true }));
+    const head = h('div.dl-results-head', {}, h('span', { text: t('dl.searchIn') }), source);
+    if (state.loading) {
+      resultsBox.replaceChildren(head, h('div.dl-hint', {}, h('span.spinner.small', {}, ...Array.from({ length: 12 }, (_, i) => h('i', { style: { '--i': i } }))), h('span', { text: t('dl.searching') })));
+    } else if (state.error) {
+      resultsBox.replaceChildren(head, h('div.dl-hint.error', {}, h('span.hint-icon', { html: icon('circle-alert', 15, 2) }), h('span', { text: state.error })));
+    } else if (!state.items.length) {
+      resultsBox.replaceChildren(head, h('div.dl-hint', {}, h('span', { text: t('dl.noResults') })));
+    } else {
+      resultsBox.replaceChildren(head, h('div.dl-result-list', {}, ...state.items.map((item) => {
+        const blank = () => h('div.dl-result-thumb.blank', { html: icon('music-2', 18, 1.6) });
+        const thumb = item.thumbnail ? h('img.dl-result-thumb', { src: item.thumbnail, alt: '', loading: 'lazy', referrerpolicy: 'no-referrer' }) : blank();
+        thumb.addEventListener('error', () => thumb.replaceWith(blank()));
+        const row = h('div.dl-result', {},
+          thumb,
+          h('div.dl-result-text', {}, h('div.dl-result-title', { text: item.title || '—' }), h('div.dl-result-sub', { text: [item.uploader, item.duration ? fmtTime(item.duration) : null].filter(Boolean).join(' · ') })),
+          button(t('dl.download'), { icon: 'arrow-down-to-line', kind: 'secondary', small: true, onClick: (e) => { e.currentTarget.disabled = true; startResult(item); } }));
+        return row;
+      })));
+    }
+    // Les réglages du format restent à portée de main pendant la recherche.
+    renderOptions({ search: true });
+    optionsBox.hidden = false;
   }
 
   function renderInfo(state) {
@@ -197,8 +279,8 @@ export function downloadsView(root) {
     renderOptions();
   }
 
-  function renderOptions() {
-    const isPl = info?.type === 'playlist';
+  function renderOptions({ search: searching = false } = {}) {
+    const isPl = !searching && info?.type === 'playlist';
     const audio = settings.dl.kind === 'audio';
     optionsBox.replaceChildren(...[
       segmented(dlBinding('kind'), [{ value: 'audio', label: t('dl.audio'), icon: 'music-2' }, { value: 'video', label: t('dl.video'), icon: 'film' }], { compact: true }),
@@ -207,7 +289,7 @@ export function downloadsView(root) {
       !audio ? popup(dlBinding('videoQuality'), VIDEO_QUALITIES) : null,
       isPl ? h('label.opt-check', {}, toggle(dlBinding('createPlaylist')), h('span', { text: t('dl.createPlaylist') })) : null,
       h('span.spacer'),
-      button(isPl ? t('dl.downloadAll', { n: info.count }) : t('dl.download'), { icon: 'arrow-down-to-line', kind: 'primary', onClick: start }),
+      searching ? null : button(isPl ? t('dl.downloadAll', { n: info.count }) : t('dl.download'), { icon: 'arrow-down-to-line', kind: 'primary', onClick: start }),
     ].filter(Boolean));
   }
 
@@ -280,12 +362,13 @@ export function downloadsView(root) {
           urlInput.value = (await navigator.clipboard.readText()).trim();
           analyze();
         } catch { urlInput.focus(); }
-      } })), infoBox, optionsBox),
+      } })), infoBox, resultsBox, optionsBox),
     toolsBox,
     queueBox,
     h('div.page-foot'),
   );
   optionsBox.hidden = true;
+  resultsBox.hidden = true;
 
   api.list().then((list) => { jobs = list; renderQueue(); });
   tools.status().then((s) => { toolStatus = s; renderTools(); });

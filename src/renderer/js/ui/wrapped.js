@@ -1,4 +1,4 @@
-// Récap annuel : une suite de cartes plein écran (musique, habitudes, films), et une image à enregistrer.
+// Récap annuel ou mensuel : une suite de cartes plein écran (musique, habitudes, films), et une image à enregistrer.
 
 import { h } from '../dom.js';
 import { icon } from '../icons.js';
@@ -22,6 +22,21 @@ const PALETTES = [
 
 const hoursOf = (s) => Math.round(s / 360) / 10;
 
+// ─── Périodes : { kind: 'year', year } ou { kind: 'month', year, month } (mois de 1 à 12) ───
+const cap = (s) => s.charAt(0).toLocaleUpperCase() + s.slice(1);
+export const monthName = (p) => cap(new Date(p.year, p.month - 1, 1).toLocaleDateString(currentLanguage(), { month: 'long' }));
+export const periodLabel = (p) => (p.kind === 'month' ? `${monthName(p)} ${p.year}` : String(p.year));
+const pad2 = (n) => String(n).padStart(2, '0');
+
+export function periodRange(p) {
+  if (p.kind === 'year') return { from: `${p.year}-01-01`, to: `${p.year}-12-31` };
+  const last = new Date(p.year, p.month, 0).getDate();
+  return { from: `${p.year}-${pad2(p.month)}-01`, to: `${p.year}-${pad2(p.month)}-${pad2(last)}` };
+}
+
+export const monthKey = (p) => `${p.year}-${pad2(p.month)}`;
+export const parseMonthKey = (key) => ({ kind: 'month', year: Number(key.slice(0, 4)), month: Number(key.slice(5, 7)) });
+
 /** Compte jusqu'à la valeur, en ralentissant à l'arrivée. */
 function countUp(el, to, { duration = 1300, format = (n) => count(Math.round(n)) } = {}) {
   const start = performance.now();
@@ -39,17 +54,18 @@ function art(cover, { round = false, size = 'm' } = {}) {
   return el;
 }
 
-function buildSlides(year, data, onSave) {
+function buildSlides(period, data, onSave) {
   const { music, video } = data;
   const slides = [];
   const lang = currentLanguage();
+  const month = period.kind === 'month';
 
   slides.push({
     id: 'intro',
     build: () => h('div.w-slide-in', {},
-      h('div.w-eyebrow', { text: 'control' }),
-      h('div.w-huge', { text: String(year) }),
-      h('div.w-lead', { text: music.plays ? t('wrapped.introMusic') : t('wrapped.introVideo') }),
+      h('div.w-eyebrow', { text: month ? `control · ${period.year}` : 'control' }),
+      h(month ? 'div.w-huge.month' : 'div.w-huge', { text: month ? monthName(period) : String(period.year) }),
+      h('div.w-lead', { text: month ? t(music.plays ? 'wrapped.introMusicMonth' : 'wrapped.introVideoMonth') : t(music.plays ? 'wrapped.introMusic' : 'wrapped.introVideo') }),
       h('div.w-hint', {}, h('span', { text: t('wrapped.tap') }), h('span', { html: icon('chevron-right', 16, 2.2) }))),
   });
 
@@ -60,7 +76,7 @@ function buildSlides(year, data, onSave) {
         const num = h('div.w-giant', { text: '0' });
         setTimeout(() => countUp(num, Math.round(music.seconds / 60)), 250);
         return h('div.w-slide-in', {},
-          h('div.w-eyebrow', { text: t('wrapped.youListened') }),
+          h('div.w-eyebrow', { text: t(month ? 'wrapped.youListenedMonth' : 'wrapped.youListened') }),
           num,
           h('div.w-title', { text: t('wrapped.minutes') }),
           h('div.w-lead', { text: t('wrapped.timeDetail', { h: count(hoursOf(music.seconds)), tracks: count(music.tracks), plays: count(music.plays) }) }));
@@ -147,7 +163,7 @@ function buildSlides(year, data, onSave) {
     build: () => h('div.w-slide-in', {},
       h('div.w-eyebrow', { text: t('wrapped.summary') }),
       h('div.w-summary', {},
-        h('div.w-sum-head', {}, h('strong', { text: String(year) }), h('span', { text: 'control' })),
+        h('div.w-sum-head', {}, h('strong', { text: month ? monthName(period) : String(period.year) }), h('span', { text: month ? `control · ${period.year}` : 'control' })),
         music.plays ? h('div.w-sum-stats', {}, h('div', {}, h('b', { text: count(Math.round(music.seconds / 60)) }), h('span', { text: t('wrapped.minutes') })), h('div', {}, h('b', { text: count(music.plays) }), h('span', { text: t('stats.playsLabel') }))) : null,
         music.topArtists[0] ? h('div.w-sum-line', {}, h('span', { text: t('wrapped.topArtist') }), h('strong', { text: music.topArtists[0].name })) : null,
         music.topTracks[0] ? h('div.w-sum-line', {}, h('span', { text: t('wrapped.topTrack') }), h('strong', { text: music.topTracks[0].title })) : null,
@@ -174,7 +190,7 @@ function roundRect(ctx, x, y, w, h2, r) {
   ctx.roundRect(x, y, w, h2, r);
 }
 
-export async function renderCard(year, data) {
+export async function renderCard(period, data) {
   const { music, video } = data;
   const W = 1080;
   const H = 1350;
@@ -203,7 +219,7 @@ export async function renderCard(year, data) {
   ctx.font = font(700, 36);
   ctx.fillText('control', 80, 120);
   ctx.textAlign = 'right';
-  ctx.fillText(String(year), W - 80, 120);
+  ctx.fillText(periodLabel(period), W - 80, 120);
   ctx.textAlign = 'left';
 
   ctx.fillStyle = '#fff';
@@ -265,35 +281,51 @@ export async function renderCard(year, data) {
 }
 
 // ─── Fenêtre ─────────────────────────────────────────────────────────────────
-export function openWrapped(year, data, { years = [], onYear } = {}) {
+/**
+ * period : { kind: 'year', year } | { kind: 'month', year, month }
+ * data : résultat de stats.get pour cette période ; years / months : périodes qui ont de l'activité.
+ * load(range) : charge une autre période sans fermer la fenêtre.
+ */
+export function openWrapped(initial, initialData, { years = [], months = [], load } = {}) {
   const layer = document.getElementById('layer');
   const overlay = h('div.wrapped');
   const stage = h('div.w-stage');
   const bars = h('div.w-bars');
+  const head = h('div.w-head');
   const closeBtn = h('button.w-close', { type: 'button', 'aria-label': t('common.close'), html: icon('x', 18, 2.2) });
   const prev = h('button.w-nav.prev', { type: 'button', 'aria-label': t('tag.prev'), html: icon('chevron-left', 22, 2.2) });
   const next = h('button.w-nav.next', { type: 'button', 'aria-label': t('tag.next'), html: icon('chevron-right', 22, 2.2) });
 
-  const empty = !data.music.plays && data.video.seconds < 60;
-  const slides = empty
-    ? [{ id: 'empty', build: () => h('div.w-slide-in', {}, h('div.w-eyebrow', { text: 'control' }), h('div.w-huge', { text: String(year) }), h('div.w-lead', { text: t('wrapped.empty') })) }]
-    : buildSlides(year, data, async () => {
-      const dataUrl = await renderCard(year, data);
-      const saved = await api.saveImage(dataUrl, `control-${year}`);
-      if (saved) toast(t('wrapped.saved'), 'image');
-    });
-
+  let period = initial;
+  let slides = [];
+  let segs = [];
   let index = 0;
   let closing = false;
-  const segs = slides.map(() => h('span.w-bar', {}, h('i')));
-  bars.append(...segs);
+  let busy = false;
 
-  const yearPicker = years.length > 1 ? h('div.w-years', {}, ...years.slice(0, 6).map((y) => h(`button.w-year${y === year ? '.on' : ''}`, { type: 'button', text: String(y), onclick: () => { if (y !== year) { close(); onYear?.(y); } } }))) : null;
+  const isEmpty = (d) => !d.music.plays && d.video.seconds < 60;
+
+  function makeSlides(data) {
+    if (isEmpty(data)) {
+      const month = period.kind === 'month';
+      return [{
+        id: 'empty',
+        build: () => h('div.w-slide-in', {},
+          h('div.w-eyebrow', { text: 'control' }),
+          h(month ? 'div.w-huge.month' : 'div.w-huge', { text: month ? monthName(period) : String(period.year) }),
+          h('div.w-lead', { text: t(month ? 'wrapped.emptyMonth' : 'wrapped.empty') })),
+      }];
+    }
+    return buildSlides(period, data, async () => {
+      const dataUrl = await renderCard(period, data);
+      const saved = await api.saveImage(dataUrl, `control-${period.kind === 'month' ? monthKey(period) : period.year}`);
+      if (saved) toast(t('wrapped.saved'), 'image');
+    });
+  }
 
   function show(i, dir = 1) {
     index = Math.max(0, Math.min(slides.length - 1, i));
     stage.dataset.slide = slides[index].id;
-    stage.dataset.i = String(index % 6);
     const el = h('div.w-slide', {}, slides[index].build());
     el.classList.add(dir > 0 ? 'fwd' : 'back');
     stage.replaceChildren(el);
@@ -301,12 +333,74 @@ export function openWrapped(year, data, { years = [], onYear } = {}) {
     overlay.style.setProperty('--g1', a);
     overlay.style.setProperty('--g2', b);
     overlay.style.setProperty('--g3', c);
-    segs.forEach((s, k) => s.classList.toggle('done', k < index));
-    segs.forEach((s, k) => s.classList.toggle('now', k === index));
+    segs.forEach((s, k) => {
+      s.classList.toggle('done', k < index);
+      s.classList.toggle('now', k === index);
+    });
     prev.hidden = index === 0;
     next.hidden = index === slides.length - 1;
   }
 
+  function rebuild(data) {
+    slides = makeSlides(data);
+    segs = slides.map(() => h('span.w-bar', {}, h('i')));
+    bars.replaceChildren(...segs);
+    paintHead();
+    show(0);
+  }
+
+  async function setPeriod(next) {
+    if (busy || !load) return;
+    busy = true;
+    stage.classList.add('loading');
+    try {
+      const data = await load(periodRange(next));
+      period = next;
+      rebuild(data);
+    } catch {
+      // On reste sur la période affichée.
+    } finally {
+      stage.classList.remove('loading');
+      busy = false;
+    }
+  }
+
+  // ─── Sélecteur de période (en haut à gauche) ───────────────────────────────
+  const pill = (label, on, onClick, extra = '') => h(`button.w-year${on ? '.on' : ''}${extra}`, { type: 'button', text: label, onclick: onClick });
+
+  function paintHead() {
+    const parts = [];
+    const canYear = years.length > 0;
+    const canMonth = months.length > 0;
+    if (canYear && canMonth) {
+      parts.push(h('div.w-modes', {},
+        pill(t('wrapped.modeYear'), period.kind === 'year', () => {
+          if (period.kind !== 'year') setPeriod({ kind: 'year', year: years.includes(period.year) ? period.year : years[0] });
+        }),
+        pill(t('wrapped.modeMonth'), period.kind === 'month', () => {
+          if (period.kind === 'month') return;
+          const wanted = months.find((m) => m.startsWith(String(period.year))) || months[0];
+          setPeriod(parseMonthKey(wanted));
+        })));
+    }
+    if (period.kind === 'year' && years.length > 1) {
+      parts.push(h('div.w-years', {}, ...years.slice(0, 6).map((y) => pill(String(y), y === period.year, () => y !== period.year && setPeriod({ kind: 'year', year: y })))));
+    } else if (period.kind === 'month' && months.length) {
+      const at = months.indexOf(monthKey(period));
+      const step = (d) => {
+        const target = months[at + d];
+        if (target) setPeriod(parseMonthKey(target));
+      };
+      const arrow = (ic, d, disabled, label) => h('button.w-mstep', { type: 'button', 'aria-label': label, disabled, html: icon(ic, 15, 2.4), onclick: () => step(d) });
+      parts.push(h('div.w-month-nav', {},
+        arrow('chevron-left', 1, at < 0 || at >= months.length - 1, t('wrapped.monthBefore')),
+        h('span.w-month-label', { text: periodLabel(period) }),
+        arrow('chevron-right', -1, at <= 0, t('wrapped.monthAfter'))));
+    }
+    head.replaceChildren(...parts);
+  }
+
+  // ─── Fermeture et clavier ──────────────────────────────────────────────────
   const go = (d) => {
     const target = index + d;
     if (target < 0 || target >= slides.length) return;
@@ -337,9 +431,9 @@ export function openWrapped(year, data, { years = [], onYear } = {}) {
   next.addEventListener('click', () => go(1));
   closeBtn.addEventListener('click', close);
 
-  overlay.append(h('div.w-bg'), bars, closeBtn, yearPicker, stage, prev, next);
+  overlay.append(h('div.w-bg'), bars, head, closeBtn, stage, prev, next);
   layer.append(overlay);
-  show(0);
+  rebuild(initialData);
   requestAnimationFrame(() => overlay.classList.add('open'));
   return { close };
 }

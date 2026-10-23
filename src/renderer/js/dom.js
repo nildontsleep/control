@@ -1,5 +1,18 @@
 // Petits utilitaires DOM.
 
+// append(), replaceChildren()… transforment un enfant null / undefined / false en texte (« null »), ce qui
+// affichait « null » à côté des boutons, dans les infobulles et les notifications. h() les ignorait déjà ; ce filet
+// fait de même pour tous les appels directs.
+for (const proto of [Element.prototype, DocumentFragment.prototype]) {
+  for (const method of ['append', 'prepend', 'replaceChildren', 'before', 'after']) {
+    const native = proto[method];
+    if (typeof native !== 'function') continue;
+    proto[method] = function skipEmpty(...nodes) {
+      return native.apply(this, nodes.filter((n) => n !== null && n !== undefined && n !== false));
+    };
+  }
+}
+
 export const $ = (sel, root = document) => root.querySelector(sel);
 export const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 

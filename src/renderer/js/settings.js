@@ -9,6 +9,14 @@ export const DEFAULTS = {
   animations: true,
   ambient: true,
   compact: false,
+  scene: 'none',
+  sceneSpeed: 100,
+  sceneBlur: 0,
+  radius: 100,
+  uiScale: 100,
+  translucency: 100,
+  oledLevel: 25,
+  customAmbiences: [],
 
   // Bibliothèque
   libraryFolders: [],
@@ -30,6 +38,21 @@ export const DEFAULTS = {
   lastView: { name: 'songs', param: null },
   statsRange: '30d',
   npTab: 'queue',
+  recapSeen: '',
+
+  // Discord (présence enrichie)
+  discord: {
+    enabled: true,
+    music: true,
+    video: true,
+    streaming: true,
+    covers: true,
+    hideTitles: false,
+    clientId: '',
+  },
+
+  // Mises à jour de l'application
+  update: { auto: true },
 
   // Films, séries et animés
   media: {
@@ -47,6 +70,7 @@ export const DEFAULTS = {
     videoQuality: '1080',
     concurrency: 2,
     cookies: '',
+    searchSource: 'soundcloud',
     createPlaylist: true,
     autoUpdate: true,
   },

@@ -31,6 +31,11 @@ import { watchingView } from './views/watching.js';
 import { shelfView } from './views/shelf.js';
 import { mylistView } from './views/mylist.js';
 import { statsView } from './views/stats.js';
+import { offerMonthlyRecap } from './stats/recap-prompt.js';
+import { startPresence } from './discord/presence.js';
+import { startUpdates, onUpdate } from './update/state.js';
+import { applyAmbience, setSceneActive } from './theme/ambience.js';
+import { LOOK_KEYS } from './theme/presets.js';
 
 const control = window.control;
 const root = document.documentElement;
@@ -40,7 +45,7 @@ const app = $('#app');
 const darkQuery = matchMedia('(prefers-color-scheme: dark)');
 
 function applyTheme() {
-  const dark = settings.theme === 'dark' || (settings.theme === 'auto' && darkQuery.matches);
+  const dark = settings.theme === 'dark' || settings.theme === 'oled' || (settings.theme === 'auto' && darkQuery.matches);
   root.dataset.theme = dark ? 'dark' : 'light';
   const hex = settings.accent === 'custom' ? settings.customAccent : (ACCENTS[settings.accent] || ACCENTS.pink)[dark ? 'dark' : 'light'];
   const rgb = hexToRgb(hex);
@@ -50,6 +55,7 @@ function applyTheme() {
   app.classList.toggle('no-ambient', !settings.ambient);
   root.classList.toggle('no-anim', !settings.animations);
   root.classList.toggle('compact', !!settings.compact);
+  applyAmbience({ dark, rgb, active: !app.classList.contains('inactive') });
 }
 darkQuery.addEventListener('change', applyTheme);
 
@@ -156,7 +162,7 @@ function wireDownloads() {
     const prev = status.get(job.id);
     status.set(job.id, job.status);
     sidebar.setDownloads(count());
-    if (job.status === 'done' && prev && prev !== 'done') toast(t('dl.doneToast', { title: job.title }), 'circle-check');
+    if (job.status === 'done' && prev && prev !== 'done') toast(job.title || job.current ? t('dl.doneToast', { title: job.title || job.current }) : t('dl.doneGeneric'), 'circle-check');
   });
   control.downloads.onReset((jobs) => {
     status.clear();
@@ -215,7 +221,11 @@ function wireKeys() {
     if (e.altKey && key === 'ArrowLeft') { e.preventDefault(); back(); return; }
     if (e.altKey && key === 'ArrowRight') { e.preventDefault(); forward(); return; }
     if (key === 'Escape') {
-      if (nowPlaying.isOpen) { nowPlaying.close(); e.preventDefault(); }
+      if (nowPlaying.isOpen) {
+        if (nowPlaying.isFullscreen) control.win.setFullscreen(false);
+        else nowPlaying.close();
+        e.preventDefault();
+      }
       return;
     }
     if (typing) return;
@@ -260,6 +270,7 @@ async function init() {
 
   control.win.onState((s) => {
     app.classList.toggle('inactive', !s.focused);
+    setSceneActive(!!s.focused);
     app.classList.toggle('fullscreen', !!s.fullscreen);
     app.classList.toggle('maximized', !!s.maximized);
     nowPlaying.setFullscreen(!!s.fullscreen);
@@ -299,11 +310,17 @@ async function init() {
   else navigate('songs');
 
   subscribe((patch, source) => {
-    if (['theme', 'accent', 'customAccent', 'ambient', 'animations', 'compact'].some((k) => k in patch)) applyTheme();
+    if ([...LOOK_KEYS, 'animations', 'compact'].some((k) => k in patch)) applyTheme();
     if ('compact' in patch && !LIBRARY_FREE.has(currentRoute()?.name)) refresh();
     if ('language' in patch && source !== 'remote' && resolveLanguage(settings.language) !== currentLanguage()) setTimeout(() => location.reload(), 120);
   });
   requestAnimationFrame(() => root.classList.add('ready'));
+  setTimeout(() => offerMonthlyRecap().catch(() => {}), 6000);
+  startPresence();
+  onUpdate((s) => sidebar.setUpdate(['available', 'ready'].includes(s.phase)));
+  startUpdates({
+    onAvailable: (s) => toast(t('upd.available', { v: s.version }), 'cloud-download', { action: { label: t('upd.view'), onClick: () => openSettings('about') }, duration: 10000 }),
+  });
 }
 
 init();

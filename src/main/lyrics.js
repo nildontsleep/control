@@ -65,11 +65,23 @@ class Lyrics {
   }
 
   async #online({ title, artist, album, duration }) {
+    // LRCLIB répond parfois « serveur occupé » (503) : on réessaie un peu avant d'abandonner.
     const get = async (url) => {
-      const res = await net.fetch(url, { headers: { 'user-agent': AGENT }, signal: AbortSignal.timeout(10000) });
-      if (res.status === 404) return null;
-      if (!res.ok) throw new Error(`LRCLIB ${res.status}`);
-      return res.json();
+      let last;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          const res = await net.fetch(url, { headers: { 'user-agent': AGENT }, signal: AbortSignal.timeout(10000) });
+          if (res.status === 404) return null;
+          if (res.status === 429 || res.status >= 500) last = Object.assign(new Error(`LRCLIB ${res.status}`), { code: 'busy' });
+          else if (!res.ok) throw Object.assign(new Error(`LRCLIB ${res.status}`), { code: 'http' });
+          else return await res.json();
+        } catch (err) {
+          if (err.code === 'http') throw err;
+          last = err.code ? err : Object.assign(err, { code: 'network' });
+        }
+        await new Promise((resolve) => setTimeout(resolve, 900 * (attempt + 1)));
+      }
+      throw last;
     };
     const seconds = Math.round(duration || 0);
     if (artist && title) {

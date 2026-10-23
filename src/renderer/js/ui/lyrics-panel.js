@@ -120,7 +120,7 @@ export function createLyricsPanel(scroller) {
     if (!res.ok) {
       root.replaceChildren(
         actions(null),
-        status('triangle-alert', t('lyr.errorTitle'), res.network ? t('lyr.errorNetwork') : res.message,
+        status('triangle-alert', t('lyr.errorTitle'), res.code === 'busy' ? t('lyr.errorBusy') : res.code === 'network' ? t('lyr.errorNetwork') : res.message,
           h('div.ly-status-actions', {}, h('button.btn.btn-secondary.btn-small', { type: 'button', onclick: () => load(player.track, true) }, h('span', { text: t('action.retry') })))));
       return;
     }

@@ -71,7 +71,7 @@ const fr = {
 
   'nav.dropTitle': 'Déposez pour ajouter', 'drop.title': 'Déposez pour ajouter à la bibliothèque', 'drop.text': 'Fichiers audio, vidéos ou dossiers entiers.',
 
-  'dl.subtitle': 'Collez un lien YouTube, SoundCloud, Bandcamp…', 'dl.placeholder': 'Collez un lien (vidéo ou playlist)', 'dl.paste': 'Coller',
+  'dl.subtitle': 'Collez un lien YouTube, SoundCloud, Bandcamp… ou cherchez un titre', 'dl.placeholder': 'Collez un lien, ou cherchez un titre', 'dl.paste': 'Coller',
   'dl.invalidUrl': 'Ce n’est pas un lien valide (il doit commencer par https://).', 'dl.needTools': 'Installez d’abord les outils ci-dessous.',
   'dl.analyzing': 'Analyse du lien…', 'dl.analyzeFailed': 'Impossible d’analyser ce lien.', 'dl.videoKind': 'Vidéo',
   'dl.playlistKind': 'Playlist · {n} titres', 'dl.audio': 'Audio', 'dl.video': 'Vidéo', 'dl.createPlaylist': 'Créer une playlist',
@@ -80,7 +80,7 @@ const fr = {
   'dl.clear': 'Effacer la liste', 'dl.itemOf': 'Titre {i} sur {n}', 'dl.eta': 'encore {t}', 'dl.starting': 'Démarrage…', 'dl.processing': 'Conversion et ajout des tags…',
   'dl.queued': 'En attente', 'dl.canceled': 'Annulé', 'dl.failed': 'Échec du téléchargement', 'dl.doneTracks_one': '{n} fichier ajouté', 'dl.doneTracks_other': '{n} fichiers ajoutés',
   'dl.retry': 'Réessayer', 'dl.openPlaylist': 'Ouvrir la playlist', 'dl.notYetInLibrary': 'Les fichiers arrivent dans la bibliothèque, réessayez dans un instant.',
-  'dl.doneToast': 'Téléchargé : {title}',
+  'dl.doneToast': 'Téléchargé : {title}', 'dl.doneGeneric': 'Téléchargement terminé',
   'dl.errBot': 'YouTube demande de confirmer que vous n’êtes pas un robot. Choisissez un navigateur dans Réglages → Téléchargements → Cookies, puis réessayez.',
   'dl.errUnavailable': 'Cette vidéo est indisponible (privée, supprimée ou bloquée dans votre pays).',
   'dl.errNetwork': 'Problème de connexion. Vérifiez votre réseau et réessayez.',
@@ -245,8 +245,67 @@ const fr = {
   'lyr.editHint': 'Texte brut ou format LRC (synchronisé). Laissez vide pour les retirer.', 'lyr.instrumental': 'Morceau instrumental',
   'lyr.noneTitle': 'Pas de paroles', 'lyr.noneText': 'Aucune parole trouvée pour ce morceau. Vous pouvez en coller, ou poser un fichier .lrc à côté.',
   'lyr.paste': 'Coller des paroles…', 'lyr.noTrack': 'Aucun morceau en cours', 'lyr.searching': 'Recherche des paroles…',
-  'lyr.errorTitle': 'Paroles indisponibles', 'lyr.errorNetwork': 'Impossible de joindre LRCLIB : vérifiez votre connexion.',
+  'lyr.errorTitle': 'Paroles indisponibles', 'lyr.errorNetwork': 'Impossible de joindre LRCLIB : vérifiez votre connexion.', 'lyr.errorBusy': 'Le service de paroles (LRCLIB) est surchargé en ce moment. Réessayez dans quelques minutes.',
   'set.crossfade': 'Fondu enchaîné', 'set.crossfadeHint': 'Les morceaux se mélangent à la fin. 0 pour désactiver.', 'set.playback': 'Lecture', 'set.seconds': '{n} s', 'set.off': 'Désactivé',
+
+  'wrapped.introMusicMonth': 'Votre mois en musique', 'wrapped.introVideoMonth': 'Votre mois en images', 'wrapped.youListenedMonth': 'Ce mois-ci, vous avez écouté',
+  'wrapped.emptyMonth': 'Rien d’écouté ce mois-ci.', 'wrapped.modeYear': 'Année', 'wrapped.modeMonth': 'Mois',
+  'wrapped.monthBefore': 'Mois précédent', 'wrapped.monthAfter': 'Mois suivant', 'stats.byMonth': 'Par mois',
+  'wrapped.monthReady': 'Votre récap de {month} est prêt', 'wrapped.see': 'Voir',
+
+  'video.back10': 'Reculer de 10 s', 'video.fwd10': 'Avancer de 10 s', 'video.pip': 'Image dans l’image', 'video.exitFullscreen': 'Quitter le plein écran', 'player.rate': 'Vitesse de lecture',
+
+  'dl.searchIn': 'Chercher sur', 'dl.searching': 'Recherche…', 'dl.noResults': 'Aucun résultat.', 'dl.searchFailed': 'La recherche a échoué. Vérifiez votre connexion.',
+
+  // Apparence
+  'set.tab.appearance': 'Apparence', 'set.interface': 'Interface', 'set.ambiances': 'Ambiances', 'set.colors': 'Couleurs', 'set.scene': 'Fond animé', 'set.shape': 'Forme et échelle',
+  'theme.oled': 'OLED', 'set.oledLevel': 'Profondeur du noir', 'amb.oledDeep': 'Noir absolu', 'amb.oledSoft': 'Noir adouci',
+  'set.sceneKind': 'Animation', 'set.sceneSpeed': 'Vitesse', 'set.sceneBlur': 'Flou', 'set.sceneHint': 'Teintée par la couleur d’accentuation. Se met en pause quand la fenêtre est inactive ou si les animations sont coupées.',
+  'set.radius': 'Arrondi des coins', 'set.translucency': 'Translucidité', 'set.uiScale': 'Taille de l’interface', 'set.shapeHint': 'Double-clic sur un curseur pour revenir à sa valeur d’origine.',
+  'amb.hint': 'Une ambiance règle d’un coup le thème, la couleur, le fond animé, les coins et la translucidité. « control » est l’apparence d’origine.',
+  'amb.save': 'Enregistrer l’apparence…', 'amb.reset': 'Revenir à control', 'amb.saveTitle': 'Enregistrer l’ambiance', 'amb.saveText': 'Donnez un nom à l’apparence actuelle pour la retrouver en un clic.',
+  'amb.namePlaceholder': 'Nom de l’ambiance', 'amb.saved': 'Ambiance « {name} » enregistrée', 'amb.customDesc': 'Votre ambiance',
+  'amb.control': 'control', 'amb.control.desc': 'L’apparence d’origine',
+  'amb.ember': 'Ember', 'amb.ember.desc': 'Braises orangées, coins vifs',
+  'amb.midnight': 'Midnight', 'amb.midnight.desc': 'Bleu nuit, coins arrondis, translucide',
+  'amb.forest': 'Forêt', 'amb.forest.desc': 'Sauge, panneaux doux, lucioles',
+  'amb.ocean': 'Ocean', 'amb.ocean.desc': 'Bleu abyssal, ondes lentes',
+  'amb.iris': 'Iris', 'amb.iris.desc': 'Violet doux, coins très arrondis',
+  'amb.sakura': 'Sakura', 'amb.sakura.desc': 'Rose poudré clair, pluie fine',
+  'amb.gold': 'Gold', 'amb.gold.desc': 'Or brûlé, panneaux profonds',
+  'amb.bloodmoon': 'Blood Moon', 'amb.bloodmoon.desc': 'Cramoisi, noir absolu, coins secs',
+  'amb.snowfall': 'Snowfall', 'amb.snowfall.desc': 'Glacial, très translucide',
+  'amb.cyberpunk': 'Cyberpunk', 'amb.cyberpunk.desc': 'Magenta électrique, angles nets',
+  'amb.monochrome': 'Monochrome', 'amb.monochrome.desc': 'Gris pur, minimal',
+  'scene.none': 'Aucun', 'scene.embers': 'Braises', 'scene.stars': 'Étoiles', 'scene.fireflies': 'Lucioles', 'scene.ripples': 'Ondes', 'scene.nebula': 'Nébuleuse',
+  'scene.rain': 'Pluie', 'scene.plasma': 'Plasma', 'scene.meteors': 'Météores', 'scene.snow': 'Neige', 'scene.hyperspace': 'Hyperespace', 'scene.grid': 'Grille',
+  'scene.bubbles': 'Bulles', 'scene.constellation': 'Constellation', 'scene.mist': 'Brume', 'scene.aurora': 'Aurore',
+
+  // Discord
+  'dc.title': 'Discord', 'dc.enable': 'Présence Discord', 'dc.enableHint': 'Affiche ce que vous écoutez ou regardez sur votre profil',
+  'dc.music': 'Musique', 'dc.video': 'Vidéos locales', 'dc.streaming': 'Films, séries et animés',
+  'dc.hide': 'Masquer les titres', 'dc.hideHint': 'Affiche seulement « Écoute de la musique » ou « Regarde une vidéo »',
+  'dc.covers': 'Pochettes', 'dc.coversHint': 'Cherche la pochette sur Apple Music : l’artiste et l’album sont envoyés à Apple. Sinon, le logo de control est utilisé.',
+  'dc.test': 'Tester', 'dc.idPlaceholder': 'Application ID (facultatif)',
+  'dc.footer': 'Nécessite l’application Discord de bureau, ouverte sur cet ordinateur. L’Application ID sert uniquement à utiliser votre propre application Discord (nom et images).',
+  'dc.state.off': 'Désactivée', 'dc.state.missing-id': 'Aucun Application ID : renseignez-le ci-dessous', 'dc.state.connecting': 'Connexion…',
+  'dc.state.connected': 'Connecté à Discord', 'dc.state.connectedAs': 'Connecté à Discord ({name})',
+  'dc.state.no-discord': 'Discord n’est pas ouvert (nouvel essai toutes les 15 s)', 'dc.state.bad-id': 'Application ID invalide', 'dc.state.error': 'Erreur de connexion à Discord',
+  'dc.hide.music': 'Écoute de la musique', 'dc.hide.video': 'Regarde une vidéo', 'dc.hide.movie': 'Regarde un film', 'dc.hide.tv': 'Regarde une série', 'dc.hide.anime': 'Regarde un animé',
+  'dc.watchingNow': 'Regarde', 'dc.listeningNow': 'Écoute', 'dc.paused': 'En pause', 'dc.localVideo': 'Vidéo locale', 'dc.unknownArtist': 'Artiste inconnu',
+
+  // Mises à jour
+  'upd.title': 'Mises à jour', 'upd.available': 'control {v} est disponible', 'upd.install': 'Mettre à jour et redémarrer', 'upd.notes': 'Nouveautés',
+  'upd.downloading': 'Téléchargement de control {v}…', 'upd.ready': 'control {v} est prêt', 'upd.verified': 'Fichier vérifié (SHA-256)', 'upd.restart': 'Redémarrer et installer',
+  'upd.installing': 'Installation… control va redémarrer', 'upd.failed': 'La mise à jour a échoué',
+  'upd.err.network': 'Connexion à GitHub impossible.', 'upd.err.http': 'GitHub ne répond pas correctement.', 'upd.err.busy': 'GitHub limite les requêtes : réessayez dans quelques minutes.',
+  'upd.err.asset': 'Aucun fichier d’installation pour cette édition.', 'upd.err.untrusted': 'Adresse de téléchargement non reconnue.',
+  'upd.err.corrupt': 'Le fichier téléchargé est corrompu (empreinte différente).', 'upd.err.launch': 'Impossible de lancer l’installation.',
+  'upd.err.unsupported': 'Installation automatique impossible ici (dossier protégé en écriture ou système non pris en charge).',
+  'upd.upToDate': 'control est à jour', 'upd.idle': 'Aucune vérification pour l’instant', 'upd.checkedAt': 'Vérifié à {when}', 'upd.check': 'Rechercher',
+  'upd.auto': 'Rechercher automatiquement', 'upd.autoHint': 'Au lancement, puis toutes les 6 heures', 'upd.view': 'Voir', 'upd.dotTip': 'Mise à jour disponible',
+  'upd.token': 'Jeton GitHub', 'upd.tokenHint': 'Pour un dépôt privé : jeton en lecture seule (Contents : Read). Il reste sur cet ordinateur.', 'upd.tokenPlaceholder': 'github_pat_…',
+  'upd.err.private': 'Le dépôt est privé : renseignez un jeton GitHub en lecture ci-dessous (ou rendez le dépôt public).', 'upd.err.token': 'Jeton GitHub refusé ou expiré.',
 };
 
 const en = {
@@ -320,7 +379,7 @@ const en = {
 
   'nav.dropTitle': 'Drop to add', 'drop.title': 'Drop to add to the library', 'drop.text': 'Audio files, videos or whole folders.',
 
-  'dl.subtitle': 'Paste a YouTube, SoundCloud, Bandcamp… link', 'dl.placeholder': 'Paste a link (video or playlist)', 'dl.paste': 'Paste',
+  'dl.subtitle': 'Paste a YouTube, SoundCloud, Bandcamp… link, or search for a title', 'dl.placeholder': 'Paste a link, or search for a title', 'dl.paste': 'Paste',
   'dl.invalidUrl': 'That is not a valid link (it must start with https://).', 'dl.needTools': 'Install the tools below first.',
   'dl.analyzing': 'Analyzing link…', 'dl.analyzeFailed': 'Could not analyze this link.', 'dl.videoKind': 'Video',
   'dl.playlistKind': 'Playlist · {n} items', 'dl.audio': 'Audio', 'dl.video': 'Video', 'dl.createPlaylist': 'Create a playlist',
@@ -329,7 +388,7 @@ const en = {
   'dl.clear': 'Clear list', 'dl.itemOf': 'Item {i} of {n}', 'dl.eta': '{t} left', 'dl.starting': 'Starting…', 'dl.processing': 'Converting and tagging…',
   'dl.queued': 'Waiting', 'dl.canceled': 'Canceled', 'dl.failed': 'Download failed', 'dl.doneTracks_one': '{n} file added', 'dl.doneTracks_other': '{n} files added',
   'dl.retry': 'Retry', 'dl.openPlaylist': 'Open playlist', 'dl.notYetInLibrary': 'Files are still being added to the library, try again in a moment.',
-  'dl.doneToast': 'Downloaded: {title}',
+  'dl.doneToast': 'Downloaded: {title}', 'dl.doneGeneric': 'Download finished',
   'dl.errBot': 'YouTube asks to confirm you are not a bot. Pick a browser in Settings → Downloads → Cookies, then try again.',
   'dl.errUnavailable': 'This video is unavailable (private, removed, or blocked in your country).',
   'dl.errNetwork': 'Connection problem. Check your network and try again.',
@@ -494,8 +553,67 @@ const en = {
   'lyr.editHint': 'Plain text or LRC format (synced). Leave empty to remove them.', 'lyr.instrumental': 'Instrumental',
   'lyr.noneTitle': 'No lyrics', 'lyr.noneText': 'No lyrics found for this song. You can paste some, or put a .lrc file next to it.',
   'lyr.paste': 'Paste Lyrics…', 'lyr.noTrack': 'Nothing is playing', 'lyr.searching': 'Looking for lyrics…',
-  'lyr.errorTitle': 'Lyrics unavailable', 'lyr.errorNetwork': 'Could not reach LRCLIB: check your connection.',
+  'lyr.errorTitle': 'Lyrics unavailable', 'lyr.errorNetwork': 'Could not reach LRCLIB: check your connection.', 'lyr.errorBusy': 'The lyrics service (LRCLIB) is overloaded right now. Try again in a few minutes.',
   'set.crossfade': 'Crossfade', 'set.crossfadeHint': 'Songs blend together at the end. 0 to turn off.', 'set.playback': 'Playback', 'set.seconds': '{n} s', 'set.off': 'Off',
+
+  'wrapped.introMusicMonth': 'Your month in music', 'wrapped.introVideoMonth': 'Your month on screen', 'wrapped.youListenedMonth': 'This month, you listened to',
+  'wrapped.emptyMonth': 'Nothing played this month.', 'wrapped.modeYear': 'Year', 'wrapped.modeMonth': 'Month',
+  'wrapped.monthBefore': 'Previous month', 'wrapped.monthAfter': 'Next month', 'stats.byMonth': 'By month',
+  'wrapped.monthReady': 'Your {month} replay is ready', 'wrapped.see': 'View',
+
+  'video.back10': 'Back 10 seconds', 'video.fwd10': 'Forward 10 seconds', 'video.pip': 'Picture in Picture', 'video.exitFullscreen': 'Exit Full Screen', 'player.rate': 'Playback speed',
+
+  'dl.searchIn': 'Search on', 'dl.searching': 'Searching…', 'dl.noResults': 'No results.', 'dl.searchFailed': 'The search failed. Check your connection.',
+
+  // Appearance
+  'set.tab.appearance': 'Appearance', 'set.interface': 'Interface', 'set.ambiances': 'Ambiences', 'set.colors': 'Colors', 'set.scene': 'Animated background', 'set.shape': 'Shape and scale',
+  'theme.oled': 'OLED', 'set.oledLevel': 'Black depth', 'amb.oledDeep': 'Pure black', 'amb.oledSoft': 'Soft black',
+  'set.sceneKind': 'Animation', 'set.sceneSpeed': 'Speed', 'set.sceneBlur': 'Blur', 'set.sceneHint': 'Tinted by the accent color. Pauses when the window is inactive or when animations are off.',
+  'set.radius': 'Corner radius', 'set.translucency': 'Translucency', 'set.uiScale': 'Interface size', 'set.shapeHint': 'Double-click a slider to reset it to its original value.',
+  'amb.hint': 'An ambience sets the theme, color, animated background, corners and translucency in one click. “control” is the original look.',
+  'amb.save': 'Save current look…', 'amb.reset': 'Back to control', 'amb.saveTitle': 'Save ambience', 'amb.saveText': 'Name the current look to get it back in one click.',
+  'amb.namePlaceholder': 'Ambience name', 'amb.saved': 'Ambience “{name}” saved', 'amb.customDesc': 'Your ambience',
+  'amb.control': 'control', 'amb.control.desc': 'The original look',
+  'amb.ember': 'Ember', 'amb.ember.desc': 'Orange embers, sharp corners',
+  'amb.midnight': 'Midnight', 'amb.midnight.desc': 'Night blue, rounded corners, translucent',
+  'amb.forest': 'Forest', 'amb.forest.desc': 'Sage, soft panels, fireflies',
+  'amb.ocean': 'Ocean', 'amb.ocean.desc': 'Deep sea blue, slow ripples',
+  'amb.iris': 'Iris', 'amb.iris.desc': 'Soft violet, very round corners',
+  'amb.sakura': 'Sakura', 'amb.sakura.desc': 'Light powder pink, fine rain',
+  'amb.gold': 'Gold', 'amb.gold.desc': 'Burnt gold, deep panels',
+  'amb.bloodmoon': 'Blood Moon', 'amb.bloodmoon.desc': 'Crimson, pure black, square corners',
+  'amb.snowfall': 'Snowfall', 'amb.snowfall.desc': 'Icy, very translucent',
+  'amb.cyberpunk': 'Cyberpunk', 'amb.cyberpunk.desc': 'Electric magenta, sharp angles',
+  'amb.monochrome': 'Monochrome', 'amb.monochrome.desc': 'Pure gray, minimal',
+  'scene.none': 'None', 'scene.embers': 'Embers', 'scene.stars': 'Stars', 'scene.fireflies': 'Fireflies', 'scene.ripples': 'Ripples', 'scene.nebula': 'Nebula',
+  'scene.rain': 'Rain', 'scene.plasma': 'Plasma', 'scene.meteors': 'Meteors', 'scene.snow': 'Snow', 'scene.hyperspace': 'Hyperspace', 'scene.grid': 'Grid',
+  'scene.bubbles': 'Bubbles', 'scene.constellation': 'Constellation', 'scene.mist': 'Mist', 'scene.aurora': 'Aurora',
+
+  // Discord
+  'dc.title': 'Discord', 'dc.enable': 'Discord presence', 'dc.enableHint': 'Shows what you listen to or watch on your profile',
+  'dc.music': 'Music', 'dc.video': 'Local videos', 'dc.streaming': 'Movies, shows and anime',
+  'dc.hide': 'Hide titles', 'dc.hideHint': 'Only shows “Listening to music” or “Watching a video”',
+  'dc.covers': 'Cover art', 'dc.coversHint': 'Looks up the cover on Apple Music: the artist and album are sent to Apple. Otherwise the control logo is used.',
+  'dc.test': 'Test', 'dc.idPlaceholder': 'Application ID (optional)',
+  'dc.footer': 'Requires the Discord desktop app, open on this computer. The Application ID only lets you use your own Discord application (name and images).',
+  'dc.state.off': 'Off', 'dc.state.missing-id': 'No Application ID: enter it below', 'dc.state.connecting': 'Connecting…',
+  'dc.state.connected': 'Connected to Discord', 'dc.state.connectedAs': 'Connected to Discord ({name})',
+  'dc.state.no-discord': 'Discord is not open (retrying every 15 s)', 'dc.state.bad-id': 'Invalid Application ID', 'dc.state.error': 'Could not talk to Discord',
+  'dc.hide.music': 'Listening to music', 'dc.hide.video': 'Watching a video', 'dc.hide.movie': 'Watching a movie', 'dc.hide.tv': 'Watching a show', 'dc.hide.anime': 'Watching anime',
+  'dc.watchingNow': 'Watching', 'dc.listeningNow': 'Listening', 'dc.paused': 'Paused', 'dc.localVideo': 'Local video', 'dc.unknownArtist': 'Unknown artist',
+
+  // Updates
+  'upd.title': 'Updates', 'upd.available': 'control {v} is available', 'upd.install': 'Update and restart', 'upd.notes': 'What’s new',
+  'upd.downloading': 'Downloading control {v}…', 'upd.ready': 'control {v} is ready', 'upd.verified': 'File verified (SHA-256)', 'upd.restart': 'Restart and install',
+  'upd.installing': 'Installing… control will restart', 'upd.failed': 'The update failed',
+  'upd.err.network': 'Could not reach GitHub.', 'upd.err.http': 'GitHub did not answer properly.', 'upd.err.busy': 'GitHub is rate-limiting requests: try again in a few minutes.',
+  'upd.err.asset': 'No installer for this edition.', 'upd.err.untrusted': 'Unrecognised download address.',
+  'upd.err.corrupt': 'The downloaded file is corrupt (checksum mismatch).', 'upd.err.launch': 'Could not start the installer.',
+  'upd.err.unsupported': 'Automatic install is not possible here (write-protected folder or unsupported system).',
+  'upd.upToDate': 'control is up to date', 'upd.idle': 'Not checked yet', 'upd.checkedAt': 'Checked at {when}', 'upd.check': 'Check now',
+  'upd.auto': 'Check automatically', 'upd.autoHint': 'At launch, then every 6 hours', 'upd.view': 'View', 'upd.dotTip': 'Update available',
+  'upd.token': 'GitHub token', 'upd.tokenHint': 'For a private repository: a read-only token (Contents: Read). It stays on this computer.', 'upd.tokenPlaceholder': 'github_pat_…',
+  'upd.err.private': 'The repository is private: enter a read-only GitHub token below (or make the repository public).', 'upd.err.token': 'GitHub token refused or expired.',
 };
 
 const DICTS = { fr, en };
@@ -524,6 +642,6 @@ export function t(key, vars) {
     s = dict[`${key}_${form}`] ?? dict[`${key}_other`] ?? fr[`${key}_${form}`] ?? fr[`${key}_other`];
   }
   s ??= dict[key] ?? fr[key] ?? key;
-  if (vars) for (const [k, v] of Object.entries(vars)) s = s.replaceAll(`{${k}}`, String(v));
+  if (vars) for (const [k, v] of Object.entries(vars)) s = s.replaceAll(`{${k}}`, v === null || v === undefined ? '' : String(v));
   return s;
 }

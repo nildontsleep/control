@@ -123,7 +123,7 @@
   width: 38px;
   height: 38px;
   flex: none;
-  border-radius: 7px;
+  border-radius: calc(7px * var(--rk, 1));
   box-shadow: 0 0 0 0.5px rgb(0 0 0 / 0.18);
 }
 
@@ -168,14 +168,14 @@
 
 .card {
   min-width: 0;
-  border-radius: 14px;
+  border-radius: calc(14px * var(--rk, 1));
   outline: none;
 }
 
 .card-art {
   position: relative;
   aspect-ratio: 1;
-  border-radius: 12px;
+  border-radius: calc(12px * var(--rk, 1));
   overflow: hidden;
   box-shadow: 0 10px 28px rgb(0 0 0 / 0.32), 0 0 0 0.5px rgb(255 255 255 / 0.1);
   transition: transform 0.5s var(--spring), box-shadow 0.35s var(--out);
@@ -269,7 +269,7 @@
   left: 8px;
   bottom: 8px;
   padding: 2px 7px;
-  border-radius: 6px;
+  border-radius: calc(6px * var(--rk, 1));
   font-size: 11.5px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
@@ -296,7 +296,7 @@
 .hero-cover {
   width: 100%;
   height: 100%;
-  border-radius: 16px;
+  border-radius: calc(16px * var(--rk, 1));
   overflow: hidden;
   box-shadow: 0 26px 60px rgb(0 0 0 / 0.5), 0 0 0 0.5px rgb(255 255 255 / 0.1);
 }
@@ -332,7 +332,7 @@
 
 .hero-text h1.editable {
   cursor: text;
-  border-radius: 8px;
+  border-radius: calc(8px * var(--rk, 1));
   margin-left: -6px;
   padding: 0 6px;
   transition: background-color 0.15s;
@@ -438,7 +438,7 @@
   grid-template-columns: var(--cols);
   align-items: center;
   padding: 0 12px;
-  border-radius: 10px;
+  border-radius: calc(10px * var(--rk, 1));
   font-size: 13px;
   contain: layout style;
   will-change: transform;
@@ -532,7 +532,7 @@
 .idx-eq i {
   width: 3px;
   height: 4px;
-  border-radius: 1.5px;
+  border-radius: calc(1.5px * var(--rk, 1));
   background: var(--accent);
 }
 
@@ -576,7 +576,7 @@
   right: 8px;
   top: 0;
   height: 2px;
-  border-radius: 1px;
+  border-radius: calc(1px * var(--rk, 1));
   background: var(--accent);
   box-shadow: 0 0 8px rgb(var(--accent-rgb) / 0.7);
   opacity: 0;
@@ -587,7 +587,7 @@
 .compact .row-cover {
   width: 28px;
   height: 28px;
-  border-radius: 5px;
+  border-radius: calc(5px * var(--rk, 1));
 }
 
 .compact .title-text .t {
@@ -624,7 +624,7 @@
   margin-bottom: 14px;
   display: grid;
   place-items: center;
-  border-radius: 26px;
+  border-radius: calc(26px * var(--rk, 1));
   color: #fff;
   background: linear-gradient(150deg, rgb(var(--accent-rgb)), rgb(var(--accent-rgb) / 0.55)), var(--accent);
   box-shadow: 0 22px 50px rgb(var(--accent-rgb) / 0.35), inset 0 0.5px 0 rgb(255 255 255 / 0.4);
@@ -665,7 +665,7 @@
   gap: 8px;
   height: 52px;
   padding: 0 8px 0 16px;
-  border-radius: 16px;
+  border-radius: calc(16px * var(--rk, 1));
   background: var(--fill);
   box-shadow: inset 0 0 0 0.5px var(--group-border);
   transition: box-shadow 0.25s var(--out), background-color 0.25s;
@@ -703,7 +703,7 @@
   height: 38px;
   display: grid;
   place-items: center;
-  border-radius: 11px;
+  border-radius: calc(11px * var(--rk, 1));
   color: var(--text-2);
 }
 
@@ -732,7 +732,7 @@
   display: flex;
   gap: 16px;
   padding: 12px;
-  border-radius: 16px;
+  border-radius: calc(16px * var(--rk, 1));
   background: var(--group);
   box-shadow: inset 0 0 0 0.5px var(--group-border);
   animation: rise 0.45s var(--spring) both;
@@ -747,7 +747,7 @@
   aspect-ratio: 16 / 9;
   flex: none;
   object-fit: cover;
-  border-radius: 10px;
+  border-radius: calc(10px * var(--rk, 1));
   background: var(--fill);
 }
 
@@ -787,6 +787,88 @@
   color: var(--text-2);
 }
 
+.dl-results {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  animation: rise 0.45s var(--spring) both;
+}
+
+.dl-results[hidden] {
+  display: none;
+}
+
+.dl-results-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 4px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-3);
+}
+
+.dl-result-list {
+  display: flex;
+  flex-direction: column;
+  border-radius: calc(16px * var(--rk, 1));
+  overflow: hidden;
+  background: var(--group);
+  box-shadow: inset 0 0 0 0.5px var(--group-border);
+}
+
+.dl-result {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 9px 12px;
+  transition: background-color 0.15s;
+}
+
+.dl-result + .dl-result {
+  border-top: 0.5px solid var(--separator);
+}
+
+.dl-result:hover {
+  background: var(--fill);
+}
+
+.dl-result-thumb {
+  width: 64px;
+  aspect-ratio: 1;
+  flex: none;
+  object-fit: cover;
+  border-radius: calc(9px * var(--rk, 1));
+  background: var(--fill);
+}
+
+.dl-result-thumb.blank {
+  display: grid;
+  place-items: center;
+  color: var(--text-3);
+}
+
+.dl-result-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.dl-result-title,
+.dl-result-sub {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dl-result-title {
+  font-weight: 600;
+}
+
+.dl-result-sub {
+  font-size: 12.5px;
+  color: var(--text-3);
+}
+
 .dl-options {
   display: flex;
   align-items: center;
@@ -815,7 +897,7 @@
   align-items: center;
   gap: 16px;
   padding: 16px 18px;
-  border-radius: 16px;
+  border-radius: calc(16px * var(--rk, 1));
   background: linear-gradient(135deg, rgb(var(--accent-rgb) / 0.2), rgb(var(--accent-rgb) / 0.06));
   box-shadow: inset 0 0 0 0.5px rgb(var(--accent-rgb) / 0.35);
 }
@@ -826,7 +908,7 @@
   flex: none;
   display: grid;
   place-items: center;
-  border-radius: 13px;
+  border-radius: calc(13px * var(--rk, 1));
   color: var(--on-accent);
   background: var(--accent);
 }
@@ -882,7 +964,7 @@
   align-items: center;
   gap: 14px;
   padding: 10px 12px;
-  border-radius: 14px;
+  border-radius: calc(14px * var(--rk, 1));
   transition: background-color 0.15s;
 }
 
@@ -899,7 +981,7 @@
   aspect-ratio: 16 / 9;
   flex: none;
   object-fit: cover;
-  border-radius: 8px;
+  border-radius: calc(8px * var(--rk, 1));
   background: var(--fill);
 }
 
@@ -937,7 +1019,7 @@
 .dl-bar {
   height: 4px;
   margin-top: 8px;
-  border-radius: 2px;
+  border-radius: calc(2px * var(--rk, 1));
   overflow: hidden;
   background: var(--control);
 }
@@ -945,7 +1027,7 @@
 .dl-bar > span {
   display: block;
   height: 100%;
-  border-radius: 2px;
+  border-radius: calc(2px * var(--rk, 1));
   background: var(--accent);
   transition: width 0.3s linear;
 }

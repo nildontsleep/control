@@ -155,10 +155,12 @@ class Stats {
       ...q('SELECT DISTINCT day FROM watch_time WHERE seconds >= 30').map((r) => r.day),
     ];
     const years = [...new Set(allDays.map((d) => Number(d.slice(0, 4))))].sort((a, b) => b - a);
+    const months = [...new Set(allDays.map((d) => d.slice(0, 7)))].sort().reverse();
 
     return {
       range: { from: fromDay, to: toDay },
       years,
+      months,
       streak: streaks(allDays),
       music: {
         ...totals,

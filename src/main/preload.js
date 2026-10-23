@@ -1,6 +1,6 @@
 'use strict';
 
-const { contextBridge, ipcRenderer, webUtils } = require('electron');
+const { contextBridge, ipcRenderer, webUtils, webFrame } = require('electron');
 
 function listen(channel) {
   return (callback) => {
@@ -30,6 +30,7 @@ contextBridge.exposeInMainWorld('control', {
     minimize: send('win:minimize'),
     toggleMaximize: send('win:toggle-maximize'),
     setFullscreen: send('win:set-fullscreen'),
+    setZoom: (factor) => webFrame.setZoomFactor(Math.min(1.5, Math.max(0.6, Number(factor) || 1))),
     state: invoke('win:state'),
     onState: listen('window:state'),
   },
@@ -54,6 +55,21 @@ contextBridge.exposeInMainWorld('control', {
     get: invoke('lyrics:get'),
     set: invoke('lyrics:set'),
     saveFile: invoke('lyrics:save-file'),
+  },
+
+  update: {
+    state: invoke('update:state'),
+    check: invoke('update:check'),
+    download: invoke('update:download'),
+    install: invoke('update:install'),
+    onState: listen('update:state'),
+  },
+
+  discord: {
+    setActivity: send('discord:activity'),
+    status: invoke('discord:status'),
+    test: invoke('discord:test'),
+    onStatus: listen('discord:status'),
   },
 
   stats: {
@@ -94,6 +110,7 @@ contextBridge.exposeInMainWorld('control', {
   downloads: {
     list: invoke('dl:list'),
     info: invoke('dl:info'),
+    search: invoke('dl:search'),
     add: invoke('dl:add'),
     cancel: send('dl:cancel'),
     retry: send('dl:retry'),

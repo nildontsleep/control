@@ -15,6 +15,19 @@ const num = (v) => {
   return Number.isFinite(n) ? n : null;
 };
 
+/** Titre lisible tiré de l'adresse (« …/sets/city-ports » → « City ports ») quand yt-dlp n'en donne pas. */
+function titleFromUrl(url) {
+  try {
+    const last = decodeURIComponent(new URL(url).pathname.split('/').filter(Boolean).pop() || '');
+    const words = last.replace(/[-_]+/g, ' ').trim();
+    return words ? words.charAt(0).toUpperCase() + words.slice(1) : null;
+  } catch {
+    return null;
+  }
+}
+
+const SEARCH_PREFIX = { youtube: 'ytsearch', soundcloud: 'scsearch' };
+
 function isMix(url) {
   // Les « mix » YouTube (list=RD…) sont infinis : on ne télécharge que la vidéo.
   return /[?&]list=RD/.test(url);
@@ -88,13 +101,17 @@ class Downloads {
         uploader: data.uploader || data.channel || null,
         count: data.playlist_count || entries.length,
         thumbnail: thumb(data) || thumb(entries[0] || {}),
-        entries: entries.slice(0, 60).map((e) => ({ title: e.title, duration: e.duration, uploader: e.uploader || e.channel })),
+        entries: entries.slice(0, 60).map((e) => ({
+          title: e.title || titleFromUrl(e.url || e.webpage_url || ''),
+          duration: e.duration || null,
+          uploader: e.uploader || e.channel || null,
+        })),
         music: entries.some((e) => e.artist) || /Topic$/.test(entries[0]?.uploader || entries[0]?.channel || ''),
       };
     }
     return {
       type: 'video',
-      title: data.track || data.title,
+      title: data.track || data.title || titleFromUrl(url),
       uploader: data.artist || data.uploader || data.channel || null,
       duration: data.duration || null,
       thumbnail: thumb(data),
@@ -102,12 +119,37 @@ class Downloads {
     };
   }
 
+  // ─── Recherche (YouTube, SoundCloud) ───────────────────────────────────────
+  async search(source, query, limit = 12) {
+    const ytdlp = this.tools.path('ytdlp');
+    if (!ytdlp) throw new Error('yt-dlp n’est pas installé.');
+    const prefix = SEARCH_PREFIX[source];
+    const text = String(query || '').replace(/\s+/g, ' ').trim().slice(0, 200);
+    if (!prefix || !text) return [];
+    const args = ['-J', '--flat-playlist', '--no-warnings', '--encoding', 'utf-8', '--ignore-config'];
+    const cookies = this.store.get('dl', {})?.cookies;
+    if (cookies && source === 'youtube') args.push('--cookies-from-browser', cookies);
+    args.push('--', `${prefix}${Math.max(1, Math.min(25, limit))}:${text}`);
+    const data = JSON.parse(await run(ytdlp, args, { timeout: 60000, env: this.tools.env() }));
+    return (data.entries || []).filter(Boolean).map((e) => {
+      const url = e.webpage_url || e.url;
+      return {
+        title: e.title || titleFromUrl(url || ''),
+        uploader: e.uploader || e.channel || e.artist || null,
+        duration: e.duration || null,
+        thumbnail: e.thumbnail || e.thumbnails?.filter((t) => t.url).pop()?.url || null,
+        url,
+        source,
+      };
+    }).filter((r) => r.url && /^https?:\/\//.test(r.url));
+  }
+
   // ─── File ──────────────────────────────────────────────────────────────────
   add(opts) {
     const job = {
       id: ++this.seq,
       url: opts.url,
-      title: opts.title || opts.url,
+      title: opts.title || titleFromUrl(opts.url) || opts.url,
       thumbnail: opts.thumbnail || null,
       isPlaylist: !!opts.isPlaylist,
       kind: opts.kind === 'video' ? 'video' : 'audio',

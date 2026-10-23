@@ -4,7 +4,7 @@
 .tabs {
   display: inline-flex;
   padding: 3px;
-  border-radius: 10px;
+  border-radius: calc(10px * var(--rk, 1));
   background: var(--fill);
   box-shadow: inset 0 0 0 0.5px var(--group-border);
 }
@@ -12,7 +12,7 @@
 .tab {
   height: 26px;
   padding: 0 15px;
-  border-radius: 8px;
+  border-radius: calc(8px * var(--rk, 1));
   font-size: 12.5px;
   font-weight: 580;
   color: var(--text-2);
@@ -151,7 +151,7 @@
 .pcard {
   width: 168px;
   min-width: 0;
-  border-radius: 14px;
+  border-radius: calc(14px * var(--rk, 1));
   outline: none;
 }
 
@@ -167,7 +167,7 @@
 .pcard-art {
   position: relative;
   aspect-ratio: 2 / 3;
-  border-radius: 12px;
+  border-radius: calc(12px * var(--rk, 1));
   overflow: hidden;
   background: var(--fill);
   box-shadow: 0 10px 26px rgb(0 0 0 / 0.3), 0 0 0 0.5px rgb(255 255 255 / 0.1);
@@ -278,14 +278,14 @@
 
 .rcard {
   width: 300px;
-  border-radius: 14px;
+  border-radius: calc(14px * var(--rk, 1));
   outline: none;
 }
 
 .rcard-art {
   position: relative;
   aspect-ratio: 16 / 9;
-  border-radius: 12px;
+  border-radius: calc(12px * var(--rk, 1));
   overflow: hidden;
   background: var(--fill);
   box-shadow: 0 10px 26px rgb(0 0 0 / 0.3), 0 0 0 0.5px rgb(255 255 255 / 0.1);
@@ -354,7 +354,7 @@
   position: relative;
   height: clamp(300px, 44vh, 440px);
   margin: 0 0 12px;
-  border-radius: 24px;
+  border-radius: calc(24px * var(--rk, 1));
   overflow: hidden;
   color: #fff;
   background: #111;
@@ -487,7 +487,7 @@
 /* ─── États ─────────────────────────────────────────────────────────────── */
 .sk {
   color: transparent !important;
-  border-radius: 8px;
+  border-radius: calc(8px * var(--rk, 1));
   background: linear-gradient(90deg, var(--fill) 25%, var(--fill-hover) 50%, var(--fill) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s linear infinite;
@@ -523,7 +523,7 @@
   max-width: 760px;
   margin: 24px auto 0;
   padding: 24px;
-  border-radius: 22px;
+  border-radius: calc(22px * var(--rk, 1));
   background: linear-gradient(135deg, rgb(var(--accent-rgb) / 0.2), rgb(var(--accent-rgb) / 0.05));
   box-shadow: inset 0 0 0 0.5px rgb(var(--accent-rgb) / 0.35);
 }
@@ -534,7 +534,7 @@
   flex: none;
   display: grid;
   place-items: center;
-  border-radius: 16px;
+  border-radius: calc(16px * var(--rk, 1));
   color: var(--on-accent);
   background: var(--accent);
   box-shadow: 0 10px 26px rgb(var(--accent-rgb) / 0.4);
@@ -600,7 +600,7 @@
   gap: 10px;
   margin: 24px 0;
   padding: 12px 16px;
-  border-radius: 14px;
+  border-radius: calc(14px * var(--rk, 1));
   color: var(--text-2);
   background: var(--fill);
 }
@@ -616,7 +616,7 @@
   gap: 14px;
 }
 
-.td-sk-hero { height: 420px; border-radius: 24px; }
+.td-sk-hero { height: 420px; border-radius: calc(24px * var(--rk, 1)); }
 .td-sk-line { height: 18px; width: 60%; }
 .td-sk-line.short { width: 35%; }
 
@@ -627,7 +627,7 @@
   position: relative;
   min-height: 440px;
   display: flex;
-  border-radius: 24px;
+  border-radius: calc(24px * var(--rk, 1));
   overflow: hidden;
   color: #fff;
   background: #111;
@@ -661,7 +661,7 @@
   width: 200px;
   aspect-ratio: 2 / 3;
   flex: none;
-  border-radius: 14px;
+  border-radius: calc(14px * var(--rk, 1));
   overflow: hidden;
   background: rgb(255 255 255 / 0.1);
   box-shadow: 0 24px 50px rgb(0 0 0 / 0.55), 0 0 0 0.5px rgb(255 255 255 / 0.2);
@@ -716,7 +716,7 @@
 
 .td-meta .badge {
   padding: 1px 7px;
-  border-radius: 5px;
+  border-radius: calc(5px * var(--rk, 1));
   font-size: 11.5px;
   font-weight: 700;
   box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.5);
@@ -778,7 +778,7 @@
   height: 46px;
   padding: 0 22px 0 18px;
   gap: 10px;
-  border-radius: 12px;
+  border-radius: calc(12px * var(--rk, 1));
   font-size: 14.5px;
   font-weight: 650;
 }
@@ -822,7 +822,7 @@
 .seg-mini {
   display: inline-flex;
   padding: 2px;
-  border-radius: 9px;
+  border-radius: calc(9px * var(--rk, 1));
   background: rgb(255 255 255 / 0.16);
   -webkit-backdrop-filter: blur(12px);
   backdrop-filter: blur(12px);
@@ -835,7 +835,7 @@
 .seg-mini button {
   height: 28px;
   padding: 0 12px;
-  border-radius: 7px;
+  border-radius: calc(7px * var(--rk, 1));
   font-size: 12.5px;
   font-weight: 560;
   color: rgb(255 255 255 / 0.75);
@@ -883,7 +883,7 @@
   gap: 18px;
   align-items: start;
   padding: 10px 12px;
-  border-radius: 14px;
+  border-radius: calc(14px * var(--rk, 1));
   text-align: left;
   transition: background-color 0.15s;
 }
@@ -895,7 +895,7 @@
 .ep-art {
   position: relative;
   aspect-ratio: 16 / 9;
-  border-radius: 10px;
+  border-radius: calc(10px * var(--rk, 1));
   overflow: hidden;
   display: grid;
   place-items: center;
@@ -1047,7 +1047,7 @@
   position: relative;
   width: 100%;
   aspect-ratio: 16 / 9;
-  border-radius: 18px;
+  border-radius: calc(18px * var(--rk, 1));
   overflow: hidden;
   background: #000;
   box-shadow: 0 30px 80px rgb(0 0 0 / 0.5), 0 0 0 0.5px rgb(255 255 255 / 0.12);
@@ -1143,7 +1143,7 @@
   align-items: center;
   gap: 14px;
   padding: 8px 10px;
-  border-radius: 12px;
+  border-radius: calc(12px * var(--rk, 1));
   outline: none;
   transition: background-color 0.15s;
 }
@@ -1156,7 +1156,7 @@
 .hist-art {
   width: 44px;
   aspect-ratio: 2 / 3;
-  border-radius: 6px;
+  border-radius: calc(6px * var(--rk, 1));
   overflow: hidden;
   background: var(--fill-strong);
 }

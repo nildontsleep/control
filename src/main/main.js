@@ -15,6 +15,8 @@ const { Downloads } = require('./downloads');
 const { Tags } = require('./tags');
 const { Stats } = require('./stats');
 const { Lyrics } = require('./lyrics');
+const { DiscordPresence } = require('./discord');
+const { Updater } = require('./updater');
 const { MediaService, frameOrigins, imageOrigins } = require('./media');
 
 // ─── Mode portable : les données restent à côté de l'exécutable ──────────────
@@ -44,6 +46,8 @@ let media;
 let tags;
 let stats;
 let lyrics;
+let discord;
+let updater;
 let mainWin = null;
 let quitting = false;
 let boundsTimer = null;
@@ -122,7 +126,31 @@ function createWindow() {
   else opts.center = true;
 
   mainWin = new BrowserWindow(opts);
-  mainWin.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+  // Au premier clic, le lecteur vidrift vérifie qu'il peut ouvrir une fenêtre (c'est ainsi qu'il détecte un iframe
+  // « sandboxé ») et affiche « Remove sandboxing » si window.open() échoue. On accepte donc cette fenêtre blanche, mais
+  // cachée, sans réseau et refermée aussitôt : toute vraie page (publicité…) reste refusée.
+  mainWin.webContents.setWindowOpenHandler(({ url }) => {
+    if (url !== 'about:blank') return { action: 'deny' };
+    return {
+      action: 'allow',
+      overrideBrowserWindowOptions: {
+        show: false,
+        width: 1,
+        height: 1,
+        skipTaskbar: true,
+        focusable: false,
+        frame: false,
+        webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false },
+      },
+    };
+  });
+  mainWin.webContents.on('did-create-window', (probe) => {
+    probe.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+    for (const ev of ['will-navigate', 'will-redirect']) probe.webContents.on(ev, (e) => e.preventDefault());
+    // Le lecteur la ferme lui-même ; filet de sécurité s'il ne le faisait pas.
+    const timer = setTimeout(() => { if (!probe.isDestroyed()) probe.destroy(); }, 4000);
+    probe.once('closed', () => clearTimeout(timer));
+  });
   mainWin.webContents.on('will-navigate', (e, url) => {
     if (!url.startsWith('app://nilcam/')) e.preventDefault();
   });
@@ -257,11 +285,38 @@ function setupPermissions() {
 }
 
 // ─── IPC ─────────────────────────────────────────────────────────────────────
+function configureDiscord() {
+  const d = store.get('discord', {}) || {};
+  discord.configure({ enabled: d.enabled !== false, clientId: d.clientId });
+}
+
+/** Adresse vers laquelle `url` redirige, sans la suivre (null si la réponse est directe). */
+function redirectTarget(url, headers) {
+  return new Promise((resolve, reject) => {
+    const req = net.request({ url, headers, redirect: 'manual' });
+    const timer = setTimeout(() => { req.abort(); reject(new Error('timeout')); }, 15000);
+    req.on('redirect', (_status, _method, location) => { clearTimeout(timer); req.abort(); resolve(location); });
+    req.on('response', (res) => { clearTimeout(timer); res.on('data', () => {}); req.abort(); resolve(null); });
+    req.on('error', (err) => { clearTimeout(timer); reject(err); });
+    req.end();
+  });
+}
+
+/** Cherche une mise à jour peu après le lancement, puis toutes les 6 heures (si l'option est active). */
+function scheduleUpdateChecks() {
+  const run = () => {
+    if ((store.get('update', {}) || {}).auto !== false) updater.check();
+  };
+  setTimeout(run, 12000).unref?.();
+  setInterval(run, 6 * 3600 * 1000).unref?.();
+}
+
 function applySettingEffects(patch) {
   if ('libraryFolders' in patch || 'downloadDir' in patch) {
     setupWatchers();
     library.scan(scanRoots());
   }
+  if ('discord' in patch) configureDiscord();
 }
 
 function setupIpc() {
@@ -279,7 +334,17 @@ function setupIpc() {
     store.reset();
     broadcast('settings:reset', null);
     setupWatchers();
+    configureDiscord();
   });
+
+  handle('update:state', () => updater.status);
+  handle('update:check', () => updater.check({ manual: true }));
+  handle('update:download', () => updater.download());
+  handle('update:install', () => updater.install());
+
+  ipcMain.on('discord:activity', (_e, activity) => discord.setActivity(activity));
+  handle('discord:status', () => discord.status);
+  handle('discord:test', () => discord.test());
 
   ipcMain.on('win:close', (e) => winOf(e)?.close());
   ipcMain.on('win:minimize', (e) => winOf(e)?.minimize());
@@ -343,7 +408,7 @@ function setupIpc() {
     try {
       return { ok: true, data: await fn(id, ...rest) };
     } catch (err) {
-      return { ok: false, message: String(err?.message || err), network: /fetch|network|timeout|abort|LRCLIB/i.test(String(err)) };
+      return { ok: false, message: String(err?.message || err), code: err?.code || null };
     }
   };
   handle('lyrics:get', lyr((id, refresh) => lyrics.get(id, { refresh: !!refresh })));
@@ -451,6 +516,13 @@ function setupIpc() {
     }
   });
   handle('dl:add', (e, opts) => downloads.add(opts));
+  handle('dl:search', async (e, source, query) => {
+    try {
+      return { ok: true, results: await downloads.search(String(source || ''), String(query || '')) };
+    } catch (err) {
+      return { ok: false, error: String(err?.message || err) };
+    }
+  });
   ipcMain.on('dl:cancel', (e, id) => downloads.cancel(id));
   ipcMain.on('dl:retry', (e, id) => downloads.retry(id));
   ipcMain.on('dl:remove', (e, id) => downloads.remove(id));
@@ -511,6 +583,20 @@ app.whenReady().then(() => {
   downloads = new Downloads({ tools, library, store, file: path.join(userData, 'downloads.json'), emit: broadcast });
   downloads.defaultDir = defaultDownloadDir();
   media = new MediaService({ db, store, emit: broadcast });
+  discord = new DiscordPresence();
+  discord.on('status', (status) => broadcast('discord:status', status));
+  updater = new Updater({
+    version: app.getVersion(),
+    portable: !!PORTABLE_DIR,
+    portableFile: process.env.PORTABLE_EXECUTABLE_FILE,
+    dir: path.join(userData, 'updates'),
+    fetch: (...args) => net.fetch(...args),
+    token: () => (store.get('update', {}) || {}).token || '',
+    redirect: redirectTarget,
+    quit: () => { quitting = true; app.quit(); },
+  });
+  updater.on('state', (state) => broadcast('update:state', state));
+  updater.cleanup();
 
   Menu.setApplicationMenu(null);
   registerProtocol();
@@ -518,6 +604,8 @@ app.whenReady().then(() => {
   setupIpc();
   media.register(ipcMain);
   createWindow();
+  configureDiscord();
+  scheduleUpdateChecks();
 
   library.scan(scanRoots());
   setupWatchers();
@@ -535,6 +623,7 @@ app.whenReady().then(() => {
 app.on('before-quit', () => {
   quitting = true;
   downloads?.killAll();
+  discord?.shutdown();
   store?.flush();
 });
 

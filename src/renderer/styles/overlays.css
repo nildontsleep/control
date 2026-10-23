@@ -14,7 +14,7 @@
   align-items: center;
   gap: 8px;
   padding: 8px 15px 8px 12px;
-  border-radius: 14px;
+  border-radius: calc(14px * var(--rk, 1));
   white-space: nowrap;
   font-weight: 550;
   color: var(--text);
@@ -45,7 +45,7 @@
   align-items: center;
   gap: 8px;
   padding: 4px 8px;
-  border-radius: 7px;
+  border-radius: calc(7px * var(--rk, 1));
   font-size: 11.5px;
   white-space: nowrap;
   color: var(--text);
@@ -86,7 +86,7 @@
   z-index: 100;
   min-width: 170px;
   padding: 5px;
-  border-radius: 10px;
+  border-radius: calc(10px * var(--rk, 1));
   color: var(--text);
   background: var(--menu);
   -webkit-backdrop-filter: blur(34px) saturate(1.9);
@@ -116,7 +116,7 @@
   align-items: center;
   gap: 6px;
   padding: 0 12px 0 8px;
-  border-radius: 5px;
+  border-radius: calc(5px * var(--rk, 1));
   text-align: left;
   font-size: 13px;
   white-space: nowrap;

@@ -4,8 +4,8 @@
 
 <h1 align="center">control</h1>
 
-<p align="center">Lecteur musique et vidéo pour Windows : téléchargements yt-dlp, éditeur de tags, paroles synchronisées, statistiques d’écoute, films, séries et animés.<br>
-Un design façon macOS : verre dépoli, pochettes qui teintent la fenêtre, animations à ressort.</p>
+<p align="center">Lecteur musique et vidéo pour Windows : téléchargements yt-dlp (YouTube, SoundCloud…), éditeur de tags, paroles synchronisées, statistiques d’écoute, films, séries et animés, Discord Rich Presence.<br>
+Un design façon macOS : verre dépoli, pochettes qui teintent la fenêtre, animations à ressort, et des ambiances en un clic.</p>
 
 <p align="center">
   <img src="docs/songs.jpg" width="49%" alt="Morceaux">
@@ -47,6 +47,7 @@ L’exécutable n’est pas signé : au premier lancement, SmartScreen peut affi
 - Touches multimédia du clavier et panneau multimédia de Windows (pochette, titre, position).
 - Reprise de la session au lancement (file d’attente, morceau, position).
 - Écran **À l’écoute** plein fenêtre sur fond de pochette floutée ; la vidéo y passe en grand, avec une interface qui se masque d’elle-même.
+- **Vraie barre de contrôle pour les vidéos** : barre de progression, ±10 s, précédent / suivant, volume, vitesse, image dans l’image et **plein écran** (`F`, `Échap` pour en sortir).
 
 **Bibliothèque**
 - Analyse incrémentale (rescan quasi instantané), tags et pochettes lus dans les fichiers, ou `cover.jpg` / `folder.jpg` du dossier.
@@ -64,7 +65,7 @@ L’exécutable n’est pas signé : au premier lancement, SmartScreen peut affi
 - Temps d’écoute, lectures, morceaux et artistes différents, série de jours d’écoute, sur 7 jours, 30 jours, l’année ou tout l’historique.
 - Histogramme des jours, calendrier de l’année, heures et jours de la semaine préférés, tops des morceaux, artistes, albums et genres (un clic lance la lecture ou ouvre la page).
 - Films, séries et animés : temps de visionnage, titres les plus regardés, genres.
-- **Récap annuel** façon « Wrapped » : une suite de cartes plein écran, avec une image à enregistrer pour la partager.
+- **Récap** façon « Wrapped » : une suite de cartes plein écran, avec une image à enregistrer pour la partager. Un par année **et un par mois** (menu *Récap* de la page, ou la notification qui apparaît en début de mois).
 
 <p align="center">
   <img src="docs/tags.jpg" width="49%" alt="Éditeur de tags">
@@ -79,7 +80,8 @@ L’exécutable n’est pas signé : au premier lancement, SmartScreen peut affi
 - Import et export M3U / M3U8.
 
 **Téléchargements (yt-dlp)**
-- Colle un lien YouTube, SoundCloud, Bandcamp… (vidéo ou playlist) : l’appli l’analyse et affiche titre, durée et vignette.
+- Colle un lien YouTube, SoundCloud, Bandcamp… (vidéo, morceau, playlist ou « set ») : l’appli l’analyse et affiche titre, durée et vignette.
+- **Recherche sans lien** : tape un titre ou un artiste, choisis *SoundCloud* ou *YouTube*, et télécharge directement un résultat.
 - Audio MP3 (128–320 kb/s), M4A, Opus, FLAC ou original ; vidéo MP4 de 480p jusqu’à la 4K.
 - Titre, artiste et pochette intégrés au fichier ; « Artiste - Titre » découpé automatiquement, et les « (Official Video) », « [Lyrics] » retirés du titre.
 - File avec progression, vitesse, temps restant, annulation et nouvel essai ; les playlists créent une playlist dans l’appli.
@@ -93,10 +95,25 @@ L’exécutable n’est pas signé : au premier lancement, SmartScreen peut affi
 - **Continuer à regarder**, historique, **Ma liste**, et recherche en ligne dans la barre de gauche (elle cherche aussi bien dans ta bibliothèque que dans les catalogues).
 - Métadonnées : [TMDB](https://www.themoviedb.org) pour les films et séries (clé gratuite à coller dans les réglages), [AniList](https://anilist.co) pour les animés (aucune clé). Les catalogues sont mis en cache et restent consultables quelques heures sans réseau.
 
-**Apparence**
-- Thème clair, sombre ou automatique, 8 couleurs d’accentuation macOS et une couleur libre.
-- Le fond prend les couleurs de la pochette en cours (désactivable), listes compactes, animations désactivables.
+**Apparence** (*Réglages* → *Apparence*)
+- Par défaut, control garde son look d’origine (verre dépoli, pochettes qui teintent la fenêtre). Les ambiances sont là si tu veux autre chose.
+- **12 ambiances** en un clic : *control* (l’apparence d’origine), Ember, Midnight, Forêt, Ocean, Iris, Sakura, Gold, Blood Moon, Snowfall, Cyberpunk, Monochrome. Tu peux **enregistrer la tienne** à partir de l’apparence actuelle, et revenir à *control* d’un clic.
+- Thème clair, sombre, automatique ou **OLED** (noir profond, profondeur réglable), 8 couleurs d’accentuation macOS et une couleur libre.
+- **16 fonds animés** (braises, étoiles, lucioles, ondes, nébuleuse, pluie, plasma, météores, neige, hyperespace, grille, bulles, constellation, brume, aurore) : vitesse et flou réglables ; ils se mettent en pause quand la fenêtre est inactive ou que les animations sont coupées.
+- Arrondi des coins, translucidité et taille de l’interface réglables ; listes compactes ; animations désactivables.
 - Interface en français ou en anglais.
+
+<p align="center">
+  <img src="docs/appearance.jpg" width="49%" alt="Ambiances">
+</p>
+
+**Discord Rich Presence** (*Réglages* → *Général* → *Discord*)
+- Affiche sur ton profil « Écoute control » (titre, artiste, pochette, barre de progression) ou « Regarde control » (vidéo, film, série, épisode, affiche), avec une pastille lecture / pause.
+- Activable séparément pour la musique, les vidéos et le streaming ; option **Masquer les titres** pour ne montrer que « Écoute de la musique ». Une pause de plus de 10 minutes efface la présence.
+- Demande l’application Discord de bureau ouverte. Mise en place de l’application Discord et des images : [docs/discord-assets](docs/discord-assets/README.md).
+
+**Mises à jour** (*Réglages* → *À propos*)
+- control cherche tout seul une nouvelle version (au lancement puis toutes les 6 h) et le dit par une notification et une pastille sur *Réglages*. Un clic sur *Mettre à jour et redémarrer* télécharge la version, **vérifie son empreinte SHA-256**, l’installe et relance l’application — installateur ou portable, selon l’édition en cours.
 
 <p align="center">
   <img src="docs/playlist.jpg" width="49%" alt="Playlist">
@@ -149,7 +166,9 @@ src/main/           processus principal : fenêtre, protocole app://, SQLite, sc
   downloads.js      file de téléchargements et analyse des liens
   tags.js           lecture et écriture des tags (node-taglib-sharp), pochettes, renommage, annulation
   stats.js          statistiques d’écoute et de visionnage (requêtes SQL à la demande)
-  lyrics.js         paroles : .lrc voisin, tags du fichier, LRCLIB, cache
+  lyrics.js         paroles : .lrc voisin, tags du fichier, LRCLIB (avec nouvel essai), cache
+  discord.js        Rich Presence : canal local de Discord, mises à jour limitées, recherche de pochette
+  updater.js        mise à jour : release GitHub, téléchargement vérifié (SHA-256), installation
   media/            films, séries, animés : TMDB, AniList, cache, progression, ma liste
 src/renderer/       interface (modules ES, sans framework ni bundler)
   js/player.js      moteur de lecture : file, égaliseur, MediaSession, comptage d’écoutes
@@ -157,6 +176,9 @@ src/renderer/       interface (modules ES, sans framework ni bundler)
   js/ui/            liste virtualisée, barre de lecture, « À l’écoute », menus, feuilles, éditeur de tags, paroles, récap
   js/tags/          motifs façon mp3tag (%artist% - %title%), casse, remplacement
   js/lyrics/        lecture du format LRC
+  js/theme/         ambiances, fonds animés (canvas), application du thème (OLED, arrondi, translucidité)
+  js/discord/       description de la lecture en cours pour la Rich Presence
+  js/update/        état de la mise à jour partagé entre notification, barre latérale et réglages
   js/views/         Morceaux, Albums, Artistes, Vidéos, Playlist, Recherche, Téléchargements,
                     Films & séries, Animés, fiche, lecture, Ma liste, Statistiques
   js/media/         accès aux catalogues, cartes et rangées, adresse du lecteur vidrift
@@ -173,6 +195,9 @@ Le design (jetons de couleur, contrôles, menus, info-bulles) est repris de [nil
 - Les captures d’écran du dépôt utilisent un catalogue fictif et une bibliothèque de test : aucune affiche ni pochette réelle n’y figure.
 - L’éditeur de tags modifie tes fichiers sur place. Il garde de quoi annuler le dernier lot, mais fais une copie de ta musique avant un gros travail par lot.
 - Les paroles sont cherchées avec le titre, l’artiste, l’album et la durée du morceau ; rien d’autre n’est envoyé. Les pochettes sont proposées par les API publiques d’Apple Music et de Deezer.
+- Discord : control parle au Discord installé sur l’ordinateur, sans compte ni jeton. Avec l’option *Pochettes*, l’artiste et l’album du morceau en cours sont envoyés à Apple Music pour trouver la pochette ; désactivée, c’est le logo de control qui s’affiche.
+- Mises à jour : le dépôt GitHub est interrogé pour connaître la dernière version, rien d’autre n’est envoyé. Si le dépôt est **privé**, GitHub refuse la requête sans identifiant : colle alors dans *Réglages* → *À propos* un jeton GitHub en lecture seule (*Contents : Read*), qui reste sur ton ordinateur — ou rends le dépôt public.
+- Certains lecteurs vidéo vérifient qu’ils peuvent ouvrir une fenêtre : control en autorise une, invisible, vide et sans accès au reste de l’application, pour que le lecteur vidrift démarre.
 - Les données (bibliothèque SQLite, réglages, pochettes, outils) sont dans `%APPDATA%\control` (installé) ou dans `control data` à côté de l’exe (portable).
 
 Icônes [Lucide](https://lucide.dev) et police [Inter](https://rsms.me/inter) : voir [THIRD-PARTY.md](THIRD-PARTY.md).

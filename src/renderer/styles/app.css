@@ -3,15 +3,15 @@
 :root {
   --bg: #0d0d10;
   --sidebar-w: 252px;
-  --sidebar-bg: rgb(30 30 36 / 0.62);
-  --bar-bg: rgb(36 36 42 / 0.66);
+  --sidebar-bg: rgb(30 30 36 / calc(0.62 * var(--tl, 1)));
+  --bar-bg: rgb(36 36 42 / calc(0.66 * var(--tl, 1)));
   --veil: rgb(13 13 16 / 0.55);
 }
 
 :root[data-theme='light'] {
   --bg: #f3f3f6;
-  --sidebar-bg: rgb(236 236 242 / 0.7);
-  --bar-bg: rgb(250 250 252 / 0.74);
+  --sidebar-bg: rgb(236 236 242 / calc(0.7 * var(--tl, 1)));
+  --bar-bg: rgb(250 250 252 / calc(0.74 * var(--tl, 1)));
   --veil: rgb(243 243 246 / 0.5);
 }
 
@@ -67,6 +67,26 @@
   display: none;
 }
 
+/* Fond animé (ambiances) : derrière la barre latérale et le contenu, qui le laissent voir par transparence. */
+.scene {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  opacity: 0;
+  filter: blur(var(--scene-blur, 0px));
+  transition: opacity 0.9s var(--out);
+}
+
+.scene.on {
+  opacity: 1;
+}
+
+:root[data-theme='light'] .scene.on {
+  opacity: 0.8;
+}
+
 .no-cursor,
 .no-cursor * {
   cursor: none !important;
@@ -115,7 +135,7 @@
   height: 30px;
   padding: 0 28px 0 28px;
   border: 0;
-  border-radius: 8px;
+  border-radius: calc(8px * var(--rk, 1));
   outline: none;
   font: inherit;
   font-size: 13px;
@@ -197,7 +217,7 @@
   align-items: center;
   gap: 10px;
   padding: 0 10px;
-  border-radius: 9px;
+  border-radius: calc(9px * var(--rk, 1));
   text-align: left;
   font-size: 13.5px;
   font-weight: 500;
@@ -263,7 +283,7 @@
   gap: 8px;
   margin: 0 12px 6px;
   padding: 8px 10px;
-  border-radius: 10px;
+  border-radius: calc(10px * var(--rk, 1));
   font-size: 12px;
   color: var(--text-2);
   background: var(--fill);
@@ -305,7 +325,7 @@
   height: 30px;
   display: grid;
   place-items: center;
-  border-radius: 9px;
+  border-radius: calc(9px * var(--rk, 1));
   color: var(--text-2);
   transition: background-color 0.15s, color 0.15s, opacity 0.2s;
 }
@@ -383,7 +403,7 @@
   max-height: calc(100vh - 64px);
   display: flex;
   flex-direction: column;
-  border-radius: 18px;
+  border-radius: calc(18px * var(--rk, 1));
   color: var(--text);
   background: var(--menu);
   -webkit-backdrop-filter: blur(50px) saturate(1.9);
@@ -451,7 +471,7 @@
   height: 34px;
   padding: 0 11px;
   border: 0;
-  border-radius: 9px;
+  border-radius: calc(9px * var(--rk, 1));
   outline: none;
   font: inherit;
   color: var(--text);
@@ -548,7 +568,7 @@
   align-items: center;
   gap: 6px;
   padding: 44px 64px;
-  border-radius: 24px;
+  border-radius: calc(24px * var(--rk, 1));
   border: 2px dashed rgb(var(--accent-rgb) / 0.8);
   background: rgb(var(--accent-rgb) / 0.12);
   color: #fff;
@@ -572,7 +592,7 @@
   align-items: center;
   gap: 8px;
   padding: 7px 12px;
-  border-radius: 10px;
+  border-radius: calc(10px * var(--rk, 1));
   font-size: 13px;
   color: #fff;
   background: var(--accent);
@@ -646,7 +666,7 @@
   top: 1px;
   width: 3px;
   height: 8px;
-  border-radius: 2px;
+  border-radius: calc(2px * var(--rk, 1));
   background: currentColor;
   transform-origin: 1.5px 13px;
   transform: rotate(calc(var(--i) * 30deg));

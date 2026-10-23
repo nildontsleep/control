@@ -13,7 +13,7 @@
   align-items: center;
   gap: 18px;
   padding: 0 18px 0 15px;
-  border-radius: 24px;
+  border-radius: calc(24px * var(--rk, 1));
   background: var(--bar-bg);
   -webkit-backdrop-filter: blur(44px) saturate(1.9);
   backdrop-filter: blur(44px) saturate(1.9);
@@ -41,7 +41,7 @@ body.np-open .playerbar {
   width: 52px;
   height: 52px;
   flex: none;
-  border-radius: 10px;
+  border-radius: calc(10px * var(--rk, 1));
   overflow: hidden;
   box-shadow: 0 6px 16px rgb(0 0 0 / 0.35), 0 0 0 0.5px rgb(255 255 255 / 0.12);
   transition: transform 0.4s var(--spring);
@@ -110,7 +110,7 @@ body.np-open .playerbar {
   height: 34px;
   display: grid;
   place-items: center;
-  border-radius: 10px;
+  border-radius: calc(10px * var(--rk, 1));
   color: var(--text-2);
   transition: color 0.15s, background-color 0.15s, transform 0.3s var(--spring);
 }
@@ -307,7 +307,7 @@ body.np-open .playerbar {
   height: 30px;
   display: grid;
   place-items: center;
-  border-radius: 9px;
+  border-radius: calc(9px * var(--rk, 1));
   color: var(--text-2);
   transition: background-color 0.15s, color 0.15s;
 }
@@ -366,7 +366,7 @@ body.np-open .playerbar {
 }
 
 .np-art .cover {
-  border-radius: 18px;
+  border-radius: calc(18px * var(--rk, 1));
   box-shadow: 0 40px 90px rgb(0 0 0 / 0.55), 0 0 0 0.5px rgb(255 255 255 / 0.12);
   transition: transform 0.7s var(--spring), box-shadow 0.7s;
 }
@@ -383,7 +383,7 @@ body.np-open .playerbar {
   width: 100%;
   height: 100%;
   object-fit: contain;
-  border-radius: 14px;
+  border-radius: calc(14px * var(--rk, 1));
   background: #000;
   box-shadow: 0 40px 90px rgb(0 0 0 / 0.55);
 }
@@ -569,7 +569,7 @@ body.np-open .playerbar {
   min-height: 0;
   display: flex;
   flex-direction: column;
-  border-radius: 22px;
+  border-radius: calc(22px * var(--rk, 1));
   overflow: hidden;
   background: rgb(255 255 255 / 0.07);
   -webkit-backdrop-filter: blur(36px) saturate(1.5);
@@ -663,7 +663,7 @@ body.np-open .playerbar {
 
 .eq-slider::-webkit-slider-runnable-track {
   width: 4px;
-  border-radius: 2px;
+  border-radius: calc(2px * var(--rk, 1));
   background: var(--control);
 }
 
@@ -760,7 +760,7 @@ body.np-open .playerbar {
   display: block;
   width: 100%;
   padding: 9px 12px;
-  border-radius: 14px;
+  border-radius: calc(14px * var(--rk, 1));
   text-align: left;
   font-size: clamp(20px, 2.7vh, 28px);
   font-weight: 730;
@@ -875,7 +875,7 @@ body.np-open .playerbar {
   width: 64px;
   height: 64px;
   margin-bottom: 8px;
-  border-radius: 20px;
+  border-radius: calc(20px * var(--rk, 1));
   background: rgb(255 255 255 / 0.1);
 }
 
@@ -900,4 +900,243 @@ body.np-open .playerbar {
   line-height: 1.45;
   font-family: inherit;
   resize: vertical;
+}
+
+/* ─── Vidéo : barre de lecture sur l'image ────────────────────────────────── */
+.vbar,
+.vtop {
+  display: none;
+}
+
+.np.has-video {
+  --np-w: calc((100vh - 210px) * 16 / 9);
+}
+
+/* La barre sur l'image remplace la progression et les commandes du bas. */
+.np.has-video .np-seek,
+.np.has-video .np-controls {
+  display: none;
+}
+
+.np.has-video .vbar {
+  display: flex;
+}
+
+.vbar {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: 14px;
+  z-index: 3;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 16px 8px;
+  border-radius: calc(20px * var(--rk, 1));
+  color: #fff;
+  background: rgb(18 18 22 / 0.62);
+  -webkit-backdrop-filter: blur(30px) saturate(1.7);
+  backdrop-filter: blur(30px) saturate(1.7);
+  border: 0.5px solid rgb(255 255 255 / 0.14);
+  box-shadow: 0 12px 40px rgb(0 0 0 / 0.45);
+  transition: opacity 0.35s var(--out), transform 0.5s var(--spring);
+}
+
+.vbar-seek {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.vbar-seek .slider {
+  flex: 1;
+}
+
+.vtime {
+  min-width: 44px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: rgb(255 255 255 / 0.75);
+}
+
+.vtime.right {
+  text-align: right;
+}
+
+.vbar-row {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 8px;
+}
+
+.vbar-side,
+.vbar-main {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.vbar-side.end {
+  justify-content: flex-end;
+}
+
+.vbtn {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 34px;
+  border-radius: calc(10px * var(--rk, 1));
+  color: #fff;
+  transition: background-color 0.15s, transform 0.3s var(--spring);
+}
+
+.vbtn:hover {
+  background: rgb(255 255 255 / 0.16);
+}
+
+.vbtn:active {
+  transform: scale(0.9);
+}
+
+.vbtn .skip-n {
+  position: absolute;
+  margin-top: 1px;
+  font-size: 7.5px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  pointer-events: none;
+}
+
+.vplay {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  margin: 0 4px;
+  border-radius: 50%;
+  color: #111;
+  background: #fff;
+  box-shadow: 0 4px 14px rgb(0 0 0 / 0.35);
+  transition: transform 0.3s var(--spring);
+}
+
+.vplay svg {
+  fill: currentColor;
+}
+
+.vplay:hover {
+  transform: scale(1.07);
+}
+
+.vplay:active {
+  transform: scale(0.94);
+}
+
+.vchip {
+  height: 28px;
+  padding: 0 10px;
+  border-radius: calc(8px * var(--rk, 1));
+  font-size: 12.5px;
+  font-weight: 650;
+  color: #fff;
+  background: rgb(255 255 255 / 0.14);
+  transition: background-color 0.15s;
+}
+
+.vchip:hover {
+  background: rgb(255 255 255 / 0.24);
+}
+
+.vvolume {
+  width: 90px;
+}
+
+.vtop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 3;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px 34px;
+  color: #fff;
+  background: linear-gradient(rgb(0 0 0 / 0.62), transparent);
+  transition: opacity 0.35s var(--out);
+}
+
+.vtop-title {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 15px;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* L'interface se retire quand la vidéo joue sans qu'on y touche. */
+.np.has-video.idle .vbar,
+.np.has-video.idle .vtop {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.np.has-video.idle .vbar {
+  transform: translateY(10px);
+}
+
+/* Plein écran : l'image occupe toute la fenêtre, la barre flotte par-dessus. */
+.np.has-video.fullscreen-mode .np-body {
+  display: block;
+  padding: 0;
+}
+
+.np.has-video.fullscreen-mode .np-main {
+  display: block;
+  gap: 0;
+}
+
+.np.has-video.fullscreen-mode .np-stage {
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+  width: 100vw;
+  min-width: 0;
+  height: 100vh;
+  aspect-ratio: auto;
+}
+
+.np.has-video.fullscreen-mode .np-video {
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.np.has-video.fullscreen-mode .np-top,
+.np.has-video.fullscreen-mode .np-info {
+  display: none;
+}
+
+.np.has-video.fullscreen-mode .vtop {
+  display: flex;
+  border-radius: 0;
+}
+
+.np.has-video.fullscreen-mode .vbar {
+  left: 50%;
+  right: auto;
+  bottom: 28px;
+  width: min(860px, calc(100vw - 48px));
+  transform: translateX(-50%);
+}
+
+.np.has-video.fullscreen-mode.idle .vbar {
+  transform: translate(-50%, 10px);
+}
+
+@media (max-width: 720px) {
+  .vbar-side:not(.end) .vvolume {
+    display: none;
+  }
 }

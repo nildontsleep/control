@@ -156,8 +156,9 @@ export function createSidebar(root, { openSettings }) {
     ], { align: 'start' });
   });
 
-  const settingsBtn = h('button.sb-item.sb-settings', { type: 'button', onclick: openSettings },
-    h('span.sb-icon', { html: icon('settings', 17, 1.9) }), h('span.sb-label', { text: t('nav.settings') }));
+  const settingsDot = h('span.sb-dot', { 'data-tip': t('upd.dotTip') });
+  const settingsBtn = h('button.sb-item.sb-settings', { type: 'button', onclick: () => openSettings() },
+    h('span.sb-icon', { html: icon('settings', 17, 1.9) }), h('span.sb-label', { text: t('nav.settings') }), settingsDot);
 
   root.replaceChildren(
     h('div.sb-top', {}, trafficLights()),
@@ -186,6 +187,9 @@ export function createSidebar(root, { openSettings }) {
     setSearch(value) {
       search.value = value;
       clearBtn.classList.toggle('show', !!value);
+    },
+    setUpdate(on) {
+      settingsDot.classList.toggle('show', !!on);
     },
     setDownloads(n) {
       activeDownloads = n;

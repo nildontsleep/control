@@ -13,6 +13,7 @@ import {
 } from '../media/api.js';
 import { embedUrl, streamOrigin } from '../media/vidrift.js';
 import { button } from '../ui/controls.js';
+import { setWatching } from '../discord/presence.js';
 
 const epKey = (season, episode) => `${season ?? ''}:${episode ?? ''}`;
 
@@ -34,6 +35,7 @@ export function watchingView(root, param) {
   let lastPosition = 0;
   let lastDuration = 0;
   let gotProgress = false;
+  let playingNow = false;
   let queue = Promise.resolve();
   const saved = new Map();
   const origin = streamOrigin();
@@ -60,9 +62,27 @@ export function watchingView(root, param) {
     return seasonData?.number === state.season ? seasonData.episodes.find((e) => e.number === state.episode)?.name || '' : '';
   }
 
+  const subtitle = () => (isMovie()
+    ? [details?.year, details?.runtime ? `${details.runtime} min` : null].filter(Boolean).join(' · ')
+    : [epLabel(), episodeName()].filter(Boolean).join(' — '));
+
+  /** Dit à Discord ce qui se regarde (une fois que le lecteur a vraiment démarré). */
+  function announce(playing) {
+    if (destroyed || !gotProgress) return;
+    setWatching({
+      type: state.type === 'anime' ? 'anime' : state.type === 'movie' ? 'movie' : 'tv',
+      title: details?.title || t('watch.untitled'),
+      subtitle: subtitle(),
+      poster: /^https:\/\//.test(details?.poster || '') ? details.poster : null,
+      position: lastPosition,
+      duration: lastDuration,
+      playing,
+    });
+  }
+
   function paintInfo() {
     titleEl.textContent = details?.title || t('watch.untitled');
-    subEl.textContent = isMovie() ? [details?.year, details?.runtime ? `${details.runtime} min` : null].filter(Boolean).join(' · ') : [epLabel(), episodeName()].filter(Boolean).join(' — ');
+    subEl.textContent = subtitle();
     const series = !isMovie() && !!details;
     const prev = series ? neighbour(details, state.season, state.episode, -1) : null;
     const next = series ? neighbour(details, state.season, state.episode, 1) : null;
@@ -79,6 +99,7 @@ export function watchingView(root, param) {
     } else {
       dubBox.replaceChildren();
     }
+    announce(playingNow);
   }
 
   async function loadSeasonName() {
@@ -181,7 +202,7 @@ export function watchingView(root, param) {
     loadSeasonName();
   }
 
-  async function record(d, finished) {
+  async function record(d, finished, playing = true) {
     await adopt(keyFrom(d));
     if (destroyed) return;
     const position = Number(d.currentTime) || 0;
@@ -190,6 +211,8 @@ export function watchingView(root, param) {
     if (duration) lastDuration = duration;
     const row = { position, duration, finished: finished || (duration > 0 && position / duration >= 0.92) };
     saved.set(epKey(state.season, state.episode), row);
+    playingNow = playing && !finished;
+    announce(playingNow);
     await watch.save({
       type: state.type,
       id: state.id,
@@ -217,7 +240,7 @@ export function watchingView(root, param) {
         enqueue(() => record(d, false));
         break;
       case 'vidrift:paused':
-        enqueue(() => record(d, false));
+        enqueue(() => record(d, false, false));
         break;
       case 'vidrift:ended':
         enqueue(() => record(d, true));
@@ -288,6 +311,7 @@ export function watchingView(root, param) {
   return {
     destroy() {
       destroyed = true;
+      setWatching(null);
       window.removeEventListener('message', onMessage);
       document.removeEventListener('fullscreenchange', onFullscreenChange);
       app.classList.remove('watch-fs');

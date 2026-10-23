@@ -15,7 +15,7 @@ export function toast(text, iconName = null, { action = null, duration = null } 
     host.append(toastEl);
   }
   toastEl.classList.toggle('has-action', !!action);
-  toastEl.replaceChildren(
+  toastEl.replaceChildren(...[
     iconName ? h('span.toast-icon', { html: icon(iconName, 16, 2) }) : null,
     h('span.toast-text', { text }),
     action ? h('button.toast-action', {
@@ -28,7 +28,7 @@ export function toast(text, iconName = null, { action = null, duration = null } 
         action.onClick();
       },
     }) : null,
-  );
+  ].filter(Boolean));
   toastEl.classList.remove('out', 'bump');
   void toastEl.offsetWidth;
   toastEl.classList.add('show', 'bump');
@@ -61,10 +61,10 @@ function showTip(target) {
     tipEl = h('div.tooltip', { role: 'tooltip' });
     document.body.append(tipEl);
   }
-  tipEl.replaceChildren(
+  tipEl.replaceChildren(...[
     h('span', { text }),
     target.dataset.kbd ? h('kbd', { text: target.dataset.kbd }) : null,
-  );
+  ].filter(Boolean));
   const r = target.getBoundingClientRect();
   tipEl.style.left = '0px';
   tipEl.style.top = '0px';
