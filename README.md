@@ -4,7 +4,7 @@
 
 <h1 align="center">control</h1>
 
-<p align="center">Lecteur musique et vidéo pour Windows, avec téléchargements yt-dlp intégrés, films, séries et animés.<br>
+<p align="center">Lecteur musique et vidéo pour Windows : téléchargements yt-dlp, éditeur de tags, paroles synchronisées, statistiques d’écoute, films, séries et animés.<br>
 Un design façon macOS : verre dépoli, pochettes qui teintent la fenêtre, animations à ressort.</p>
 
 <p align="center">
@@ -42,6 +42,8 @@ L’exécutable n’est pas signé : au premier lancement, SmartScreen peut affi
 - Audio (MP3, FLAC, M4A, AAC, OGG, Opus, WAV) et vidéo (MP4, MKV, WebM, MOV) dans la même app.
 - File d’attente modifiable par glisser-déposer, aléatoire, répétition (tout / un seul), vitesse de lecture.
 - **Égaliseur 10 bandes** avec 10 préréglages.
+- **Fondu enchaîné** réglable de 1 à 12 s (*Réglages* → *Général*) : la fin d’un morceau se mêle au début du suivant, à puissance constante.
+- **Paroles synchronisées** : onglet *Paroles* de « À l’écoute » (`L`). Les lignes défilent avec la musique, un clic sur une ligne s’y rend. Elles viennent d’un fichier `.lrc` posé à côté du morceau, des paroles intégrées au fichier, ou de [LRCLIB](https://lrclib.net) (gratuit, sans compte) ; une fois trouvées, elles sont gardées. On peut aussi en coller, ou les enregistrer en `.lrc`.
 - Touches multimédia du clavier et panneau multimédia de Windows (pochette, titre, position).
 - Reprise de la session au lancement (file d’attente, morceau, position).
 - Écran **À l’écoute** plein fenêtre sur fond de pochette floutée ; la vidéo y passe en grand, avec une interface qui se masque d’elle-même.
@@ -51,6 +53,25 @@ L’exécutable n’est pas signé : au premier lancement, SmartScreen peut affi
 - Vues *Morceaux* (liste virtualisée, tri par colonne), *Albums* (taille réglable), *Artistes*, *Vidéos*.
 - Recherche instantanée dans les morceaux, albums, artistes, vidéos et playlists.
 - Menu contextuel partout : lire, lire ensuite, ajouter à la file ou à une playlist, aller à l’artiste, afficher dans le dossier, supprimer (avec corbeille en option).
+
+**Éditeur de tags** (clic droit → *Modifier les tags…*, ou `Ctrl` + `I`)
+- Un ou plusieurs morceaux à la fois : titre, artiste, artiste de l’album, album, genre, année, piste et disque, compositeur, commentaire, paroles. Les champs qui diffèrent d’un morceau à l’autre affichent « Plusieurs valeurs » et ne sont touchés que si tu les modifies ; on peut aussi passer d’un morceau à l’autre dans la sélection.
+- **Pochette** : choisir une image, la glisser sur la pochette, la retirer, ou **la chercher en ligne** (Apple Music et Deezer).
+- **Outils par lot**, avec aperçu avant d’appliquer : *tags depuis le nom du fichier* (`%artist% - %title%`…), *renommer les fichiers depuis les tags*, *numéroter les pistes*, *remplacer* (texte ou expression régulière), *casse*, *nettoyer* (« (Official Video) », espaces en trop).
+- MP3, FLAC, M4A, OGG, Opus, WAV : les tags sont écrits dans le fichier, sans le réencoder. Rien n’est écrit tant que tu n’as pas cliqué sur *Enregistrer*, et le dernier lot peut être **annulé**. Les lectures et les playlists suivent un fichier renommé.
+
+**Statistiques** (barre latérale → *Statistiques*)
+- Temps d’écoute, lectures, morceaux et artistes différents, série de jours d’écoute, sur 7 jours, 30 jours, l’année ou tout l’historique.
+- Histogramme des jours, calendrier de l’année, heures et jours de la semaine préférés, tops des morceaux, artistes, albums et genres (un clic lance la lecture ou ouvre la page).
+- Films, séries et animés : temps de visionnage, titres les plus regardés, genres.
+- **Récap annuel** façon « Wrapped » : une suite de cartes plein écran, avec une image à enregistrer pour la partager.
+
+<p align="center">
+  <img src="docs/tags.jpg" width="49%" alt="Éditeur de tags">
+  <img src="docs/lyrics.jpg" width="49%" alt="Paroles synchronisées">
+  <img src="docs/stats.jpg" width="49%" alt="Statistiques">
+  <img src="docs/wrapped.jpg" width="49%" alt="Récap annuel">
+</p>
 
 **Playlists**
 - Classiques : glisser des morceaux depuis n’importe quelle vue, réordonner par glisser-déposer.
@@ -91,7 +112,8 @@ L’exécutable n’est pas signé : au premier lancement, SmartScreen peut affi
 | `→` / `←` | Avancer / reculer de 10 s |
 | `Ctrl` + `↑` / `↓` | Volume |
 | `S` / `R` / `M` | Aléatoire / répéter / muet |
-| `Q` / `E` | File d’attente / égaliseur |
+| `Q` / `E` / `L` | File d’attente / égaliseur / paroles |
+| `Ctrl` + `I` | Modifier les tags de la sélection |
 | `Entrée` | Ouvrir ou fermer « À l’écoute » |
 | `F` | Plein écran (dans « À l’écoute ») |
 | `Ctrl` + `F` ou `/` | Rechercher |
@@ -101,11 +123,9 @@ L’exécutable n’est pas signé : au premier lancement, SmartScreen peut affi
 
 Dans une liste : `↑` `↓` pour se déplacer, `Maj` ou `Ctrl` pour sélectionner plusieurs morceaux, `Entrée` pour lire, `Suppr` pour retirer.
 
-## À venir
+## Idées pour la suite
 
-- **Éditeur de tags** type mp3tag (par lot, renommage des fichiers, pochettes en ligne).
-- **Statistiques d’écoute** (les lectures sont déjà enregistrées) et récap annuel.
-- Paroles synchronisées, fondu enchaîné, mini-lecteur flottant.
+- Mini-lecteur flottant.
 
 ## Développer
 
@@ -127,13 +147,18 @@ src/main/           processus principal : fenêtre, protocole app://, SQLite, sc
   library.js        scan incrémental, tags (music-metadata), pochettes, playlists, écoutes
   tools.js          téléchargement de yt-dlp, ffmpeg et deno au premier lancement
   downloads.js      file de téléchargements et analyse des liens
+  tags.js           lecture et écriture des tags (node-taglib-sharp), pochettes, renommage, annulation
+  stats.js          statistiques d’écoute et de visionnage (requêtes SQL à la demande)
+  lyrics.js         paroles : .lrc voisin, tags du fichier, LRCLIB, cache
   media/            films, séries, animés : TMDB, AniList, cache, progression, ma liste
 src/renderer/       interface (modules ES, sans framework ni bundler)
   js/player.js      moteur de lecture : file, égaliseur, MediaSession, comptage d’écoutes
   js/data.js        bibliothèque en mémoire, albums et artistes dérivés, playlists intelligentes
-  js/ui/            liste virtualisée, barre de lecture, « À l’écoute », menus, feuilles
+  js/ui/            liste virtualisée, barre de lecture, « À l’écoute », menus, feuilles, éditeur de tags, paroles, récap
+  js/tags/          motifs façon mp3tag (%artist% - %title%), casse, remplacement
+  js/lyrics/        lecture du format LRC
   js/views/         Morceaux, Albums, Artistes, Vidéos, Playlist, Recherche, Téléchargements,
-                    Films & séries, Animés, fiche, lecture, Ma liste
+                    Films & séries, Animés, fiche, lecture, Ma liste, Statistiques
   js/media/         accès aux catalogues, cartes et rangées, adresse du lecteur vidrift
 build/              icônes de l’application
 ```
@@ -145,7 +170,9 @@ Le design (jetons de couleur, contrôles, menus, info-bulles) est repris de [nil
 - Télécharger depuis YouTube enfreint ses conditions d’utilisation : à utiliser pour un usage personnel, à tes propres risques.
 - control n’héberge ni ne stocke aucune vidéo de film, série ou animé : le lecteur [vidrift](https://vidrift.net) est affiché tel quel dans la fenêtre (publicités comprises), et c’est à toi de vérifier que son usage est légal chez toi. Si le lecteur ne charge pas, essaie l’autre serveur dans *Réglages* → *Streaming*.
 - La clé TMDB reste dans les réglages de ton ordinateur. Ce produit utilise l’API TMDB mais n’est ni approuvé ni certifié par TMDB.
-- Les captures d’écran du dépôt utilisent un catalogue fictif : aucune affiche réelle n’y figure.
+- Les captures d’écran du dépôt utilisent un catalogue fictif et une bibliothèque de test : aucune affiche ni pochette réelle n’y figure.
+- L’éditeur de tags modifie tes fichiers sur place. Il garde de quoi annuler le dernier lot, mais fais une copie de ta musique avant un gros travail par lot.
+- Les paroles sont cherchées avec le titre, l’artiste, l’album et la durée du morceau ; rien d’autre n’est envoyé. Les pochettes sont proposées par les API publiques d’Apple Music et de Deezer.
 - Les données (bibliothèque SQLite, réglages, pochettes, outils) sont dans `%APPDATA%\control` (installé) ou dans `control data` à côté de l’exe (portable).
 
 Icônes [Lucide](https://lucide.dev) et police [Inter](https://rsms.me/inter) : voir [THIRD-PARTY.md](THIRD-PARTY.md).

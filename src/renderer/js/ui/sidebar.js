@@ -18,6 +18,7 @@ const NAV = [
   { id: 'albums', icon: 'disc-3' },
   { id: 'artists', icon: 'mic-vocal' },
   { id: 'videos', icon: 'film' },
+  { id: 'stats', icon: 'chart-column' },
 ];
 
 /** Entrée de la barre latérale à surligner pour une page donnée. */

@@ -20,6 +20,7 @@ export const DEFAULTS = {
   shuffle: false,
   repeat: 'off',
   rate: 1,
+  crossfade: 0,
   eq: { enabled: false, preset: 'flat', gains: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0] },
   session: null,
 
@@ -27,6 +28,8 @@ export const DEFAULTS = {
   sort: { songs: { key: 'title', dir: 'asc' }, albums: 'title', artists: 'name', videos: 'addedAt' },
   albumSize: 190,
   lastView: { name: 'songs', param: null },
+  statsRange: '30d',
+  npTab: 'queue',
 
   // Films, séries et animés
   media: {

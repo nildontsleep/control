@@ -10,7 +10,7 @@ import { openSheet, confirmSheet } from './sheet.js';
 import { media } from '../media/api.js';
 import { toast } from './feedback.js';
 import {
-  createScope, withScope, refreshScope, toggle, segmented, popup, swatches, button, row, group, badge, live,
+  createScope, withScope, refreshScope, toggle, segmented, popup, swatches, button, row, group, badge, live, sliderRow,
 } from './controls.js';
 
 const library = window.control.library;
@@ -23,7 +23,7 @@ const B = { blue: '#0a84ff', pink: '#ff375f', green: '#30d158', orange: '#ff9f0a
 export const SHORTCUTS = [
   [['Espace'], 'kb.playPause'], [['Ctrl', '→'], 'kb.next'], [['Ctrl', '←'], 'kb.prev'], [['→'], 'kb.seekForward'], [['←'], 'kb.seekBack'],
   [['Ctrl', '↑'], 'kb.volUp'], [['Ctrl', '↓'], 'kb.volDown'], [['S'], 'kb.shuffle'], [['R'], 'kb.repeat'], [['M'], 'kb.mute'],
-  [['Q'], 'kb.queue'], [['E'], 'kb.eq'], [['Entrée'], 'kb.nowPlaying'], [['Ctrl', 'F'], 'kb.search'], [['Alt', '←'], 'kb.back'],
+  [['Q'], 'kb.queue'], [['L'], 'kb.lyrics'], [['E'], 'kb.eq'], [['Ctrl', 'I'], 'kb.tags'], [['Entrée'], 'kb.nowPlaying'], [['Ctrl', 'F'], 'kb.search'], [['Alt', '←'], 'kb.back'],
   [['Ctrl', ','], 'kb.settings'], [['F'], 'kb.fullscreen'], [['Échap'], 'kb.escape'],
 ];
 
@@ -58,6 +58,9 @@ export function openSettings(initial = 'general') {
           row(t('set.compact'), toggle('compact'), { hint: t('set.compactHint'), badge: badge('list', B.teal) }),
           row(t('set.animations'), toggle('animations'), { badge: badge('wand-sparkles', B.orange) }),
         ]),
+        group(t('set.playback'), [
+          sliderRow(t('set.crossfade'), 'crossfade', { min: 0, max: 12, step: 1, format: (v) => (v ? t('set.seconds', { n: v }) : t('set.off')) }),
+        ], { footer: t('set.crossfadeHint') }),
         group(t('set.language'), [
           row(t('set.language'), popup('language', langs), { badge: badge('languages', B.blue) }),
         ], { footer: t('set.languageHint') }),

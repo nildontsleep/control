@@ -8,6 +8,7 @@ import { navigate } from '../router.js';
 import { toast } from './feedback.js';
 import { openMenu } from './menu.js';
 import { promptSheet, confirmSheet } from './sheet.js';
+import { openTagEditor } from './tag-editor.js';
 
 const library = window.control.library;
 const playlists = window.control.playlists;
@@ -89,6 +90,7 @@ export function trackMenuItems(tracks, ctx = {}) {
     if (first.sourceUrl) items.push({ label: t('menu.openSource'), icon: 'link', action: () => window.control.app.openExternal(first.sourceUrl) });
   }
   items.push({ label: t('menu.reveal'), icon: 'folder-open', action: () => library.reveal(first.id) });
+  items.push({ label: t('tag.menu'), icon: 'tags', shortcut: 'Ctrl+I', action: () => openTagEditor(tracks) });
   items.push({ separator: true });
   items.push({ label: t('menu.removeLibrary'), icon: 'trash-2', action: () => removeFromLibrary(tracks) });
   return items;

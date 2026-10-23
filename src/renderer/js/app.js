@@ -30,6 +30,7 @@ import { titleView } from './views/title.js';
 import { watchingView } from './views/watching.js';
 import { shelfView } from './views/shelf.js';
 import { mylistView } from './views/mylist.js';
+import { statsView } from './views/stats.js';
 
 const control = window.control;
 const root = document.documentElement;
@@ -103,12 +104,14 @@ function buildShell() {
   registerView('watching', watchingView);
   registerView('shelf', shelfView);
   registerView('mylist', mylistView);
+  registerView('stats', statsView);
 
   nowPlaying = createNowPlaying($('#nowPlaying'));
   sidebar = createSidebar($('#sidebar'), { openSettings: () => openSettings() });
   playerBar = createPlayerBar($('#playerbar'), {
     openNowPlaying: () => nowPlaying.open(),
     openQueue: () => nowPlaying.isOpen ? nowPlaying.close() : nowPlaying.open('queue'),
+    openLyrics: () => nowPlaying.open('lyrics'),
   });
 
   onRoute((route) => {
@@ -121,7 +124,7 @@ function buildShell() {
 
 // ─── Données ─────────────────────────────────────────────────────────────────
 // Pages qui ne dépendent pas de la bibliothèque musicale : inutile (et nuisible pour le lecteur vidéo) de les redessiner.
-const LIBRARY_FREE = new Set(['downloads', 'watching', 'title', 'watch', 'anime', 'shelf', 'mylist']);
+const LIBRARY_FREE = new Set(['downloads', 'watching', 'title', 'watch', 'anime', 'shelf', 'mylist', 'stats']);
 const refreshView = debounce(() => {
   const route = currentRoute();
   if (route && !LIBRARY_FREE.has(route.name)) refresh();
@@ -234,6 +237,7 @@ function wireKeys() {
       case 'm': player.toggleMute(); break;
       case 'q': if (nowPlaying.isOpen) nowPlaying.close(); else nowPlaying.open('queue'); break;
       case 'e': nowPlaying.open('eq'); break;
+      case 'l': nowPlaying.open('lyrics'); break;
       case 'f': if (nowPlaying.isOpen) control.win.state().then((st) => control.win.setFullscreen(!st.fullscreen)); break;
       case 'enter': if (tag !== 'BUTTON' && !e.target.closest?.('.tl')) nowPlaying.toggle(); else return; break;
       case '/': e.preventDefault(); sidebar.focusSearch(); break;
@@ -290,7 +294,7 @@ async function init() {
   setAmbient(player.track?.cover || null);
 
   const last = settings.lastView;
-  const valid = new Set(['songs', 'albums', 'artists', 'videos', 'album', 'artist', 'playlist', 'watch', 'anime', 'mylist']);
+  const valid = new Set(['songs', 'albums', 'artists', 'videos', 'album', 'artist', 'playlist', 'watch', 'anime', 'mylist', 'stats']);
   if (last && valid.has(last.name)) navigate(last.name, last.param);
   else navigate('songs');
 

@@ -4,7 +4,13 @@ import { settings, update, subscribe as onSettings } from './settings.js';
 import { lib, bumpPlay } from './data.js';
 
 const api = window.control?.library;
-const media = document.getElementById('media');
+// Deux « platines » : l'élément vidéo (aussi utilisé pour l'audio et pour toutes les vidéos) et un élément audio
+// de renfort. Le fondu enchaîné fait jouer la fin d'un morceau sur l'une pendant que le suivant démarre sur l'autre.
+const videoEl = document.getElementById('media');
+const audioEl = new Audio();
+audioEl.preload = 'auto';
+const decks = [videoEl, audioEl];
+let media = videoEl;
 
 export const EQ_BANDS = [31, 62, 125, 250, 500, 1000, 2000, 4000, 8000, 16000];
 export const EQ_PRESETS = {
@@ -41,6 +47,7 @@ const state = {
 let audioCtx = null;
 let eqFilters = [];
 let preamp = null;
+const deckGain = new Map();
 
 function ensureAudioGraph() {
   if (audioCtx) {
@@ -49,8 +56,12 @@ function ensureAudioGraph() {
   }
   try {
     audioCtx = new AudioContext();
-    const source = audioCtx.createMediaElementSource(media);
     preamp = audioCtx.createGain();
+    for (const el of decks) {
+      const gain = audioCtx.createGain();
+      audioCtx.createMediaElementSource(el).connect(gain).connect(preamp);
+      deckGain.set(el, gain);
+    }
     eqFilters = EQ_BANDS.map((freq, i) => {
       const f = audioCtx.createBiquadFilter();
       f.type = i === 0 ? 'lowshelf' : i === EQ_BANDS.length - 1 ? 'highshelf' : 'peaking';
@@ -58,7 +69,7 @@ function ensureAudioGraph() {
       f.Q.value = 1.1;
       return f;
     });
-    let node = source.connect(preamp);
+    let node = preamp;
     for (const f of eqFilters) node = node.connect(f);
     node.connect(audioCtx.destination);
     applyEq();
@@ -94,8 +105,9 @@ export const player = {
   get playing() {
     return state.playing;
   },
+  /** L'élément vidéo : c'est lui que « À l'écoute » affiche pour les vidéos. */
   get media() {
-    return media;
+    return videoEl;
   },
   get upcoming() {
     return state.queue.slice(state.index + 1);
@@ -104,8 +116,10 @@ export const player = {
 
 const volumeCurve = (v) => v * v;
 function applyVolume() {
-  media.volume = volumeCurve(Math.min(1, Math.max(0, settings.volume)));
-  media.muted = !!settings.muted;
+  for (const el of decks) {
+    el.volume = volumeCurve(Math.min(1, Math.max(0, settings.volume)));
+    el.muted = !!settings.muted;
+  }
 }
 
 function shuffled(list, keepFirst) {
@@ -159,6 +173,7 @@ function trackListen() {
 // ─── Chargement et lecture ───────────────────────────────────────────────────
 function load(index, { autoplay = true, position = 0 } = {}) {
   finishListen(false);
+  killFade();
   state.index = index;
   const track = state.queue[index];
   if (!track) {
@@ -168,6 +183,13 @@ function load(index, { autoplay = true, position = 0 } = {}) {
     emit('track', null);
     emit('state');
     return;
+  }
+  // Une vidéo s'affiche toujours dans l'élément vidéo ; l'audio reste sur la platine en cours.
+  if (track.kind === 'video' && media !== videoEl) {
+    media.pause();
+    media.removeAttribute('src');
+    media.load();
+    media = videoEl;
   }
   resetListen(track.id);
   state.loading = true;
@@ -209,40 +231,125 @@ function ended() {
   }
 }
 
-media.addEventListener('playing', () => {
-  state.playing = true;
-  state.loading = false;
-  state.failures = 0;
-  listen.last = media.currentTime;
-  setSessionState('playing');
-  emit('state');
-});
-media.addEventListener('pause', () => {
-  state.playing = false;
-  setSessionState('paused');
-  saveSession();
-  emit('state');
-});
-media.addEventListener('waiting', () => { state.loading = true; emit('state'); });
-media.addEventListener('canplay', () => { state.loading = false; emit('state'); });
-media.addEventListener('ended', ended);
-media.addEventListener('timeupdate', () => {
-  trackListen();
-  emit('time', media.currentTime);
-  throttledPosition();
-});
-media.addEventListener('durationchange', () => { emit('state'); throttledPosition(true); });
-media.addEventListener('error', () => {
-  if (!player.track) return;
-  state.failures += 1;
-  emit('error', player.track);
-  if (state.failures < 4 && state.index < state.queue.length - 1) setTimeout(() => load(state.index + 1), 500);
-  else {
-    state.playing = false;
+/** Seule la platine active pilote l'interface : la platine qui s'éteint en fondu est ignorée. */
+function bindDeck(el) {
+  const own = (fn) => (e) => { if (e.target === media) fn(e); };
+  el.addEventListener('playing', own(() => {
+    state.playing = true;
     state.loading = false;
+    state.failures = 0;
+    listen.last = media.currentTime;
+    setSessionState('playing');
     emit('state');
+  }));
+  el.addEventListener('pause', own(() => {
+    state.playing = false;
+    setSessionState('paused');
+    saveSession();
+    emit('state');
+  }));
+  el.addEventListener('waiting', own(() => { state.loading = true; emit('state'); }));
+  el.addEventListener('canplay', own(() => { state.loading = false; emit('state'); }));
+  el.addEventListener('ended', own(ended));
+  el.addEventListener('timeupdate', own(() => {
+    trackListen();
+    maybeCrossfade();
+    emit('time', media.currentTime);
+    throttledPosition();
+  }));
+  el.addEventListener('durationchange', own(() => { emit('state'); throttledPosition(true); }));
+  el.addEventListener('error', own(() => {
+    if (!player.track) return;
+    state.failures += 1;
+    emit('error', player.track);
+    if (state.failures < 4 && state.index < state.queue.length - 1) setTimeout(() => load(state.index + 1), 500);
+    else {
+      state.playing = false;
+      state.loading = false;
+      emit('state');
+    }
+  }));
+}
+decks.forEach(bindDeck);
+
+// ─── Fondu enchaîné ──────────────────────────────────────────────────────────
+let fade = null;
+
+function setGain(el, value) {
+  const g = deckGain.get(el);
+  if (!g) return;
+  g.gain.cancelScheduledValues(0);
+  g.gain.value = value;
+}
+
+/** Arrête un fondu en cours (saut, pause, déplacement dans le morceau) : la platine sortante se tait tout de suite. */
+function killFade() {
+  if (!fade) return;
+  clearTimeout(fade.timer);
+  const { outgoing } = fade;
+  fade = null;
+  outgoing.pause();
+  outgoing.removeAttribute('src');
+  outgoing.load();
+  for (const el of decks) setGain(el, 1);
+}
+
+function nextFadeIndex() {
+  if (settings.repeat === 'one') return -1;
+  if (state.index < state.queue.length - 1) return state.index + 1;
+  if (settings.repeat === 'all' && state.queue.length > 1) return 0;
+  return -1;
+}
+
+function maybeCrossfade() {
+  const length = Number(settings.crossfade) || 0;
+  if (length <= 0 || fade || !audioCtx || !state.playing || media.seeking) return;
+  const track = player.track;
+  if (!track || track.kind !== 'audio') return;
+  const duration = player.duration;
+  if (!duration || duration < length * 2 + 2) return;
+  const remaining = duration - media.currentTime;
+  if (remaining > length + 0.05 || remaining < 0.4) return;
+  const index = nextFadeIndex();
+  const next = state.queue[index];
+  if (index < 0 || !next || next.kind !== 'audio') return;
+  startCrossfade(index, Math.min(length, remaining));
+}
+
+function startCrossfade(index, seconds) {
+  const outgoing = media;
+  const incoming = outgoing === videoEl ? audioEl : videoEl;
+  const next = state.queue[index];
+  finishListen(true);
+  incoming.src = `app://nilcam/media/${next.id}`;
+  incoming.playbackRate = settings.rate;
+  setGain(incoming, 0);
+  setGain(outgoing, 1);
+  fade = { outgoing, incoming, timer: null };
+  state.index = index;
+  media = incoming;
+  resetListen(next.id);
+  state.loading = true;
+  incoming.play().catch(() => {});
+
+  // Fondu à puissance constante : la somme des deux volumes reste perçue comme stable.
+  const steps = 64;
+  const rise = new Float32Array(steps);
+  const fall = new Float32Array(steps);
+  for (let i = 0; i < steps; i++) {
+    const x = i / (steps - 1);
+    rise[i] = Math.sin(x * Math.PI / 2);
+    fall[i] = Math.cos(x * Math.PI / 2);
   }
-});
+  const at = audioCtx.currentTime;
+  deckGain.get(incoming).gain.setValueCurveAtTime(rise, at, seconds);
+  deckGain.get(outgoing).gain.setValueCurveAtTime(fall, at, seconds);
+  fade.timer = setTimeout(() => killFade(), seconds * 1000 + 200);
+
+  updateMediaSession(next);
+  emit('track', next);
+  emit('state');
+}
 
 // ─── Commandes ───────────────────────────────────────────────────────────────
 player.playQueue = (tracks, startIndex = 0, { shuffle } = {}) => {
@@ -264,10 +371,37 @@ player.toggle = () => {
   if (!player.track) return;
   ensureAudioGraph();
   if (media.paused) media.play().catch(() => {});
-  else media.pause();
+  else {
+    killFade();
+    media.pause();
+  }
 };
 player.play = () => { if (player.track && media.paused) { ensureAudioGraph(); media.play().catch(() => {}); } };
-player.pause = () => media.pause();
+player.pause = () => {
+  killFade();
+  media.pause();
+};
+
+/** État des platines (utile au diagnostic et aux tests). */
+player.decksInfo = () => decks.map((d, i) => ({
+  deck: i ? 'audio' : 'video', active: d === media, paused: d.paused, time: Math.round(d.currentTime * 10) / 10, src: d.getAttribute('src') || '',
+  gain: deckGain.get(d) ? Math.round(deckGain.get(d).gain.value * 100) / 100 : null,
+}));
+
+/** Libère le fichier en cours de lecture (Windows refuse d'écrire dans un fichier ouvert) ; retourne de quoi le reprendre. */
+player.suspend = (ids) => {
+  const track = player.track;
+  if (!track || !ids.includes(track.id)) return () => {};
+  killFade();
+  const resume = { position: media.currentTime || 0, playing: state.playing };
+  media.pause();
+  media.removeAttribute('src');
+  media.load();
+  return () => {
+    if (player.track?.id !== track.id) return;
+    load(state.index, { autoplay: resume.playing, position: resume.position });
+  };
+};
 
 player.next = () => {
   if (!state.queue.length) return;
@@ -279,6 +413,7 @@ player.next = () => {
 player.prev = () => {
   if (!state.queue.length) return;
   if (media.currentTime > 3 || state.index === 0) {
+    killFade();
     media.currentTime = 0;
     return;
   }
@@ -287,6 +422,7 @@ player.prev = () => {
 
 player.seek = (t) => {
   if (!Number.isFinite(t)) return;
+  killFade();
   media.currentTime = Math.max(0, Math.min(player.duration || t, t));
   emit('time', media.currentTime);
 };
@@ -410,7 +546,7 @@ player.restoreSession = () => {
 // ─── Réglages ────────────────────────────────────────────────────────────────
 onSettings((patch) => {
   if ('volume' in patch || 'muted' in patch) applyVolume();
-  if ('rate' in patch) media.playbackRate = settings.rate;
+  if ('rate' in patch) for (const el of decks) el.playbackRate = settings.rate;
   if ('eq' in patch) applyEq();
   emit('settings', patch);
 });

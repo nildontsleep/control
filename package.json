@@ -1,7 +1,7 @@
 {
   "name": "control",
   "productName": "control",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Lecteur musique et vidéo, téléchargements yt-dlp et bibliothèque, dans un style macOS.",
   "author": "nildontsleep",
   "private": true,
@@ -13,7 +13,8 @@
     "dist:setup": "electron-builder --win nsis --x64 --publish never"
   },
   "dependencies": {
-    "music-metadata": "12.2.3"
+    "music-metadata": "12.2.3",
+    "node-taglib-sharp": "6.0.3"
   },
   "devDependencies": {
     "electron": "44.7.0",

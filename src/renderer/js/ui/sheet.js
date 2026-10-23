@@ -6,7 +6,7 @@ import { t } from '../i18n.js';
 
 let openCount = 0;
 
-export function openSheet({ title, width = 460, body, footer, onClose, className = '' }) {
+export function openSheet({ title, width = 460, body, footer, onClose, canClose, className = '' }) {
   const backdrop = h('div.sheet-backdrop');
   const closeBtn = h('button.icon-btn.sheet-close', { type: 'button', 'data-tip': t('common.close'), html: icon('x', 16, 2) });
   const sheet = h(`div.sheet${className ? `.${className}` : ''}`, { role: 'dialog', 'aria-modal': 'true', style: { width: `${width}px` } },
@@ -17,6 +17,9 @@ export function openSheet({ title, width = 460, body, footer, onClose, className
   document.getElementById('layer').append(backdrop);
   openCount++;
   const prevFocus = document.activeElement;
+
+  // Échap, clic à côté et croix passent par canClose (une feuille avec des modifications peut demander confirmation).
+  const request = () => { if (!canClose || canClose() !== false) close(); };
 
   function close(result) {
     if (!backdrop.isConnected) return;
@@ -32,12 +35,12 @@ export function openSheet({ title, width = 460, body, footer, onClose, className
     if (e.key === 'Escape') {
       e.preventDefault();
       e.stopPropagation();
-      close();
+      request();
     }
   };
   document.addEventListener('keydown', onKey, true);
-  backdrop.addEventListener('pointerdown', (e) => { if (e.target === backdrop) close(); });
-  closeBtn.addEventListener('click', () => close());
+  backdrop.addEventListener('pointerdown', (e) => { if (e.target === backdrop) request(); });
+  closeBtn.addEventListener('click', () => request());
   requestAnimationFrame(() => backdrop.classList.add('open'));
   return { close, el: sheet };
 }

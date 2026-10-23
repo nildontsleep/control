@@ -96,8 +96,28 @@ class Library {
   }
 
   // ─── Scan ──────────────────────────────────────────────────────────────────
+  /** Exécute fn pendant qu'aucun scan ne tourne (renommage de fichiers, écriture de tags). */
+  async exclusive(fn) {
+    while (this.scanning) await this.scanning;
+    this.holds = (this.holds || 0) + 1;
+    try {
+      return await fn();
+    } finally {
+      this.holds -= 1;
+      if (!this.holds && this.deferred) {
+        const roots = this.deferred;
+        this.deferred = null;
+        this.scan(roots);
+      }
+    }
+  }
+
   scan(roots) {
     roots = [...new Set((roots || []).filter(Boolean))];
+    if (this.holds) {
+      this.deferred = [...new Set([...(this.deferred || []), ...roots])];
+      return Promise.resolve({ added: 0, removed: 0, total: 0 });
+    }
     if (this.scanning) {
       this.rescan = [...new Set([...(this.rescan || []), ...roots])];
       return this.scanning;
@@ -286,6 +306,23 @@ class Library {
     if (!row.cover && row.kind === 'audio') row.cover = await this.#folderCover(path.dirname(file.path));
     if (!row.sourceUrl) delete row.sourceUrl;
     return row;
+  }
+
+  /** Relit un fichier modifié (tags, nom) en gardant le même identifiant : lectures et playlists suivent. */
+  async refreshTrack(id, newPath = null) {
+    const current = this.trackPath(id);
+    if (!current) return null;
+    const file = newPath || current;
+    const st = await fsp.stat(file);
+    const row = await this.#read({ path: file, size: st.size, mtime: Math.floor(st.mtimeMs) });
+    transaction(this.db, () => {
+      if (file !== current) {
+        this.db.prepare('UPDATE tracks SET path = ? WHERE id = ?').run(file, id);
+      }
+      this.#upsert(row);
+    });
+    this.folderCovers.clear();
+    return this.db.prepare(`SELECT ${TRACK_COLUMNS} FROM tracks WHERE id = ?`).get(id);
   }
 
   #upsert(row) {

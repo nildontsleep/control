@@ -27,7 +27,7 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 The following Lucide icons are derived from the Feather project:
 
-airplay, alert-circle, alert-octagon, alert-triangle, aperture, arrow-down-circle, arrow-down-left, arrow-down-right, arrow-down, arrow-left-circle, arrow-left, arrow-right-circle, arrow-right, arrow-up-circle, arrow-up-left, arrow-up-right, arrow-up, at-sign, calendar, cast, check, chevron-down, chevron-left, chevron-right, chevron-up, chevrons-down, chevrons-left, chevrons-right, chevrons-up, circle, clipboard, clock, code, columns, command, compass, corner-down-left, corner-down-right, corner-left-down, corner-left-up, corner-right-down, corner-right-up, corner-up-left, corner-up-right, crosshair, database, divide-circle, divide-square, dollar-sign, download, external-link, feather, frown, hash, headphones, help-circle, info, italic, key, layout, life-buoy, link-2, link, loader, lock, log-in, log-out, maximize, meh, minimize, minimize-2, minus-circle, minus-square, minus, monitor, moon, more-horizontal, more-vertical, move, music, navigation-2, navigation, octagon, pause-circle, percent, plus-circle, plus-square, plus, power, radio, rss, search, server, share, shopping-bag, sidebar, smartphone, smile, square, table-2, tablet, target, terminal, trash-2, trash, triangle, tv, type, upload, x-circle, x-octagon, x-square, x, zoom-in, zoom-out
+activity, airplay, alert-circle, alert-octagon, alert-triangle, aperture, arrow-down-circle, arrow-down-left, arrow-down-right, arrow-down, arrow-left-circle, arrow-left, arrow-right-circle, arrow-right, arrow-up-circle, arrow-up-left, arrow-up-right, arrow-up, at-sign, award, calendar, cast, check, chevron-down, chevron-left, chevron-right, chevron-up, chevrons-down, chevrons-left, chevrons-right, chevrons-up, circle, clipboard, clock, code, columns, command, compass, corner-down-left, corner-down-right, corner-left-down, corner-left-up, corner-right-down, corner-right-up, corner-up-left, corner-up-right, crosshair, database, divide-circle, divide-square, dollar-sign, download, external-link, fast-forward, feather, frown, hash, headphones, help-circle, info, italic, key, layers, layout, life-buoy, link-2, link, loader, lock, log-in, log-out, maximize, meh, minimize, minimize-2, minus-circle, minus-square, minus, monitor, moon, more-horizontal, more-vertical, move, music, navigation-2, navigation, octagon, pause-circle, percent, plus-circle, plus-square, plus, power, radio, rss, search, server, share-2, share, shopping-bag, sidebar, smartphone, smile, square, table-2, tablet, target, terminal, trash-2, trash, triangle, tv, type, upload, x-circle, x-octagon, x-square, x, zoom-in, zoom-out
 
 The MIT License (MIT) (for the icons listed above)
 
@@ -55,3 +55,11 @@ SOFTWARE.
 ## Inter (police)
 
 https://rsms.me/inter — fichiers dans `src/renderer/assets/fonts/`, sous licence SIL Open Font License 1.1 (voir `src/renderer/assets/fonts/OFL.txt`).
+
+## node-taglib-sharp (écriture des tags)
+
+https://github.com/benrr101/node-taglib-sharp — licence **GNU LGPL 2.1 ou ultérieure** (texte complet dans `node_modules/node-taglib-sharp/LICENSE`, embarqué dans l'application). Portage JavaScript de TagLib#, utilisé tel quel et chargé comme module séparé : il se trouve dans `node_modules/node-taglib-sharp` à l'intérieur de `resources/app.asar` et peut être remplacé par une autre version compatible. Ses dépendances (`iconv-lite`, `os-locale`, `uuid`) sont sous licence MIT.
+
+## Services en ligne
+
+control interroge, à ta demande, des services publics : [LRCLIB](https://lrclib.net) (paroles), Apple Music et Deezer (recherche de pochettes), [TMDB](https://www.themoviedb.org) et [AniList](https://anilist.co) (catalogues). Aucune donnée personnelle n'est envoyée en dehors du titre, de l'artiste ou de la recherche demandés.

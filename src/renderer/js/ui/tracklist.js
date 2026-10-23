@@ -8,6 +8,7 @@ import { player, on as onPlayer } from '../player.js';
 import { settings } from '../settings.js';
 import { coverEl } from './cover.js';
 import { openContextMenu, trackMenuItems, startTrackDrag, removeFromLibrary } from './actions.js';
+import { openTagEditor } from './tag-editor.js';
 
 const OVERSCAN = 6;
 const REORDER = 'application/x-control-reorder';
@@ -211,6 +212,9 @@ export function createTrackList(options) {
     } else if (e.key === 'Enter' && selected.size) {
       e.preventDefault();
       play(selectedIndices()[0]);
+    } else if ((e.key === 'i' || e.key === 'I') && (e.ctrlKey || e.metaKey) && selected.size) {
+      e.preventDefault();
+      openTagEditor(tracksAt(selectedIndices()));
     } else if ((e.key === 'a' || e.key === 'A') && (e.ctrlKey || e.metaKey)) {
       e.preventDefault();
       items.forEach((_, k) => selected.add(k));

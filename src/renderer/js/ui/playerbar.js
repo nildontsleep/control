@@ -14,7 +14,7 @@ function paintRange(input, pct) {
   input.style.setProperty('--to', `${pct}%`);
 }
 
-export function createPlayerBar(root, { openNowPlaying, openQueue }) {
+export function createPlayerBar(root, { openNowPlaying, openQueue, openLyrics }) {
   const art = h('button.pb-art', { type: 'button', 'data-tip': t('np.open') });
   const title = h('div.pb-title');
   const sub = h('button.pb-sub', { type: 'button' });
@@ -51,6 +51,7 @@ export function createPlayerBar(root, { openNowPlaying, openQueue }) {
   }, { passive: false });
 
   const queueBtn = btn('queue', 'list-music', t('player.queue'), () => openQueue(), '.toggle');
+  const lyricsBtn = btn('lyrics', 'mic-vocal', t('lyr.title'), () => openLyrics(), '.toggle');
   const expand = btn('expand', 'maximize-2', t('np.open'), () => openNowPlaying());
 
   root.replaceChildren(
@@ -58,7 +59,7 @@ export function createPlayerBar(root, { openNowPlaying, openQueue }) {
     h('div.pb-center', {},
       h('div.pb-transport', {}, shuffle, prev, playBtn, next, repeat),
       h('div.pb-seek', {}, cur, seek, total)),
-    h('div.pb-right', {}, queueBtn, volIcon, volume, expand));
+    h('div.pb-right', {}, lyricsBtn, queueBtn, volIcon, volume, expand));
 
   art.addEventListener('click', () => openNowPlaying());
   info.addEventListener('click', (e) => { if (!e.target.closest('.pb-sub')) openNowPlaying(); });

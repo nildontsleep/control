@@ -115,6 +115,17 @@ const MIGRATIONS = [
     PRIMARY KEY (day, media_type, media_id, season, episode)
   );
   `,
+  `
+  -- Paroles : texte brut et/ou synchronisé (LRC), avec la provenance. source = 'none' garde en mémoire une recherche vaine.
+  CREATE TABLE lyrics (
+    track_id INTEGER PRIMARY KEY REFERENCES tracks(id) ON DELETE CASCADE,
+    synced TEXT,
+    plain TEXT,
+    source TEXT NOT NULL,
+    instrumental INTEGER NOT NULL DEFAULT 0,
+    fetched_at INTEGER NOT NULL
+  );
+  `,
 ];
 
 function open(file) {

@@ -50,6 +50,26 @@ contextBridge.exposeInMainWorld('control', {
     onScan: listen('lib:scan-progress'),
   },
 
+  lyrics: {
+    get: invoke('lyrics:get'),
+    set: invoke('lyrics:set'),
+    saveFile: invoke('lyrics:save-file'),
+  },
+
+  stats: {
+    get: invoke('stats:get'),
+    saveImage: invoke('stats:save-image'),
+  },
+
+  tags: {
+    read: invoke('tags:read'),
+    write: invoke('tags:write'),
+    undo: invoke('tags:undo'),
+    stageCover: invoke('tags:stage-cover'),
+    pickCover: invoke('tags:pick-cover'),
+    searchCovers: invoke('tags:search-covers'),
+  },
+
   playlists: {
     create: invoke('pl:create'),
     rename: invoke('pl:rename'),

@@ -9,6 +9,7 @@ import { player, on as onPlayer, EQ_BANDS, EQ_PRESETS } from '../player.js';
 import { navigate } from '../router.js';
 import { coverEl, coverUrl } from './cover.js';
 import { createTrackList } from './tracklist.js';
+import { createLyricsPanel } from './lyrics-panel.js';
 import { trafficLights } from './traffic.js';
 import { createScope, withScope, refreshScope, popup, toggle, segmented } from './controls.js';
 
@@ -30,8 +31,9 @@ export function createNowPlaying(root) {
   const side = root.querySelector('#npPanel');
   const tabs = root.querySelector('#npTabs');
   const video = player.media;
-  let tab = 'queue';
+  let tab = ['queue', 'lyrics', 'eq'].includes(settings.npTab) ? settings.npTab : 'queue';
   let list = null;
+  const lyrics = createLyricsPanel(side);
   let open = false;
   let idleTimer = null;
 
@@ -152,16 +154,24 @@ export function createNowPlaying(root) {
       h('p.eq-hint', { text: t('eq.hint') }));
   }
 
+  function renderLyrics() {
+    destroyList();
+    side.replaceChildren(lyrics.el);
+    lyrics.show(player.track);
+  }
+
   function renderPanel() {
     if (tab === 'queue') renderQueue();
+    else if (tab === 'lyrics') renderLyrics();
     else withScope(scope, renderEq);
   }
 
   const tabControl = withScope(scope, () => segmented({
     get: () => tab,
-    set: (v) => { tab = v; renderPanel(); refreshScope(scope); },
+    set: (v) => { tab = v; update({ npTab: v }); renderPanel(); refreshScope(scope); },
   }, [
     { value: 'queue', label: t('queue.title'), icon: 'list-music' },
+    { value: 'lyrics', label: t('lyr.title'), icon: 'mic-vocal' },
     { value: 'eq', label: t('eq.title'), icon: 'sliders-horizontal' },
   ], { compact: true }));
   tabs.replaceChildren(tabControl);
@@ -209,6 +219,7 @@ export function createNowPlaying(root) {
     cur.textContent = fmtTime(time);
     remaining.textContent = `-${fmtTime(Math.max(0, duration - time))}`;
     paintRange(seek, (time / duration) * 100);
+    if (tab === 'lyrics') lyrics.tick(time);
   }
 
   // ─── Ouverture / fermeture ─────────────────────────────────────────────────
@@ -260,7 +271,7 @@ export function createNowPlaying(root) {
   root.addEventListener('pointermove', wake);
   root.addEventListener('pointerdown', wake);
 
-  onPlayer('track', () => { paintTrack(); });
+  onPlayer('track', () => { paintTrack(); if (open && tab === 'lyrics') lyrics.show(player.track); });
   onPlayer('state', () => { paintState(); wake(); });
   onPlayer('queue', () => { if (open && tab === 'queue') renderQueue(); });
   onPlayer('settings', paintSettings);

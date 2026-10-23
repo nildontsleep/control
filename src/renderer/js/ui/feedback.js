@@ -6,16 +6,28 @@ import { icon } from '../icons.js';
 let toastEl = null;
 let toastTimer = null;
 
-export function toast(text, iconName = null) {
+/** opts : { action: { label, onClick }, duration } — avec une action, la notification reste cliquable plus longtemps. */
+export function toast(text, iconName = null, { action = null, duration = null } = {}) {
   const host = $('#toasts');
   if (!host) return;
   if (!toastEl) {
     toastEl = h('div.toast');
     host.append(toastEl);
   }
+  toastEl.classList.toggle('has-action', !!action);
   toastEl.replaceChildren(
     iconName ? h('span.toast-icon', { html: icon(iconName, 16, 2) }) : null,
     h('span.toast-text', { text }),
+    action ? h('button.toast-action', {
+      type: 'button',
+      text: action.label,
+      onclick: () => {
+        clearTimeout(toastTimer);
+        toastEl.classList.add('out');
+        toastEl.classList.remove('show');
+        action.onClick();
+      },
+    }) : null,
   );
   toastEl.classList.remove('out', 'bump');
   void toastEl.offsetWidth;
@@ -24,7 +36,7 @@ export function toast(text, iconName = null) {
   toastTimer = setTimeout(() => {
     toastEl.classList.add('out');
     toastEl.classList.remove('show');
-  }, 2200);
+  }, duration ?? (action ? 7000 : 2200));
 }
 
 // ─── Info-bulles ─────────────────────────────────────────────────────────────

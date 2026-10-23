@@ -12,6 +12,9 @@ const { open: openDb } = require('./db');
 const { Library } = require('./library');
 const { Tools } = require('./tools');
 const { Downloads } = require('./downloads');
+const { Tags } = require('./tags');
+const { Stats } = require('./stats');
+const { Lyrics } = require('./lyrics');
 const { MediaService, frameOrigins, imageOrigins } = require('./media');
 
 // ─── Mode portable : les données restent à côté de l'exécutable ──────────────
@@ -38,6 +41,9 @@ let library;
 let tools;
 let downloads;
 let media;
+let tags;
+let stats;
+let lyrics;
 let mainWin = null;
 let quitting = false;
 let boundsTimer = null;
@@ -330,6 +336,68 @@ function setupIpc() {
     if (file) shell.showItemInFolder(file);
   });
   handle('lib:play-start', (e, id, duration) => library.playStart(id, duration));
+
+  // Paroles
+  const lyr = (fn) => async (e, id, ...rest) => {
+    if (!Number.isInteger(id)) return { ok: false, message: 'Morceau invalide.' };
+    try {
+      return { ok: true, data: await fn(id, ...rest) };
+    } catch (err) {
+      return { ok: false, message: String(err?.message || err), network: /fetch|network|timeout|abort|LRCLIB/i.test(String(err)) };
+    }
+  };
+  handle('lyrics:get', lyr((id, refresh) => lyrics.get(id, { refresh: !!refresh })));
+  handle('lyrics:set', lyr((id, text) => lyrics.set(id, String(text || '').slice(0, 200000))));
+  handle('lyrics:save-file', lyr((id) => lyrics.saveSidecar(id)));
+
+  // Statistiques
+  handle('stats:get', (e, range) => {
+    try {
+      return { ok: true, data: stats.get({ from: String(range?.from || ''), to: String(range?.to || '') }) };
+    } catch (err) {
+      return { ok: false, message: String(err?.message || err) };
+    }
+  });
+  handle('stats:save-image', async (e, dataUrl, name) => {
+    const match = /^data:image\/png;base64,([A-Za-z0-9+/=]+)$/.exec(String(dataUrl || ''));
+    if (!match || match[1].length > 30 * 1024 * 1024) return false;
+    const res = await dialog.showSaveDialog(winOf(e), {
+      title: 'Enregistrer l’image',
+      defaultPath: path.join(app.getPath('pictures'), `${String(name || 'control').replace(/[\\/:*?"<>|]/g, '_')}.png`),
+      filters: [{ name: 'Image PNG', extensions: ['png'] }],
+    });
+    if (res.canceled || !res.filePath) return false;
+    await fs.promises.writeFile(res.filePath, Buffer.from(match[1], 'base64'));
+    return res.filePath;
+  });
+
+  // Éditeur de tags
+  const wrap = async (fn) => {
+    try {
+      return { ok: true, data: await fn() };
+    } catch (err) {
+      return { ok: false, message: String(err?.message || err) };
+    }
+  };
+  const ids = (list) => (Array.isArray(list) ? list.filter(Number.isInteger).slice(0, 5000) : []);
+  handle('tags:read', (e, list) => wrap(() => tags.read(ids(list))));
+  handle('tags:write', (e, edits) => wrap(() => tags.write((Array.isArray(edits) ? edits : []).filter((x) => x && Number.isInteger(x.id)))));
+  handle('tags:undo', () => wrap(() => tags.undo()));
+  handle('tags:stage-cover', (e, src) => wrap(() => tags.stageCover(src && typeof src === 'object' ? src : {})));
+  handle('tags:pick-cover', (e) => wrap(async () => {
+    const res = await dialog.showOpenDialog(winOf(e), {
+      title: 'Choisir une pochette',
+      defaultPath: app.getPath('pictures'),
+      filters: [{ name: 'Images', extensions: ['jpg', 'jpeg', 'png', 'webp', 'bmp', 'gif'] }],
+      properties: ['openFile'],
+    });
+    if (res.canceled || !res.filePaths[0]) return null;
+    return tags.stageCover({ path: res.filePaths[0] });
+  }));
+  handle('tags:search-covers', (e, query) => wrap(() => tags.searchCovers({
+    artist: String(query?.artist || '').slice(0, 200),
+    album: String(query?.album || '').slice(0, 200),
+  })));
   ipcMain.on('lib:play-end', (e, playId, seconds, completed) => library.playEnd(playId, seconds, completed));
 
   // Playlists
@@ -436,6 +504,9 @@ app.whenReady().then(() => {
     thumbsDir: path.join(userData, 'thumbs'),
     emit: broadcast,
   });
+  tags = new Tags({ library });
+  stats = new Stats(db);
+  lyrics = new Lyrics({ db, library, tags });
   tools = new Tools({ binDir: path.join(userData, 'bin'), tmpDir: path.join(userData, 'tmp'), emit: broadcast });
   downloads = new Downloads({ tools, library, store, file: path.join(userData, 'downloads.json'), emit: broadcast });
   downloads.defaultDir = defaultDownloadDir();
