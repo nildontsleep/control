@@ -1,0 +1,371 @@
+/* nil cam — contrôles façon macOS. */
+
+/* ─── Interrupteur ──────────────────────────────────────────────────────── */
+.switch {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  width: 34px;
+  height: 20px;
+}
+
+.switch input {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+}
+
+.switch-track {
+  position: absolute;
+  inset: 0;
+  border-radius: 99px;
+  background: var(--control);
+  box-shadow: inset 0 0 0 0.5px rgb(0 0 0 / 0.06);
+  transition: background-color 0.25s var(--out), box-shadow 0.2s;
+}
+
+.switch-knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 99px;
+  background: #fff;
+  box-shadow: 0 1px 2.5px rgb(0 0 0 / 0.3), 0 0 0 0.5px rgb(0 0 0 / 0.04);
+  transition: transform 0.32s var(--spring), width 0.2s var(--out);
+}
+
+.switch input:checked + .switch-track {
+  background: var(--accent);
+}
+
+.switch input:checked + .switch-track .switch-knob {
+  transform: translateX(14px);
+}
+
+.switch:active .switch-knob {
+  width: 20px;
+}
+
+.switch:active input:checked + .switch-track .switch-knob {
+  transform: translateX(10px);
+}
+
+.switch input:focus-visible + .switch-track {
+  box-shadow: 0 0 0 3px rgb(var(--accent-rgb) / 0.4);
+}
+
+/* ─── Curseur ───────────────────────────────────────────────────────────── */
+.slider {
+  --from: 0%;
+  --to: 0%;
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 20px;
+  margin: 0;
+  background: transparent;
+}
+
+.slider:focus {
+  outline: none;
+}
+
+.slider::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(90deg,
+    var(--control) var(--from), var(--accent) var(--from),
+    var(--accent) var(--to), var(--control) var(--to));
+}
+
+.slider.custom-track::-webkit-slider-runnable-track {
+  height: 5px;
+  border-radius: 3px;
+  background: var(--track);
+  box-shadow: inset 0 0 0 0.5px rgb(0 0 0 / 0.18);
+}
+
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  margin-top: -7px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.34), 0 0 0 0.5px rgb(0 0 0 / 0.1);
+  transition: transform 0.2s var(--spring);
+}
+
+.slider.custom-track::-webkit-slider-thumb {
+  margin-top: -6.5px;
+}
+
+.slider:active::-webkit-slider-thumb {
+  transform: scale(1.12);
+}
+
+.slider:focus-visible::-webkit-slider-thumb {
+  box-shadow: 0 0 0 3px rgb(var(--accent-rgb) / 0.45), 0 1px 3px rgb(0 0 0 / 0.34);
+}
+
+.slider-value {
+  font-size: 12px;
+  color: var(--text-2);
+  font-variant-numeric: tabular-nums;
+  transition: color 0.2s;
+}
+
+.slider-value.dim {
+  color: var(--text-3);
+}
+
+/* ─── Contrôle segmenté ─────────────────────────────────────────────────── */
+.seg {
+  --i: 0;
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(var(--n), 1fr);
+  padding: 2px;
+  border-radius: 8px;
+  background: var(--fill);
+  box-shadow: inset 0 0 0 0.5px var(--group-border);
+}
+
+.seg-thumb {
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  left: 2px;
+  width: calc((100% - 4px) / var(--n));
+  border-radius: 6px;
+  background: var(--seg-thumb);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.16), 0 0 0 0.5px rgb(0 0 0 / 0.05);
+  transform: translateX(calc(var(--i) * 100%));
+  transition: transform 0.38s var(--spring), opacity 0.2s;
+}
+
+.seg-btn {
+  position: relative;
+  z-index: 1;
+  height: 24px;
+  padding: 0 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  border-radius: 6px;
+  font-size: 12.5px;
+  font-weight: 500;
+  white-space: nowrap;
+  color: var(--text-2);
+  transition: color 0.2s;
+}
+
+.seg-btn:hover,
+.seg-btn.on {
+  color: var(--text);
+}
+
+.seg-icon {
+  display: grid;
+}
+
+.seg.compact .seg-btn {
+  height: 22px;
+  padding: 0 8px;
+  font-size: 12px;
+}
+
+.seg.icons-only .seg-btn {
+  padding: 0 10px;
+}
+
+/* ─── Bouton pop-up ─────────────────────────────────────────────────────── */
+.popup {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 200px;
+  height: 24px;
+  padding: 0 3px 0 10px;
+  border-radius: 6px;
+  font-size: 12.5px;
+  background: var(--fill-strong);
+  box-shadow: inset 0 0.5px 0 rgb(255 255 255 / 0.08), 0 0.5px 1.5px rgb(0 0 0 / 0.2);
+  transition: filter 0.15s;
+}
+
+:root[data-theme='light'] .popup {
+  background: #fff;
+  box-shadow: 0 0.5px 2px rgb(0 0 0 / 0.2), 0 0 0 0.5px rgb(0 0 0 / 0.07);
+}
+
+.popup:hover,
+.popup.menu-anchor {
+  filter: brightness(1.08);
+}
+
+.popup-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.popup-chev {
+  flex: none;
+  width: 17px;
+  height: 17px;
+  border-radius: 4px;
+  display: grid;
+  place-items: center;
+  color: var(--on-accent);
+  background: linear-gradient(180deg, rgb(255 255 255 / 0.18), transparent), var(--accent);
+  box-shadow: inset 0 0.5px 0 rgb(255 255 255 / 0.25);
+}
+
+/* ─── Pastilles de couleur ──────────────────────────────────────────────── */
+.swatches {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 7px;
+}
+
+.swatch {
+  position: relative;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--c);
+  box-shadow: inset 0 0 0 0.5px rgb(0 0 0 / 0.22), inset 0 -3px 6px rgb(0 0 0 / 0.12);
+  transition: transform 0.25s var(--spring);
+}
+
+.swatch:hover {
+  transform: scale(1.14);
+}
+
+.swatch.on::after {
+  content: '';
+  position: absolute;
+  inset: 6px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 2px rgb(0 0 0 / 0.35);
+}
+
+.swatch-custom {
+  background:
+    radial-gradient(circle, var(--c) 0 40%, transparent 42%),
+    conic-gradient(from 90deg, #ff453a, #ff9f0a, #ffd60a, #30d158, #40c8e0, #0a84ff, #bf5af2, #ff375f, #ff453a);
+}
+
+.swatch-custom input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+}
+
+/* ─── Boutons ───────────────────────────────────────────────────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 13px;
+  border-radius: 7px;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: filter 0.15s, transform 0.2s var(--spring), background-color 0.15s;
+}
+
+.btn:active {
+  transform: scale(0.97);
+}
+
+.btn-small {
+  height: 24px;
+  padding: 0 10px;
+  font-size: 12.5px;
+  border-radius: 6px;
+}
+
+.btn-icon {
+  display: grid;
+}
+
+.btn-primary {
+  color: var(--on-accent);
+  background: linear-gradient(180deg, rgb(255 255 255 / 0.17), rgb(255 255 255 / 0)), var(--accent);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.24), inset 0 0.5px 0 rgb(255 255 255 / 0.28);
+}
+
+.btn-primary:hover {
+  filter: brightness(1.08);
+}
+
+.btn-secondary {
+  color: var(--text);
+  background: var(--fill-strong);
+  box-shadow: inset 0 0.5px 0 rgb(255 255 255 / 0.08), 0 0.5px 1.5px rgb(0 0 0 / 0.16);
+}
+
+:root[data-theme='light'] .btn-secondary {
+  background: #fff;
+  box-shadow: 0 0.5px 2px rgb(0 0 0 / 0.2), 0 0 0 0.5px rgb(0 0 0 / 0.06);
+}
+
+.state .btn-secondary {
+  color: #fff;
+  background: rgb(255 255 255 / 0.14);
+}
+
+.btn-secondary:hover {
+  filter: brightness(1.12);
+}
+
+.btn-plain {
+  padding: 0 7px;
+  color: var(--accent);
+}
+
+.btn-plain:hover {
+  background: rgb(var(--accent-rgb) / 0.13);
+}
+
+.btn-danger {
+  color: #ff453a;
+  background: rgb(255 69 58 / 0.13);
+}
+
+.btn-danger:hover {
+  background: rgb(255 69 58 / 0.22);
+}
+
+.icon-btn {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  display: grid;
+  place-items: center;
+  color: var(--text-2);
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.icon-btn:hover {
+  background: var(--fill);
+  color: var(--text);
+}

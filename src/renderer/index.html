@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="fr" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: app: https:; media-src 'self' blob: app:; font-src 'self'; connect-src 'self' app: blob:">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>control</title>
+  <link rel="icon" href="assets/icon.png">
+  <link rel="stylesheet" href="styles/base.css">
+  <link rel="stylesheet" href="styles/controls.css">
+  <link rel="stylesheet" href="styles/overlays.css">
+  <link rel="stylesheet" href="styles/settings.css">
+  <link rel="stylesheet" href="styles/app.css">
+  <link rel="stylesheet" href="styles/views.css">
+  <link rel="stylesheet" href="styles/player.css">
+  <script type="module" src="js/app.js"></script>
+</head>
+<body>
+  <div id="app" class="app">
+    <div class="ambient" aria-hidden="true"><div class="amb" id="ambA"></div><div class="amb" id="ambB"></div></div>
+
+    <aside id="sidebar" class="sidebar"></aside>
+
+    <main class="main">
+      <div id="topbar" class="topbar">
+        <button id="navBack" class="nav-btn" type="button"></button>
+        <button id="navForward" class="nav-btn" type="button"></button>
+      </div>
+      <div id="scroller" class="scroller"><div id="view" class="view"></div></div>
+      <div id="playerbar" class="playerbar"></div>
+    </main>
+
+    <section id="nowPlaying" class="np" aria-hidden="true">
+      <div class="np-bg"></div>
+      <div class="np-shade"></div>
+      <canvas id="npViz" class="np-viz"></canvas>
+      <header class="np-top"></header>
+      <div class="np-body">
+        <div class="np-main">
+          <div class="np-stage">
+            <div id="npArt" class="np-art"></div>
+            <video id="media" class="np-video" playsinline></video>
+          </div>
+          <div id="npInfo" class="np-info"></div>
+          <div id="npSeek" class="np-seek"></div>
+          <div id="npControls" class="np-controls"></div>
+        </div>
+        <aside class="np-side">
+          <div id="npTabs" class="np-tabs"></div>
+          <div id="npPanel" class="np-panel"></div>
+        </aside>
+      </div>
+    </section>
+
+    <div id="toasts" class="toasts" aria-live="polite"></div>
+    <div id="layer" class="layer"></div>
+    <div id="dropzone" class="dropzone"><div class="drop-card"><strong id="dropTitle"></strong><span id="dropText"></span></div></div>
+  </div>
+</body>
+</html>

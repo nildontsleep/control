@@ -1,0 +1,171 @@
+/* control — toasts, info-bulles et menus (repris de nil cam). */
+
+.toasts {
+  position: absolute;
+  top: 18px;
+  left: 50%;
+  z-index: 60;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 15px 8px 12px;
+  border-radius: 14px;
+  white-space: nowrap;
+  font-weight: 550;
+  color: var(--text);
+  background: var(--panel);
+  -webkit-backdrop-filter: blur(30px) saturate(1.8);
+  backdrop-filter: blur(30px) saturate(1.8);
+  border: 0.5px solid var(--panel-border);
+  box-shadow: 0 14px 36px rgb(0 0 0 / 0.3), inset 0 0.5px 0 var(--panel-edge);
+  opacity: 0;
+  transform: translateY(-10px) scale(0.96);
+  transition: opacity 0.3s var(--out), transform 0.5s var(--spring);
+}
+
+.toast.show {
+  opacity: 1;
+  transform: none;
+}
+
+.toast-icon {
+  display: grid;
+  color: var(--accent);
+}
+
+.tooltip {
+  position: fixed;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  border-radius: 7px;
+  font-size: 11.5px;
+  white-space: nowrap;
+  color: var(--text);
+  background: var(--tooltip);
+  border: 0.5px solid var(--panel-border);
+  box-shadow: 0 6px 20px rgb(0 0 0 / 0.25);
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(3px);
+  transition: opacity 0.12s, transform 0.25s var(--out);
+}
+
+.tooltip.below {
+  transform: translateY(-3px);
+}
+
+.tooltip.show {
+  opacity: 1;
+  transform: none;
+}
+
+.tooltip.measure {
+  opacity: 0 !important;
+  transition: none !important;
+}
+
+.tooltip kbd {
+  min-width: 18px;
+  height: 18px;
+  font-size: 10.5px;
+  padding: 0 5px;
+}
+
+.menu {
+  max-height: min(70vh, 520px);
+  overflow-y: auto;
+  position: fixed;
+  z-index: 100;
+  min-width: 170px;
+  padding: 5px;
+  border-radius: 10px;
+  color: var(--text);
+  background: var(--menu);
+  -webkit-backdrop-filter: blur(34px) saturate(1.9);
+  backdrop-filter: blur(34px) saturate(1.9);
+  border: 0.5px solid var(--panel-border);
+  box-shadow: 0 14px 40px rgb(0 0 0 / 0.32), inset 0 0.5px 0 var(--panel-edge);
+  opacity: 0;
+  transform: scale(0.97);
+  transition: opacity 0.12s, transform 0.2s var(--out);
+  -webkit-app-region: no-drag;
+}
+
+.menu.open {
+  opacity: 1;
+  transform: none;
+}
+
+.menu.closing {
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.menu-item {
+  width: 100%;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px 0 8px;
+  border-radius: 5px;
+  text-align: left;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.menu-item:focus,
+.menu-item:focus-visible {
+  outline: none;
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.menu-item:disabled {
+  opacity: 0.4;
+}
+
+.menu-check {
+  width: 14px;
+  display: grid;
+  place-items: center;
+}
+
+.menu-icon {
+  display: grid;
+  opacity: 0.85;
+}
+
+.menu-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
+.menu-kbd {
+  margin-left: auto;
+  padding-left: 20px;
+  opacity: 0.5;
+}
+
+.menu-sep {
+  height: 1px;
+  margin: 5px 8px;
+  background: var(--separator);
+}
+
+.menu-header {
+  padding: 4px 10px 2px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-3);
+}
+

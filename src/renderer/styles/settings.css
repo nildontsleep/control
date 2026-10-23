@@ -1,0 +1,202 @@
+/* control — groupes, lignes et fiche « à propos » (repris de nil cam). */
+
+/* ─── Groupes et lignes ─────────────────────────────────────────────────── */
+.group {
+  margin-top: 16px;
+}
+
+.group-head {
+  min-height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 4px 6px 8px;
+}
+
+.group-head h3 {
+  margin: 0;
+  font-size: 12.5px;
+  font-weight: 650;
+  color: var(--text-2);
+}
+
+.group-body {
+  overflow: hidden;
+  border-radius: 12px;
+  background: var(--group);
+  box-shadow: inset 0 0 0 0.5px var(--group-border);
+}
+
+.group-footer {
+  margin: 7px 8px 0;
+  font-size: 11.5px;
+  line-height: 1.38;
+  color: var(--text-3);
+}
+
+.row {
+  position: relative;
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+}
+
+.row + .row::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 12px;
+  right: 0;
+  height: 0.5px;
+  background: var(--separator);
+}
+
+.row-badge {
+  width: 24px;
+  height: 24px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 7px;
+  color: #fff;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--c) 80%, #fff), var(--c));
+  box-shadow: inset 0 0.5px 0 rgb(255 255 255 / 0.3), 0 0.5px 1.5px rgb(0 0 0 / 0.2);
+}
+
+.row-label {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.row-title {
+  font-size: 13px;
+}
+
+.row-hint {
+  font-size: 11.5px;
+  line-height: 1.35;
+  color: var(--text-2);
+}
+
+.row-control {
+  flex: none;
+  display: flex;
+  align-items: center;
+}
+
+.row-slider {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 5px;
+  padding: 9px 12px 8px;
+}
+
+.row-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.row-block {
+  display: block;
+  padding: 12px;
+}
+
+.row-actions {
+  justify-content: flex-end;
+  min-height: 40px;
+}
+
+.row-actions .row-label {
+  display: none;
+}
+
+.row-stack {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 9px;
+  padding: 10px 12px 12px;
+}
+
+.row-stack .row-control,
+.row-stack .swatches {
+  width: 100%;
+}
+
+.row-stack .swatches {
+  justify-content: space-between;
+  gap: 0;
+}
+
+.row-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.folder-path + .row-buttons {
+  margin-top: 10px;
+}
+
+.stream-info {
+  font-size: 11.5px;
+  color: var(--text-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.folder-path {
+  padding: 7px 10px;
+  border-radius: 7px;
+  font-size: 12px;
+  color: var(--text-2);
+  background: var(--fill);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+
+/* ─── À propos ──────────────────────────────────────────────────────────── */
+.about-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 18px 0 4px;
+  text-align: center;
+}
+
+.about-icon {
+  width: 88px;
+  height: 88px;
+  margin-bottom: 10px;
+  filter: drop-shadow(0 10px 22px rgb(0 0 0 / 0.35));
+}
+
+.about-name {
+  font-size: 21px;
+  font-weight: 700;
+  letter-spacing: -0.022em;
+}
+
+.about-tagline {
+  color: var(--text-2);
+}
+
+.about-meta {
+  margin-top: 4px;
+  font-size: 11.5px;
+  color: var(--text-3);
+}
+
+.kbds {
+  display: flex;
+  gap: 4px;
+}
+
