@@ -99,9 +99,10 @@ class Updater extends EventEmitter {
   /** Sans l'API : « releases/latest » redirige vers la page du dernier tag, et les fichiers portent un nom prévisible. */
   async #web() {
     const signal = AbortSignal.timeout(12000);
-    const page = await this.fetch(`https://github.com/${REPO}/releases/latest`, { method: 'HEAD', headers: { 'user-agent': AGENT }, signal });
-    const tag = /\/releases\/tag\/([^/?#]+)/.exec(page.url || '')?.[1];
-    if (!page.ok || !tag) throw Object.assign(new Error('web'), { code: 'http' });
+    // `releases/latest` répond par une redirection vers la page du dernier tag : on la lit sans la suivre.
+    const location = await this.redirect(`https://github.com/${REPO}/releases/latest`, { 'user-agent': AGENT });
+    const tag = /\/releases\/tag\/([^/?#]+)/.exec(location || '')?.[1];
+    if (!tag) throw Object.assign(new Error('web'), { code: 'http' });
     const version = decodeURIComponent(tag).replace(/^v/i, '');
     const assets = [];
     for (const kind of ['setup', 'portable']) {
@@ -122,6 +123,7 @@ class Updater extends EventEmitter {
     try {
       let rel;
       try {
+        if (process.env.CONTROL_UPDATE_WEBONLY) throw Object.assign(new Error('essai'), { code: 'busy' });
         rel = await this.#api();
       } catch (err) {
         // L'API GitHub limite les requêtes anonymes (60 par heure et par adresse IP) : on passe alors par les pages publiques.

@@ -10,7 +10,7 @@ const path = require('node:path');
 const { EventEmitter } = require('node:events');
 
 // Identifiant de l'application créée sur https://discord.com/developers/applications (public, ce n'est pas un secret).
-const APP_ID = process.env.CONTROL_DISCORD_ID || '';
+const APP_ID = process.env.CONTROL_DISCORD_ID || '1563182510202949733';
 
 const ITUNES = process.env.CONTROL_ITUNES_URL || 'https://itunes.apple.com/search';
 const OP = { HANDSHAKE: 0, FRAME: 1, CLOSE: 2, PING: 3, PONG: 4 };

@@ -19,7 +19,7 @@ Toutes font 1024 × 1024 px (Discord demande 512 px minimum).
 3. **Rich Presence → Art Assets** : téléverser les cinq fichiers ci-dessus et vérifier que chaque clé est bien celle du tableau (la clé est le nom du fichier sans `.png`). Les images peuvent mettre quelques minutes à apparaître.
 4. Rien d'autre à activer dans le portail : pas de bot, pas d'OAuth2, pas d'URL de redirection. control parle directement au Discord installé sur l'ordinateur.
 5. Dans Discord (application de bureau, pas le navigateur) : *Paramètres utilisateur → Confidentialité de l'activité* → laisser activés le partage de l'activité détectée et l'affichage de l'activité en cours comme statut (les libellés varient un peu selon la version).
-6. Dans control : **Réglages → Général → Discord**. L'Application ID peut être collé dans le champ prévu, puis **Tester**. Il peut aussi être inscrit une fois pour toutes dans le programme (`src/main/discord.js`, constante `APP_ID`).
+6. L'Application ID est déjà inscrit dans control (`src/main/discord.js`, constante `APP_ID`) : rien à coller. Un autre ID peut être saisi dans **Réglages → Général → Discord** (puis **Tester**) pour utiliser sa propre application.
 
 ## Ce qui est affiché
 
