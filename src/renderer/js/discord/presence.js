@@ -54,8 +54,8 @@ function fromTrack(track, d) {
     details: track.title,
     state: video ? (track.artist || t('dc.localVideo')) : artist || t('dc.unknownArtist'),
     imageText: track.album || undefined,
-    // Les pochettes locales ne sont pas joignables par Discord : on cherche la pochette officielle.
-    lookup: !video && d.covers !== false ? { artist, album: track.album || '', title: track.title } : null,
+    // La pochette du fichier (tag) ou l'image de la vidéo : le processus principal la rend accessible à Discord.
+    cover: d.covers === false ? null : track.cover ? { kind: 'cover', id: track.cover } : video ? { kind: 'vthumb', id: track.id } : null,
   };
 }
 

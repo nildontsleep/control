@@ -23,8 +23,8 @@ Toutes font 1024 × 1024 px (Discord demande 512 px minimum).
 
 ## Ce qui est affiché
 
-- **Musique** : « Écoute control », titre, artiste, pochette (cherchée sur Apple Music si l'option est activée), barre de progression.
-- **Vidéo de la bibliothèque** : « Regarde control », titre, durée écoulée.
-- **Films, séries, animés** : « Regarde control », titre, saison et épisode, affiche, barre de progression.
+- **Musique** : « Écoute control », titre, artiste, pochette **du fichier** (celle des tags, envoyée à un hébergeur temporaire — voir le README principal), barre de progression.
+- **Vidéo de la bibliothèque** : « Regarde control », titre, image de la vidéo (ou sa pochette intégrée), durée écoulée.
+- **Films, séries, animés** : « Regarde control », titre, saison et épisode, affiche du film (TMDB / AniList), barre de progression.
 - **Pause** : la pastille passe à `pause` et la barre disparaît ; au bout de 10 minutes de pause, la présence est effacée.
 - **Masquer les titres** : seuls « Écoute de la musique » / « Regarde un film »… sont envoyés.

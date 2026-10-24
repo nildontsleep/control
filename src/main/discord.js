@@ -7,12 +7,18 @@
 const net = require('node:net');
 const fs = require('node:fs');
 const path = require('node:path');
+const crypto = require('node:crypto');
 const { EventEmitter } = require('node:events');
 
 // Identifiant de l'application créée sur https://discord.com/developers/applications (public, ce n'est pas un secret).
 const APP_ID = process.env.CONTROL_DISCORD_ID || '1563182510202949733';
 
-const ITUNES = process.env.CONTROL_ITUNES_URL || 'https://itunes.apple.com/search';
+// Discord n'affiche que des images accessibles par une adresse publique : la pochette d'un fichier local est donc
+// envoyée à un hébergeur temporaire (litterbox.catbox.moe, sans compte), qui l'efface au bout de 72 heures.
+const COVER_HOST = process.env.CONTROL_COVER_HOST_URL || 'https://litterbox.catbox.moe/resources/internals/api.php';
+const COVER_URL = /^https:\/\/(?:[\w-]+\.)?catbox\.moe\/[\w./-]+$/;
+const COVER_TTL = 60 * 3600 * 1000; // l'hébergeur garde 72 h : on renvoie un peu avant
+const COVER_RETRY = 2 * 60 * 1000;
 const OP = { HANDSHAKE: 0, FRAME: 1, CLOSE: 2, PING: 3, PONG: 4 };
 const TYPE = { listening: 2, watching: 3 };
 const ICONS = new Set(['play', 'pause', 'watching', 'video']);
@@ -28,8 +34,6 @@ const clip = (value, max = 128) => {
   return s.length < 2 ? s.padEnd(2, ' ') : s; // Discord exige au moins 2 caractères
 };
 
-const plain = (value, max) => String(value ?? '').replace(/\s+/g, ' ').trim().slice(0, max);
-
 const httpsUrl = (v) => (typeof v === 'string' && /^https:\/\//i.test(v) && v.length <= 256 ? v : null);
 
 /** Normalise ce que la fenêtre envoie : rien de ce qui arrive du rendu n'est transmis tel quel. */
@@ -39,8 +43,9 @@ function sanitize(raw) {
   const details = clip(raw.details);
   if (!kind || !details) return null;
   const num = (v) => (Number.isFinite(Number(v)) && Number(v) >= 0 ? Number(v) : 0);
-  const lookup = raw.lookup && typeof raw.lookup === 'object'
-    ? { artist: plain(raw.lookup.artist, 80), album: plain(raw.lookup.album, 80), title: plain(raw.lookup.title, 80) }
+  const c = raw.cover && typeof raw.cover === 'object' ? raw.cover : null;
+  const cover = c && ((c.kind === 'cover' && /^[0-9a-f]{20}$/.test(String(c.id))) || (c.kind === 'vthumb' && Number.isInteger(c.id) && c.id > 0))
+    ? { kind: c.kind, id: c.kind === 'cover' ? String(c.id) : c.id }
     : null;
   return {
     kind,
@@ -53,7 +58,7 @@ function sanitize(raw) {
     playing: !!raw.playing,
     position: num(raw.position),
     duration: num(raw.duration),
-    lookup: lookup && (lookup.artist || lookup.album || lookup.title) ? lookup : null,
+    cover,
   };
 }
 
@@ -129,8 +134,27 @@ class DiscordPresence extends EventEmitter {
   #flushTimer = null;
   #retryTimer = null;
   #nonce = 0;
-  #covers = new Map();
+  #covers = new Map(); // clé de pochette → { url, at } (au plus 60 h)
+  #pending = new Map();
+  #failed = new Map();
   #coverToken = 0;
+  #coverFile;
+  #cacheFile;
+
+  /**
+   * @param {object} [o]
+   * @param {Function} [o.coverFile]  async ({ kind, id }) → chemin du fichier image, ou null
+   * @param {string} [o.cacheFile]  fichier JSON où garder les adresses déjà obtenues
+   */
+  constructor({ coverFile, cacheFile } = {}) {
+    super();
+    this.#coverFile = coverFile || (async () => null);
+    this.#cacheFile = cacheFile || '';
+    try {
+      const saved = JSON.parse(fs.readFileSync(this.#cacheFile, 'utf8'));
+      for (const [key, v] of Object.entries(saved)) if (v && COVER_URL.test(v.url) && Date.now() - v.at < COVER_TTL) this.#covers.set(key, v);
+    } catch { /* pas encore de cache */ }
+  }
 
   get status() {
     return { state: this.#status, detail: this.#detail, clientId: this.#id() };
@@ -164,38 +188,78 @@ class DiscordPresence extends EventEmitter {
   /** `null` efface la présence. */
   setActivity(raw) {
     this.#activity = sanitize(raw);
-    const lookup = this.#activity?.lookup;
-    const key = lookup ? `${lookup.artist}|${lookup.album}|${lookup.title}`.toLowerCase() : '';
+    const ref = this.#activity?.cover;
+    const key = ref ? `${ref.kind}:${ref.id}` : '';
     if (key !== this.#coverKey) {
       this.#coverKey = key;
       this.#cover = null;
       this.#coverToken++;
-      if (lookup) this.#findCover(lookup, key, this.#coverToken);
+      if (ref) this.#findCover(ref, key, this.#coverToken);
     }
     this.#schedule();
   }
 
-  async #findCover(lookup, key, token) {
-    if (!this.#covers.has(key)) {
-      this.#covers.set(key, null);
-      try {
-        const term = [lookup.artist, lookup.album || lookup.title].filter(Boolean).join(' ');
-        const params = new URLSearchParams({ media: 'music', entity: lookup.album ? 'album' : 'song', limit: '1', term });
-        // `net` n'existe qu'une fois l'application prête : on l'importe à l'usage.
-        const { net: electronNet } = require('electron');
-        const res = await electronNet.fetch(`${ITUNES}?${params}`, { headers: { 'user-agent': 'control (https://github.com/nildontsleep/control)' }, signal: AbortSignal.timeout(6000) });
-        if (res.ok) {
-          const art = (await res.json()).results?.[0]?.artworkUrl100;
-          if (art) this.#covers.set(key, art.replace(/\d+x\d+bb/, '512x512bb'));
-        }
-      } catch { /* hors ligne : on garde le logo */ }
-      if (this.#covers.size > 200) this.#covers.delete(this.#covers.keys().next().value);
-    }
-    const url = this.#covers.get(key);
+  async #findCover(ref, key, token) {
+    const url = await this.#coverUrl(ref, key);
     if (url && token === this.#coverToken) {
       this.#cover = url;
       this.#schedule();
     }
+  }
+
+  /** Adresse publique de la pochette : celle déjà obtenue, sinon on envoie le fichier à l'hébergeur temporaire. */
+  async #coverUrl(ref, key) {
+    const hit = this.#covers.get(key);
+    if (hit && Date.now() - hit.at < COVER_TTL) return hit.url;
+    if (Date.now() - (this.#failed.get(key) || 0) < COVER_RETRY) return null;
+    if (!this.#pending.has(key)) {
+      const job = this.#upload(ref, key).finally(() => this.#pending.delete(key));
+      this.#pending.set(key, job);
+    }
+    return this.#pending.get(key);
+  }
+
+  async #upload(ref, key) {
+    try {
+      const file = await this.#coverFile(ref);
+      if (!file) throw new Error('pas de pochette');
+      const data = await fs.promises.readFile(file);
+      if (!data.length || data.length > 8 * 1024 * 1024) throw new Error('pochette inutilisable');
+      const boundary = `----control${crypto.randomBytes(12).toString('hex')}`;
+      const field = (name, value) => `--${boundary}\r\nContent-Disposition: form-data; name="${name}"\r\n\r\n${value}\r\n`;
+      const body = Buffer.concat([
+        Buffer.from(field('reqtype', 'fileupload') + field('time', '72h')),
+        Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="fileToUpload"; filename="cover.jpg"\r\nContent-Type: image/jpeg\r\n\r\n`),
+        data,
+        Buffer.from(`\r\n--${boundary}--\r\n`),
+      ]);
+      // `net` n'existe qu'une fois l'application prête : on l'importe à l'usage.
+      const { net } = require('electron');
+      const res = await net.fetch(COVER_HOST, {
+        method: 'POST',
+        headers: { 'content-type': `multipart/form-data; boundary=${boundary}`, 'user-agent': 'control (https://github.com/nildontsleep/control)' },
+        body,
+        signal: AbortSignal.timeout(20000),
+      });
+      const text = (await res.text()).trim();
+      if (!res.ok || !(COVER_URL.test(text) || (process.env.CONTROL_COVER_HOST_URL && /^https?:\/\//.test(text)))) throw new Error('réponse inattendue');
+      this.#covers.set(key, { url: text, at: Date.now() });
+      this.#failed.delete(key);
+      this.#saveCache();
+      return text;
+    } catch {
+      this.#failed.set(key, Date.now()); // hors ligne ou hébergeur indisponible : le logo de control reste affiché
+      return null;
+    }
+  }
+
+  #saveCache() {
+    if (!this.#cacheFile) return;
+    for (const [key, v] of this.#covers) if (Date.now() - v.at >= COVER_TTL) this.#covers.delete(key);
+    try {
+      fs.mkdirSync(path.dirname(this.#cacheFile), { recursive: true });
+      fs.writeFileSync(this.#cacheFile, JSON.stringify(Object.fromEntries(this.#covers)));
+    } catch { /* cache facultatif */ }
   }
 
   // ─── Connexion ─────────────────────────────────────────────────────────────

@@ -583,7 +583,17 @@ app.whenReady().then(() => {
   downloads = new Downloads({ tools, library, store, file: path.join(userData, 'downloads.json'), emit: broadcast });
   downloads.defaultDir = defaultDownloadDir();
   media = new MediaService({ db, store, emit: broadcast });
-  discord = new DiscordPresence();
+  discord = new DiscordPresence({
+    cacheFile: path.join(userData, 'discord-covers.json'),
+    // Pochette intégrée au fichier (ou du dossier), ou image extraite d'une vidéo : déjà rangées par la bibliothèque.
+    coverFile: async ({ kind, id }) => {
+      if (kind === 'cover') {
+        const file = path.join(library.coversDir, `${id}.jpg`);
+        return fs.existsSync(file) ? file : null;
+      }
+      return library.videoThumb(id, tools.path('ffmpeg'));
+    },
+  });
   discord.on('status', (status) => broadcast('discord:status', status));
   updater = new Updater({
     version: app.getVersion(),
