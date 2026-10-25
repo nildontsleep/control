@@ -61,10 +61,13 @@ export function openSettings(initial = 'general') {
       if (phase === 'checking') nodes = [h('span.spinner.small', {}, ...Array.from({ length: 12 }, (_, i) => h('i', { style: { '--i': i } }))), text('upd.checking')];
       else if (phase === 'available') {
         nodes = [
-          h('div.upd-info', {}, h('strong', { text: t('upd.available', { v: st.version }) }), h('span', { text: st.size ? fmtBytes(st.size) : '' })),
+          h('div.upd-info', {}, h('strong', { text: t('upd.available', { v: st.version }) }), h('span', { text: st.manual ? t('upd.manual') : st.size ? fmtBytes(st.size) : '' })),
           h('div.row-buttons', {},
-            button(t('upd.install'), { icon: 'cloud-download', kind: 'primary', small: true, onClick: () => updateNow() }),
-            st.page ? button(t('upd.notes'), { icon: 'external-link', small: true, onClick: () => app.openExternal(st.page) }) : null),
+            // Paquet .deb, macOS, lancement depuis les sources : pas d'installation automatique, on renvoie vers la page.
+            st.manual
+              ? button(t('upd.download'), { icon: 'external-link', kind: 'primary', small: true, onClick: () => app.openExternal(st.page) })
+              : button(t('upd.install'), { icon: 'cloud-download', kind: 'primary', small: true, onClick: () => updateNow() }),
+            !st.manual && st.page ? button(t('upd.notes'), { icon: 'external-link', small: true, onClick: () => app.openExternal(st.page) }) : null),
         ];
       } else if (phase === 'downloading') {
         const pct = st.size ? Math.min(100, Math.round(((st.received || 0) / st.size) * 100)) : 0;
@@ -388,7 +391,7 @@ export function openSettings(initial = 'general') {
         resetAll();
         setTimeout(() => location.reload(), 150);
       });
-      const edition = !info ? '' : info.portable ? t('about.portable') : t('about.installed');
+      const edition = !info ? '' : info.portable ? t('about.portable') : info.appimage ? t('about.appimage') : t('about.installed');
       return [
         h('div.about-card', {},
           h('img.about-icon', { src: 'assets/icon.png', alt: '' }),

@@ -4,7 +4,7 @@
 
 <h1 align="center">control</h1>
 
-<p align="center">Lecteur musique et vidéo pour Windows : téléchargements yt-dlp (YouTube, SoundCloud…), éditeur de tags, paroles synchronisées, statistiques d’écoute, films, séries et animés, Discord Rich Presence.<br>
+<p align="center">Lecteur musique et vidéo pour Windows et Linux : téléchargements yt-dlp (YouTube, SoundCloud…), éditeur de tags, paroles synchronisées, statistiques d’écoute, films, séries et animés, Discord Rich Presence.<br>
 Un design façon macOS : verre dépoli, pochettes qui teintent la fenêtre, animations à ressort, et des ambiances en un clic.</p>
 
 <p align="center">
@@ -27,7 +27,12 @@ Chaque build est produit par GitHub Actions et publié dans **Releases** :
 | `control-<version>-setup.exe` | **Installateur** : raccourcis Bureau et menu Démarrer, désinstallation depuis les Paramètres Windows. |
 | `control-<version>-portable.exe` | **Portable** : un seul fichier. La bibliothèque, les réglages et les outils vont dans un dossier `control data` posé à côté. |
 
-L’exécutable n’est pas signé : au premier lancement, SmartScreen peut afficher « Windows a protégé votre ordinateur ». Clique sur **Informations complémentaires** → **Exécuter quand même**.
+| `control-<version>-x86_64.AppImage` | **Linux, un seul fichier** : `chmod +x control-*.AppImage` puis double-clic ou `./control-*.AppImage`. Se met à jour tout seul depuis l’application. |
+| `control-<version>-amd64.deb` | **Linux (Debian, Ubuntu et dérivés)** : `sudo apt install ./control-*.deb`. Une nouvelle version est signalée dans l’application ; le paquet se télécharge à la main. |
+
+L’exécutable Windows n’est pas signé : au premier lancement, SmartScreen peut afficher « Windows a protégé votre ordinateur ». Clique sur **Informations complémentaires** → **Exécuter quand même**.
+
+**Linux** : 64 bits (x86_64) uniquement. L’AppImage demande FUSE 2 sur Ubuntu 22.04 et plus récent (`sudo apt install libfuse2t64`, ou `libfuse2` avant 24.04) ; sans FUSE : `./control-*.AppImage --appimage-extract-and-run`. Sur les distributions qui interdisent l’espace utilisateur isolé (Ubuntu 24.04…), l’AppImage ne peut pas installer le bac à sable de Chromium et démarre sans lui ; le paquet .deb, lui, installe ce qu’il faut. Les outils de téléchargement (yt-dlp, ffmpeg, deno) sont téléchargés au premier besoin ; l’extraction demande `tar` et `unzip` (`sudo apt install unzip xz-utils`), et un ffmpeg déjà installé sur le système est utilisé tel quel. Les touches multimédia et le panneau du bureau passent par MPRIS (non vérifié sur toutes les distributions).
 
 ## Premiers pas
 
@@ -154,7 +159,7 @@ npm start            # lance l’appli en développement
 npm run dist         # construit l’installateur et la version portable dans dist/
 ```
 
-`npm run dist:portable` et `npm run dist:setup` construisent l’un ou l’autre. La version portable se construit aussi sous Linux ; l’installateur NSIS demande Windows (ou Wine). Le workflow GitHub Actions (`.github/workflows/build.yml`) tourne sur `windows-latest` à chaque push, dépose les deux `.exe` en artefacts et publie une release quand la version de `package.json` n’a pas encore de release sur la branche par défaut (ou quand on pousse un tag `v*`).
+`npm run dist:portable` et `npm run dist:setup` construisent l’un ou l’autre ; `npm run dist:linux` construit l’AppImage et le paquet .deb (sous Linux). La version portable se construit aussi sous Linux ; l’installateur NSIS demande Windows (ou Wine). Le workflow GitHub Actions (`.github/workflows/build.yml`) construit sur `windows-latest` et sur `ubuntu-latest` à chaque push, dépose les fichiers en artefacts, et un dernier job publie une release avec les quatre quand la version de `package.json` n’a pas encore de release sur la branche par défaut (ou quand on pousse un tag `v*`).
 
 ### Organisation
 
@@ -198,6 +203,6 @@ Le design (jetons de couleur, contrôles, menus, info-bulles) est repris de [nil
 - Discord : control parle au Discord installé sur l’ordinateur, sans compte ni jeton. Discord n’affiche que des images accessibles par une adresse publique : avec l’option *Pochettes*, la pochette du fichier (celle des tags, ou l’image d’une vidéo) est envoyée à un hébergeur temporaire sans compte ([litterbox.catbox.moe](https://litterbox.catbox.moe), effacée après 72 h) ; les affiches de films, séries et animés viennent directement de TMDB / AniList. Désactivée, ou sans pochette, c’est le logo de control qui s’affiche.
 - Mises à jour : le dépôt GitHub est interrogé pour connaître la dernière version, rien d’autre n’est envoyé. Si le dépôt est **privé**, GitHub refuse la requête sans identifiant : colle alors dans *Réglages* → *À propos* un jeton GitHub en lecture seule (*Contents : Read*), qui reste sur ton ordinateur — ou rends le dépôt public.
 - Certains lecteurs vidéo vérifient qu’ils peuvent ouvrir une fenêtre : control en autorise une, invisible, vide et sans accès au reste de l’application, pour que le lecteur vidrift démarre.
-- Les données (bibliothèque SQLite, réglages, pochettes, outils) sont dans `%APPDATA%\control` (installé) ou dans `control data` à côté de l’exe (portable).
+- Les données (bibliothèque SQLite, réglages, pochettes, outils) sont dans `%APPDATA%\control` (installé), dans `control data` à côté de l’exe (portable) ou dans `~/.config/control` (Linux).
 
 Icônes [Lucide](https://lucide.dev) et police [Inter](https://rsms.me/inter) : voir [THIRD-PARTY.md](THIRD-PARTY.md).

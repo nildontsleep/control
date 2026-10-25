@@ -29,10 +29,18 @@ function compare(a, b) {
   return 0;
 }
 
-/** Choisit le bon fichier de la release : installeur ou portable, selon l'édition en cours. */
-function pickAsset(assets, portable) {
-  const want = portable ? /-portable\.exe$/i : /-setup\.exe$/i;
-  return (assets || []).find((a) => want.test(a.name) && a.browser_download_url) || null;
+// Édition en cours → fichier de la release qui la remplace. « manual » : paquet .deb, macOS, lancement depuis les
+// sources… — on prévient qu'une version existe, sans l'installer.
+const WANTED = {
+  setup: /-setup\.exe$/i,
+  portable: /-portable\.exe$/i,
+  appimage: /-x86_64\.AppImage$/i,
+};
+
+/** Choisit le bon fichier de la release, selon l'édition en cours. */
+function pickAsset(assets, edition) {
+  const want = WANTED[edition];
+  return want ? (assets || []).find((a) => want.test(a.name) && a.browser_download_url) || null : null;
 }
 
 const sha256File = (file) => new Promise((resolve, reject) => {
@@ -44,24 +52,24 @@ class Updater extends EventEmitter {
   /**
    * @param {object} o
    * @param {string} o.version  version en cours
-   * @param {boolean} o.portable  édition portable
+   * @param {'setup'|'portable'|'appimage'|'manual'} o.edition  édition en cours
    * @param {string} o.dir  dossier de travail pour les téléchargements
    * @param {Function} o.fetch  équivalent de fetch (net.fetch d'Electron)
    * @param {Function} o.quit  ferme l'application
-   * @param {string} [o.portableFile]  chemin de l'exécutable portable en cours
+   * @param {string} [o.selfFile]  chemin de l'exécutable en cours (portable Windows ou AppImage)
    * @param {Function} [o.token]  jeton GitHub en lecture (dépôt privé), lu à chaque requête
    * @param {Function} [o.redirect]  (url, headers) → adresse de redirection (sans la suivre), ou null
    */
-  constructor({ version, portable, dir, fetch: fetchFn, quit, portableFile, token, redirect }) {
+  constructor({ version, edition, dir, fetch: fetchFn, quit, selfFile, token, redirect }) {
     super();
     this.token = token || (() => '');
     this.redirect = redirect || (async () => null);
     this.version = version;
-    this.portable = !!portable;
+    this.edition = WANTED[edition] ? edition : 'manual';
     this.dir = dir;
     this.fetch = fetchFn;
     this.quit = quit;
-    this.portableFile = portableFile || '';
+    this.selfFile = selfFile || '';
     this.release = null;
     this.file = null;
     this.state = { phase: 'idle', current: version };
@@ -105,8 +113,7 @@ class Updater extends EventEmitter {
     if (!tag) throw Object.assign(new Error('web'), { code: 'http' });
     const version = decodeURIComponent(tag).replace(/^v/i, '');
     const assets = [];
-    for (const kind of ['setup', 'portable']) {
-      const name = `control-${version}-${kind}.exe`;
+    for (const name of [`control-${version}-setup.exe`, `control-${version}-portable.exe`, `control-${version}-x86_64.AppImage`]) {
       const url = `https://github.com/${REPO}/releases/download/${tag}/${name}`;
       // eslint-disable-next-line no-await-in-loop
       const head = await this.fetch(url, { method: 'HEAD', headers: { 'user-agent': AGENT }, signal }).catch(() => null);
@@ -136,7 +143,13 @@ class Updater extends EventEmitter {
         this.#set({ phase: 'none', checkedAt: Date.now() });
         return this.state;
       }
-      const asset = pickAsset(rel.assets, this.portable);
+      if (this.edition === 'manual') {
+        // Rien à installer tout seul (paquet .deb…) : on signale la nouvelle version et on renvoie vers sa page.
+        this.release = null;
+        this.#set({ phase: 'available', manual: true, version: latest, name: rel.name || `v${latest}`, notes: String(rel.body || '').slice(0, 4000), page: rel.html_url, checkedAt: Date.now() });
+        return this.state;
+      }
+      const asset = pickAsset(rel.assets, this.edition);
       if (!asset) throw Object.assign(new Error('asset'), { code: 'asset' });
       // Dépôt privé : le téléchargement passe par l'API (avec le jeton) ; sinon par l'adresse publique.
       const authed = !!this.#auth().authorization;
@@ -219,7 +232,9 @@ class Updater extends EventEmitter {
       this.#set({ phase: 'error', code: 'corrupt', version: this.release.version });
       return this.state;
     }
-    const plan = this.portable ? this.#portablePlan() : { command: this.file, args: ['/S', '--updated', '--force-run'], options: {} };
+    const plan = this.edition === 'portable' ? this.#portablePlan()
+      : this.edition === 'appimage' ? this.#appImagePlan()
+        : { command: this.file, args: ['/S', '--updated', '--force-run'], options: {} };
     if (!plan) {
       this.#set({ phase: 'error', code: 'unsupported', version: this.release?.version });
       return this.state;
@@ -231,6 +246,7 @@ class Updater extends EventEmitter {
       return this.state;
     }
     try {
+      if (plan.prepare) await plan.prepare();
       if (plan.script) await fsp.writeFile(plan.scriptPath, plan.script, 'utf8');
       const child = spawn(plan.command, plan.args, { detached: true, stdio: 'ignore', windowsHide: true, ...plan.options });
       child.unref();
@@ -248,7 +264,7 @@ class Updater extends EventEmitter {
    */
   #portablePlan() {
     if (process.platform !== 'win32' && !process.env.CONTROL_UPDATE_DRYRUN) return null;
-    const old = this.portableFile;
+    const old = this.selfFile;
     if (!old) return null;
     try {
       fs.accessSync(path.dirname(old), fs.constants.W_OK); // dossier protégé : mieux vaut le dire que fermer l'application pour rien
@@ -279,12 +295,47 @@ class Updater extends EventEmitter {
     return { command: process.env.ComSpec || 'cmd.exe', args: ['/d', '/s', '/c', `"${q(scriptPath)}"`], options: { windowsVerbatimArguments: true }, script, scriptPath };
   }
 
+  /**
+   * AppImage : le nouveau fichier prend la place de l'ancien (même nom, donc les raccourcis restent valables ; Linux
+   * permet de remplacer un exécutable en cours d'utilisation). Un petit script attend la fin de control puis lance
+   * la nouvelle version, pour que le verrou d'instance unique soit libre.
+   */
+  #appImagePlan() {
+    if (process.platform !== 'linux' && !process.env.CONTROL_UPDATE_DRYRUN) return null;
+    const target = this.selfFile;
+    if (!target) return null;
+    try {
+      fs.accessSync(path.dirname(target), fs.constants.W_OK); // dossier protégé (installé pour tous) : mise à jour manuelle
+    } catch {
+      return null;
+    }
+    const staged = `${target}.new`;
+    const source = this.file;
+    const script = 'pid=$1; shift; i=0; while kill -0 "$pid" 2>/dev/null && [ "$i" -lt 150 ]; do sleep 0.2; i=$((i+1)); done; exec "$@"';
+    // Le nouveau programme ne doit pas hériter de l'environnement de l'ancien (points de montage de l'ancienne image).
+    const env = { ...process.env };
+    for (const k of ['APPIMAGE', 'APPDIR', 'ARGV0', 'OWD']) delete env[k];
+    return {
+      command: '/bin/sh',
+      args: ['-c', script, 'sh', String(process.pid), target],
+      options: { env },
+      script: null,
+      prepare: async () => {
+        await fsp.copyFile(source, staged); // copie plutôt que déplacement : le dossier de destination peut être sur un autre disque
+        await fsp.chmod(staged, 0o755);
+        await fsp.rename(staged, target);
+        await fsp.rm(source, { force: true });
+      },
+    };
+  }
+
   /** Nettoie les anciens téléchargements (appelé au démarrage, une fois la nouvelle version lancée). */
   async cleanup() {
     try {
       for (const name of await fsp.readdir(this.dir)) {
-        const m = /-(\d+\.\d+\.\d+)-(setup|portable)\.exe(\.part)?$/.exec(name);
-        if (m && (compare(m[1], this.version) <= 0 || m[3])) await fsp.rm(path.join(this.dir, name), { force: true });
+        // Fichiers de mises à jour déjà installées (version ≤ version en cours) et téléchargements interrompus.
+        const m = /-(\d+\.\d+\.\d+)-(?:setup\.exe|portable\.exe|x86_64\.AppImage)(\.part)?$/.exec(name);
+        if (m && (m[2] || compare(m[1], this.version) <= 0)) await fsp.rm(path.join(this.dir, name), { force: true });
       }
       await fsp.rm(path.join(this.dir, 'apply-update.cmd'), { force: true });
     } catch { /* dossier absent */ }

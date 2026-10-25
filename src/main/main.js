@@ -26,6 +26,26 @@ if (PORTABLE_DIR) app.setPath('userData', path.join(PORTABLE_DIR, 'control data'
 app.setAppUserModelId('com.nildontsleep.control');
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
 
+// ─── Linux ───────────────────────────────────────────────────────────────────
+if (process.platform === 'linux') {
+  // Touches multimédia et panneau « en cours de lecture » du bureau (MPRIS).
+  app.commandLine.appendSwitch('enable-features', 'HardwareMediaKeyHandling,MediaSessionService');
+  // Le bac à sable de Chromium demande soit l'espace utilisateur isolé (interdit par défaut sur Ubuntu 24.04 et
+  // certains Debian), soit un `chrome-sandbox` appartenant à root avec le bit setuid. Le paquet .deb règle cela à
+  // l'installation (profil AppArmor, bit setuid) ; une AppImage ne peut rien installer. Si aucun des deux n'est
+  // disponible, Chromium refuse de démarrer : pour l'AppImage seulement, on désactive alors le bac à sable.
+  const readFlag = (file) => { try { return fs.readFileSync(file, 'utf8').trim(); } catch { return null; } };
+  const userNamespaces = readFlag('/proc/sys/kernel/unprivileged_userns_clone') !== '0'
+    && readFlag('/proc/sys/kernel/apparmor_restrict_unprivileged_userns') !== '1';
+  const suidSandbox = (() => {
+    try {
+      const st = fs.statSync(path.join(path.dirname(process.execPath), 'chrome-sandbox'));
+      return st.uid === 0 && (st.mode & 0o4000) !== 0;
+    } catch { return false; }
+  })();
+  if (process.env.APPIMAGE && !userNamespaces && !suidSandbox) app.commandLine.appendSwitch('no-sandbox');
+}
+
 const RENDERER_DIR = path.join(__dirname, '..', 'renderer');
 const PRELOAD = path.join(__dirname, 'preload.js');
 const APP_ICON = path.join(RENDERER_DIR, 'assets', 'icon.png');
@@ -551,6 +571,7 @@ function setupIpc() {
     chrome: process.versions.chrome,
     platform: process.platform,
     portable: !!PORTABLE_DIR,
+    appimage: !!process.env.APPIMAGE,
     dataDir: app.getPath('userData'),
     musicDir: app.getPath('music'),
     downloadDir: store.get('downloadDir', '') || defaultDownloadDir(),
@@ -597,8 +618,10 @@ app.whenReady().then(() => {
   discord.on('status', (status) => broadcast('discord:status', status));
   updater = new Updater({
     version: app.getVersion(),
-    portable: !!PORTABLE_DIR,
-    portableFile: process.env.PORTABLE_EXECUTABLE_FILE,
+    edition: PORTABLE_DIR ? 'portable'
+      : process.platform === 'win32' ? 'setup'
+        : process.platform === 'linux' && process.env.APPIMAGE ? 'appimage' : 'manual',
+    selfFile: process.env.PORTABLE_EXECUTABLE_FILE || process.env.APPIMAGE,
     dir: path.join(userData, 'updates'),
     fetch: (...args) => net.fetch(...args),
     token: () => (store.get('update', {}) || {}).token || '',

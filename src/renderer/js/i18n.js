@@ -304,6 +304,7 @@ const fr = {
   'upd.err.unsupported': 'Installation automatique impossible ici (dossier protégé en écriture ou système non pris en charge).',
   'upd.upToDate': 'control est à jour', 'upd.idle': 'Aucune vérification pour l’instant', 'upd.checkedAt': 'Vérifié à {when}', 'upd.check': 'Rechercher',
   'upd.auto': 'Rechercher automatiquement', 'upd.autoHint': 'Au lancement, puis toutes les 6 heures', 'upd.view': 'Voir', 'upd.dotTip': 'Mise à jour disponible',
+  'upd.manual': 'Cette installation ne se met pas à jour toute seule', 'upd.download': 'Télécharger', 'about.appimage': 'Édition AppImage',
   'upd.token': 'Jeton GitHub', 'upd.tokenHint': 'Pour un dépôt privé : jeton en lecture seule (Contents : Read). Il reste sur cet ordinateur.', 'upd.tokenPlaceholder': 'github_pat_…',
   'upd.err.private': 'Le dépôt est privé : renseignez un jeton GitHub en lecture ci-dessous (ou rendez le dépôt public).', 'upd.err.token': 'Jeton GitHub refusé ou expiré.',
 };
@@ -612,6 +613,7 @@ const en = {
   'upd.err.unsupported': 'Automatic install is not possible here (write-protected folder or unsupported system).',
   'upd.upToDate': 'control is up to date', 'upd.idle': 'Not checked yet', 'upd.checkedAt': 'Checked at {when}', 'upd.check': 'Check now',
   'upd.auto': 'Check automatically', 'upd.autoHint': 'At launch, then every 6 hours', 'upd.view': 'View', 'upd.dotTip': 'Update available',
+  'upd.manual': 'This install does not update itself', 'upd.download': 'Download', 'about.appimage': 'AppImage edition',
   'upd.token': 'GitHub token', 'upd.tokenHint': 'For a private repository: a read-only token (Contents: Read). It stays on this computer.', 'upd.tokenPlaceholder': 'github_pat_…',
   'upd.err.private': 'The repository is private: enter a read-only GitHub token below (or make the repository public).', 'upd.err.token': 'GitHub token refused or expired.',
 };

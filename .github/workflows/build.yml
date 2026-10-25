@@ -1,4 +1,4 @@
-name: Build Windows
+name: Build
 
 on:
   push:
@@ -54,11 +54,56 @@ jobs:
           path: dist/*-setup.exe
           if-no-files-found: error
 
-      # Une release est publiée pour chaque tag v*, et sur la branche par défaut
-      # dès que la version de package.json n’a pas encore de release.
+  linux:
+    name: Linux — AppImage + deb
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Installer les dépendances
+        run: npm ci
+
+      - name: Construire l’AppImage et le paquet deb
+        run: npm run dist:linux
+
+      - name: Fichiers générés
+        run: ls -lh dist/*.AppImage dist/*.deb
+
+      - name: Envoyer l’AppImage
+        uses: actions/upload-artifact@v6
+        with:
+          name: control-appimage
+          path: dist/*.AppImage
+          if-no-files-found: error
+
+      - name: Envoyer le paquet deb
+        uses: actions/upload-artifact@v6
+        with:
+          name: control-deb
+          path: dist/*.deb
+          if-no-files-found: error
+
+  # Une release est publiée pour chaque tag v*, et sur la branche par défaut
+  # dès que la version de package.json n’a pas encore de release.
+  release:
+    name: Publier la release
+    needs: [windows, linux]
+    runs-on: ubuntu-latest
+    if: >-
+      startsWith(github.ref, 'refs/tags/v') ||
+      (github.event_name == 'push' && github.ref_name == github.event.repository.default_branch)
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
       - name: Lire la version
         id: version
-        shell: bash
         run: |
           version=$(node -p "require('./package.json').version")
           echo "version=$version" >> "$GITHUB_OUTPUT"
@@ -68,12 +113,15 @@ jobs:
             echo "tagged=false" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Récupérer les fichiers construits
+        if: startsWith(github.ref, 'refs/tags/v') || steps.version.outputs.tagged == 'false'
+        uses: actions/download-artifact@v6
+        with:
+          path: dist
+          merge-multiple: true
+
       - name: Publier la release
-        if: >-
-          startsWith(github.ref, 'refs/tags/v') ||
-          (github.event_name == 'push' &&
-           github.ref_name == github.event.repository.default_branch &&
-           steps.version.outputs.tagged == 'false')
+        if: startsWith(github.ref, 'refs/tags/v') || steps.version.outputs.tagged == 'false'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || format('v{0}', steps.version.outputs.version) }}
@@ -83,10 +131,17 @@ jobs:
           files: |
             dist/*-portable.exe
             dist/*-setup.exe
+            dist/*.AppImage
+            dist/*.deb
           body: |
             ## Télécharger
 
+            **Windows**
             - **`control-${{ steps.version.outputs.version }}-setup.exe`** : installateur (raccourcis Bureau et menu Démarrer, désinstallation propre).
             - **`control-${{ steps.version.outputs.version }}-portable.exe`** : version portable, rien à installer ; les réglages, la bibliothèque et les outils sont rangés dans un dossier `control data` à côté du fichier.
+
+            **Linux (64 bits)**
+            - **`control-${{ steps.version.outputs.version }}-x86_64.AppImage`** : un seul fichier, à rendre exécutable (`chmod +x`) puis à lancer ; il se met à jour tout seul. Demande FUSE 2 (`libfuse2`) sur Ubuntu récent, sinon : `./control-….AppImage --appimage-extract-and-run`.
+            - **`control-${{ steps.version.outputs.version }}-amd64.deb`** : paquet pour Debian, Ubuntu et dérivés (`sudo apt install ./control-….deb`) ; une nouvelle version est signalée dans l’application, à télécharger à la main.
 
             L’application n’est pas signée : au premier lancement, Windows SmartScreen peut afficher « Windows a protégé votre ordinateur ». Cliquez sur **Informations complémentaires**, puis **Exécuter quand même**.
