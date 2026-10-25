@@ -13,14 +13,26 @@ const { EventEmitter } = require('node:events');
 // Identifiant de l'application créée sur https://discord.com/developers/applications (public, ce n'est pas un secret).
 const APP_ID = process.env.CONTROL_DISCORD_ID || '1563182510202949733';
 
-// Discord n'affiche que des images accessibles par une adresse publique : la pochette d'un fichier local est donc
-// envoyée à un hébergeur temporaire (litterbox.catbox.moe, sans compte), qui l'efface au bout de 72 heures.
-const COVER_HOST = process.env.CONTROL_COVER_HOST_URL || 'https://litterbox.catbox.moe/resources/internals/api.php';
-const COVER_URL = /^https:\/\/(?:[\w-]+\.)?catbox\.moe\/[\w./-]+$|^https:\/\/(?:cdn|media)\.discordapp\.(?:com|net)\/attachments\/\S+$/;
-// Webhook Discord (facultatif) : les pochettes sont alors postées dans un salon à soi plutôt que chez un hébergeur tiers.
-const COVER_WEBHOOK_URL = /^https:\/\/(?:cdn|media)\.discordapp\.(?:com|net)\//;
-const WEBHOOK = /^https:\/\/(?:(?:ptb|canary)\.)?discord(?:app)?\.com\/api\/webhooks\/\d{15,25}\/[\w-]{20,120}$/;
-const COVER_TTL = 60 * 3600 * 1000; // l'hébergeur garde 72 h : on renvoie un peu avant
+// Discord n'affiche que des images accessibles par une adresse publique (celles de son propre CDN, signées et
+// expirantes, sont refusées) : la pochette d'un fichier local est donc envoyée à un hébergeur temporaire sans compte.
+// On essaie les hébergeurs dans l'ordre jusqu'à ce que l'un réponde.
+const CATBOX = /^https:\/\/(?:[\w-]+\.)?catbox\.moe\/[\w./-]+$/;
+const UGUU = /^https:\/\/(?:[\w-]+\.)?uguu\.se\/[\w./%-]+$/;
+const COVER_URL = /^https:\/\/(?:[\w-]+\.)?(?:catbox\.moe|uguu\.se)\/[\w./%-]+$/;
+const COVER_TTL = 60 * 3600 * 1000; // litterbox garde 72 h : on renvoie un peu avant
+const HOSTS = process.env.CONTROL_COVER_HOST_URL
+  ? [{ name: 'essai', url: process.env.CONTROL_COVER_HOST_URL, fields: { reqtype: 'fileupload', time: '72h' }, file: 'fileToUpload', ttl: COVER_TTL, parse: (t) => (/^https?:\/\//.test(t) ? t : null) }]
+  : [
+    { name: 'litterbox', url: 'https://litterbox.catbox.moe/resources/internals/api.php', fields: { reqtype: 'fileupload', time: '72h' }, file: 'fileToUpload', ttl: COVER_TTL, parse: (t) => (CATBOX.test(t) ? t : null) },
+    {
+      name: 'uguu',
+      url: 'https://uguu.se/upload',
+      fields: {},
+      file: 'files[]',
+      ttl: 50 * 60 * 1000,
+      parse: (t) => { try { const u = JSON.parse(t).files?.[0]?.url; return typeof u === 'string' && UGUU.test(u) ? u : null; } catch { return null; } },
+    },
+  ];
 const COVER_RETRY = 2 * 60 * 1000;
 const OP = { HANDSHAKE: 0, FRAME: 1, CLOSE: 2, PING: 3, PONG: 4 };
 const TYPE = { listening: 2, watching: 3 };
@@ -30,14 +42,27 @@ const RETRY = 15000;
 const HANDSHAKE_TIMEOUT = 6000;
 const DEBOUNCE = 120;
 
-/**
- * Une image hébergée par Discord (pièce jointe d'un webhook) se désigne par son identifiant du « media proxy » :
- * https://cdn.discordapp.com/attachments/… devient mp:attachments/… (que Discord relie à media.discordapp.net).
- * Passer l'adresse complète est traité comme une image externe, que Discord ne sait pas aller chercher sur son propre CDN.
- */
-function toAsset(url) {
-  const m = /^https:\/\/(?:cdn|media)\.discordapp\.(?:com|net)\/(attachments\/\S+)$/.exec(url || '');
-  return m ? `mp:${m[1]}` : url;
+/** Envoi d'un formulaire multipart en HTTP/1.1 par Node (pas par le réseau de Chromium, qui peut passer en HTTP/3). */
+function postMultipart(target, headers, body, timeout = 20000) {
+  return new Promise((resolve, reject) => {
+    const u = new URL(target);
+    const lib = u.protocol === 'http:' ? require('node:http') : require('node:https');
+    const req = lib.request({
+      method: 'POST',
+      hostname: u.hostname,
+      port: u.port || undefined,
+      path: u.pathname + u.search,
+      headers: { ...headers, 'content-length': body.length, connection: 'close' },
+      timeout,
+    }, (res) => {
+      const chunks = [];
+      res.on('data', (c) => chunks.push(c));
+      res.on('end', () => resolve({ status: res.statusCode, text: Buffer.concat(chunks).toString('utf8').trim() }));
+    });
+    req.on('timeout', () => req.destroy(new Error('délai dépassé')));
+    req.on('error', reject);
+    req.end(body);
+  });
 }
 
 const clip = (value, max = 128) => {
@@ -163,7 +188,6 @@ class DiscordPresence extends EventEmitter {
   #coverState = { state: 'none', detail: '' }; // ce que devient la pochette de la lecture en cours (affiché dans les réglages)
   #coverFile;
   #cacheFile;
-  #webhook = '';
 
   /**
    * @param {object} [o]
@@ -202,16 +226,7 @@ class DiscordPresence extends EventEmitter {
   }
 
   /** Réglages : activation et identifiant d'application (celui des réglages prime sur celui du programme). */
-  configure({ enabled, clientId, coverWebhook } = {}) {
-    const wanted = String(coverWebhook || '').trim();
-    const hook = WEBHOOK.test(wanted) || (process.env.CONTROL_COVER_HOST_URL && /^http:\/\/127\.0\.0\.1:\d+\/api\/webhooks\//.test(wanted)) ? wanted : '';
-    if (hook !== this.#webhook) {
-      // Nouvelle destination des pochettes : on réessaie tout de suite celle de la lecture en cours.
-      this.#webhook = hook;
-      this.#failed.clear();
-      this.#coverKey = '';
-      this.#syncCover();
-    }
+  configure({ enabled, clientId } = {}) {
     const id = /^\d{15,25}$/.test(String(clientId || '').trim()) ? String(clientId).trim() : '';
     const changed = id !== this.#override || !!enabled !== this.#enabled;
     this.#override = id;
@@ -259,7 +274,7 @@ class DiscordPresence extends EventEmitter {
     if (token !== this.#coverToken) return;
     if (url) {
       this.#cover = url;
-      this.#setCover('ok', COVER_WEBHOOK_URL.test(url) ? 'webhook Discord' : 'hébergeur');
+      this.#setCover('ok', this.#covers.get(key)?.host || 'hébergeur');
       this.#schedule();
     } else {
       this.#setCover('failed', this.#failed.get(key)?.detail || 'réseau');
@@ -294,51 +309,36 @@ class DiscordPresence extends EventEmitter {
       const type = sniffImage(data);
       if (!type) throw Object.assign(new Error('format'), { detail: 'format d’image non reconnu' });
       const sizeNote = `${type.ext}, ${Math.max(1, Math.round(data.length / 1024))} Ko`;
-      const { net } = require('electron'); // n'existe qu'une fois l'application prête : importé à l'usage
-      const post = async (url, fields, fileField, extraHeaders = {}) => {
-        const boundary = `----control${crypto.randomBytes(12).toString('hex')}`;
-        const text = (name, value) => `--${boundary}\r\nContent-Disposition: form-data; name="${name}"\r\n\r\n${value}\r\n`;
-        const body = Buffer.concat([
-          Buffer.from(Object.entries(fields).map(([k, v]) => text(k, v)).join('')),
-          Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="${fileField}"; filename="cover.${type.ext}"\r\nContent-Type: ${type.mime}\r\n\r\n`),
-          data,
-          Buffer.from(`\r\n--${boundary}--\r\n`),
-        ]);
-        const res = await net.fetch(url, {
-          method: 'POST',
-          headers: { 'content-type': `multipart/form-data; boundary=${boundary}`, 'user-agent': 'control (https://github.com/nildontsleep/control)', ...extraHeaders },
-          body,
-          signal: AbortSignal.timeout(20000),
-        });
-        return { res, text: (await res.text()).trim() };
-      };
       const flat = (v, n) => String(v).replace(/\s+/g, ' ').slice(0, n);
-
-      if (this.#webhook) {
-        // Webhook : Discord répond par le message créé, dont la pièce jointe a une adresse publique signée (valable un temps).
-        const { res, text } = await post(`${this.#webhook}?wait=true`, { payload_json: JSON.stringify({ content: '', flags: 4096, attachments: [{ id: 0, filename: `cover.${type.ext}` }] }) }, 'files[0]');
-        if (!res.ok) throw Object.assign(new Error('http'), { detail: `Discord répond HTTP ${res.status} (${res.status === 404 || res.status === 401 ? 'webhook invalide ou supprimé' : res.status === 429 ? 'trop d’envois, nouvel essai automatique' : flat(text, 80)})` });
-        let url = '';
-        try { url = JSON.parse(text).attachments?.[0]?.url || ''; } catch { /* réponse non JSON */ }
-        if (!COVER_URL.test(url)) throw Object.assign(new Error('reply'), { detail: `réponse inattendue du webhook : ${flat(text, 60)}` });
-        // `ex` : date d'expiration (secondes Unix, en hexadécimal) ; on garde une marge.
-        const ex = parseInt(new URL(url).searchParams.get('ex') || '', 16);
-        const exp = Number.isFinite(ex) ? ex * 1000 - 10 * 60 * 1000 : Date.now() + 12 * 3600 * 1000;
-        this.#covers.set(key, { url, at: Date.now(), exp });
-        this.#failed.delete(key);
-        this.#saveCache();
-        return url;
+      const errors = [];
+      for (const host of HOSTS) {
+        try {
+          const boundary = `----control${crypto.randomBytes(12).toString('hex')}`;
+          const text = (name, value) => `--${boundary}\r\nContent-Disposition: form-data; name="${name}"\r\n\r\n${value}\r\n`;
+          const body = Buffer.concat([
+            Buffer.from(Object.entries(host.fields).map(([k, v]) => text(k, v)).join('')),
+            Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="${host.file}"; filename="cover.${type.ext}"\r\nContent-Type: ${type.mime}\r\n\r\n`),
+            data,
+            Buffer.from(`\r\n--${boundary}--\r\n`),
+          ]);
+          // eslint-disable-next-line no-await-in-loop
+          const { status, text: reply } = await postMultipart(host.url, {
+            'content-type': `multipart/form-data; boundary=${boundary}`,
+            'user-agent': 'control (https://github.com/nildontsleep/control)',
+            accept: '*/*',
+          }, body);
+          if (status < 200 || status >= 300) throw new Error(`HTTP ${status} « ${flat(reply, 60)} »`);
+          const url = host.parse(reply);
+          if (!url) throw new Error(`réponse inattendue « ${flat(reply, 60)} »`);
+          this.#covers.set(key, { url, at: Date.now(), exp: Date.now() + host.ttl - 10 * 60 * 1000, host: host.name });
+          this.#failed.delete(key);
+          this.#saveCache();
+          return url;
+        } catch (err) {
+          errors.push(`${host.name} : ${flat(err.message || err, 90)}`);
+        }
       }
-
-      const { res, text } = await post(COVER_HOST, { reqtype: 'fileupload', time: '72h' }, 'fileToUpload');
-      if (!res.ok) throw Object.assign(new Error('http'), { detail: `l’hébergeur répond HTTP ${res.status} « ${flat(text, 80)} » (${sizeNote})` });
-      if (!(COVER_URL.test(text) || (process.env.CONTROL_COVER_HOST_URL && /^https?:\/\//.test(text)))) {
-        throw Object.assign(new Error('reply'), { detail: `réponse inattendue : ${flat(text, 60)}` });
-      }
-      this.#covers.set(key, { url: text, at: Date.now() });
-      this.#failed.delete(key);
-      this.#saveCache();
-      return text;
+      throw Object.assign(new Error('hosts'), { detail: `${errors.join(' ; ')} (${sizeNote})` });
     } catch (err) {
       // Hors ligne ou hébergeur indisponible : le logo de control reste affiché, et la raison l'est dans les réglages.
       this.#failed.set(key, { at: Date.now(), detail: err.detail || `réseau (${String(err.message || err).slice(0, 60)})` });
@@ -437,7 +437,7 @@ class DiscordPresence extends EventEmitter {
     const activity = {
       type: TYPE[a.kind],
       details: a.details,
-      assets: { large_image: this.#cover ? toAsset(this.#cover) : a.image || 'control' },
+      assets: { large_image: this.#cover || a.image || 'control' },
       instance: false,
       // « Écoute <artiste> » / « Regarde <titre> » dans la liste des membres.
       status_display_type: a.kind === 'listening' ? 1 : 2,

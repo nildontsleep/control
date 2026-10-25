@@ -37,6 +37,7 @@ const dlBinding = (key) => ({
 /** Traduit les erreurs courantes de yt-dlp en conseils compréhensibles. */
 export function friendlyError(raw) {
   const text = String(raw || '');
+  if (/could not copy .*cookie database|failed to decrypt|dpapi|cookie database/i.test(text)) return t('dl.errCookies');
   if (/confirm you.?re not a bot|sign in to confirm|HTTP Error 429/i.test(text)) return t('dl.errBot');
   if (/confirm your age|age.restricted|inappropriate for some users/i.test(text)) return t('dl.errAge');
   if (/video unavailable|is unavailable|private video|removed|not available in your country|blocked it/i.test(text)) return t('dl.errUnavailable');

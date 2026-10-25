@@ -307,7 +307,7 @@ function setupPermissions() {
 // ─── IPC ─────────────────────────────────────────────────────────────────────
 function configureDiscord() {
   const d = store.get('discord', {}) || {};
-  discord.configure({ enabled: d.enabled !== false, clientId: d.clientId, coverWebhook: d.coverWebhook });
+  discord.configure({ enabled: d.enabled !== false, clientId: d.clientId });
 }
 
 /** Adresse vers laquelle `url` redirige, sans la suivre (null si la réponse est directe). */
@@ -547,6 +547,18 @@ function setupIpc() {
   ipcMain.on('dl:retry', (e, id) => downloads.retry(id));
   ipcMain.on('dl:remove', (e, id) => downloads.remove(id));
   ipcMain.on('dl:clear', () => downloads.clearFinished());
+  handle('dl:choose-cookies', async (e) => {
+    const res = await dialog.showOpenDialog(winOf(e), {
+      title: 'Fichier cookies.txt',
+      properties: ['openFile'],
+      filters: [{ name: 'cookies.txt', extensions: ['txt'] }, { name: 'Tous les fichiers', extensions: ['*'] }],
+    });
+    if (res.canceled || !res.filePaths[0]) return null;
+    const dl = { ...(store.get('dl', {}) || {}), cookiesFile: res.filePaths[0] };
+    store.patch({ dl });
+    broadcast('settings:changed', { dl: { cookiesFile: res.filePaths[0] } });
+    return res.filePaths[0];
+  });
   handle('dl:choose-dir', async (e) => {
     const res = await dialog.showOpenDialog(winOf(e), {
       title: 'Dossier des téléchargements',

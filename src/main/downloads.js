@@ -81,14 +81,21 @@ class Downloads {
     return this.store.get('downloadDir', '') || this.defaultDir;
   }
 
+  /** Cookies donnés à yt-dlp : un fichier cookies.txt (exporté du navigateur) passe avant les cookies d'un navigateur. */
+  #cookieArgs() {
+    const dl = this.store.get('dl', {}) || {};
+    if (dl.cookiesFile && fs.existsSync(dl.cookiesFile)) return ['--cookies', dl.cookiesFile];
+    if (dl.cookies) return ['--cookies-from-browser', dl.cookies];
+    return [];
+  }
+
   // ─── Analyse d'un lien ─────────────────────────────────────────────────────
   async info(url) {
     const ytdlp = this.tools.path('ytdlp');
     if (!ytdlp) throw new Error('yt-dlp n’est pas installé.');
     const args = ['-J', '--flat-playlist', '--no-warnings', '--encoding', 'utf-8', '--ignore-config'];
     if (isMix(url)) args.push('--no-playlist');
-    const cookies = this.store.get('dl', {})?.cookies;
-    if (cookies) args.push('--cookies-from-browser', cookies);
+    args.push(...this.#cookieArgs());
     args.push('--', url);
     const text = await run(ytdlp, args, { timeout: 90000, env: this.tools.env() });
     const data = JSON.parse(text);
@@ -127,8 +134,7 @@ class Downloads {
     const text = String(query || '').replace(/\s+/g, ' ').trim().slice(0, 200);
     if (!prefix || !text) return [];
     const args = ['-J', '--flat-playlist', '--no-warnings', '--encoding', 'utf-8', '--ignore-config'];
-    const cookies = this.store.get('dl', {})?.cookies;
-    if (cookies && source === 'youtube') args.push('--cookies-from-browser', cookies);
+    if (source === 'youtube') args.push(...this.#cookieArgs());
     args.push('--', `${prefix}${Math.max(1, Math.min(25, limit))}:${text}`);
     const data = JSON.parse(await run(ytdlp, args, { timeout: 60000, env: this.tools.env() }));
     return (data.entries || []).filter(Boolean).map((e) => {
@@ -259,8 +265,7 @@ class Downloads {
       const cap = /^\d+$/.test(job.quality) ? `res:${job.quality},` : '';
       a.push('-S', `${cap}vcodec:h264,acodec:aac`, '--merge-output-format', 'mp4', '--embed-chapters');
     }
-    const cookies = this.store.get('dl', {})?.cookies;
-    if (cookies) a.push('--cookies-from-browser', cookies);
+    a.push(...this.#cookieArgs());
     const ffmpeg = this.tools.path('ffmpeg');
     if (ffmpeg) a.push('--ffmpeg-location', path.dirname(ffmpeg));
     const deno = this.tools.path('deno');

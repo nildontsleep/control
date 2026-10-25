@@ -117,6 +117,7 @@ contextBridge.exposeInMainWorld('control', {
     remove: send('dl:remove'),
     clear: send('dl:clear'),
     chooseDir: invoke('dl:choose-dir'),
+    chooseCookies: invoke('dl:choose-cookies'),
     openDir: send('dl:open-dir'),
     onUpdate: listen('dl:update'),
     onReset: listen('dl:reset'),

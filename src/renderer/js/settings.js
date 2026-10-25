@@ -49,7 +49,6 @@ export const DEFAULTS = {
     covers: true,
     hideTitles: false,
     clientId: '',
-    coverWebhook: '',
   },
 
   // Mises à jour de l'application
@@ -71,6 +70,7 @@ export const DEFAULTS = {
     videoQuality: '1080',
     concurrency: 2,
     cookies: '',
+    cookiesFile: '',
     searchSource: 'soundcloud',
     createPlaylist: true,
     autoUpdate: true,
