@@ -138,6 +138,7 @@ class DiscordPresence extends EventEmitter {
   #pending = new Map();
   #failed = new Map();
   #coverToken = 0;
+  #coverState = { state: 'none', detail: '' }; // ce que devient la pochette de la lecture en cours (affiché dans les réglages)
   #coverFile;
   #cacheFile;
 
@@ -157,7 +158,13 @@ class DiscordPresence extends EventEmitter {
   }
 
   get status() {
-    return { state: this.#status, detail: this.#detail, clientId: this.#id() };
+    return { state: this.#status, detail: this.#detail, clientId: this.#id(), cover: this.#coverState };
+  }
+
+  #setCover(state, detail = '') {
+    if (state === this.#coverState.state && detail === this.#coverState.detail) return;
+    this.#coverState = { state, detail };
+    this.emit('status', this.status);
   }
 
   #id() {
@@ -194,16 +201,25 @@ class DiscordPresence extends EventEmitter {
       this.#coverKey = key;
       this.#cover = null;
       this.#coverToken++;
-      if (ref) this.#findCover(ref, key, this.#coverToken);
+      if (!ref) this.#setCover('none');
+      else {
+        const hit = this.#covers.get(key);
+        this.#setCover(hit && Date.now() - hit.at < COVER_TTL ? 'ok' : 'uploading');
+        this.#findCover(ref, key, this.#coverToken);
+      }
     }
     this.#schedule();
   }
 
   async #findCover(ref, key, token) {
     const url = await this.#coverUrl(ref, key);
-    if (url && token === this.#coverToken) {
+    if (token !== this.#coverToken) return;
+    if (url) {
       this.#cover = url;
+      this.#setCover('ok');
       this.#schedule();
+    } else {
+      this.#setCover('failed', this.#failed.get(key)?.detail || 'réseau');
     }
   }
 
@@ -211,7 +227,7 @@ class DiscordPresence extends EventEmitter {
   async #coverUrl(ref, key) {
     const hit = this.#covers.get(key);
     if (hit && Date.now() - hit.at < COVER_TTL) return hit.url;
-    if (Date.now() - (this.#failed.get(key) || 0) < COVER_RETRY) return null;
+    if (Date.now() - (this.#failed.get(key)?.at || 0) < COVER_RETRY) return null;
     if (!this.#pending.has(key)) {
       const job = this.#upload(ref, key).finally(() => this.#pending.delete(key));
       this.#pending.set(key, job);
@@ -222,9 +238,9 @@ class DiscordPresence extends EventEmitter {
   async #upload(ref, key) {
     try {
       const file = await this.#coverFile(ref);
-      if (!file) throw new Error('pas de pochette');
+      if (!file) throw Object.assign(new Error('file'), { detail: 'fichier de pochette introuvable' });
       const data = await fs.promises.readFile(file);
-      if (!data.length || data.length > 8 * 1024 * 1024) throw new Error('pochette inutilisable');
+      if (!data.length || data.length > 8 * 1024 * 1024) throw Object.assign(new Error('size'), { detail: 'pochette vide ou trop lourde' });
       const boundary = `----control${crypto.randomBytes(12).toString('hex')}`;
       const field = (name, value) => `--${boundary}\r\nContent-Disposition: form-data; name="${name}"\r\n\r\n${value}\r\n`;
       const body = Buffer.concat([
@@ -242,13 +258,17 @@ class DiscordPresence extends EventEmitter {
         signal: AbortSignal.timeout(20000),
       });
       const text = (await res.text()).trim();
-      if (!res.ok || !(COVER_URL.test(text) || (process.env.CONTROL_COVER_HOST_URL && /^https?:\/\//.test(text)))) throw new Error('réponse inattendue');
+      if (!res.ok) throw Object.assign(new Error('http'), { detail: `l’hébergeur répond HTTP ${res.status}` });
+      if (!(COVER_URL.test(text) || (process.env.CONTROL_COVER_HOST_URL && /^https?:\/\//.test(text)))) {
+        throw Object.assign(new Error('reply'), { detail: `réponse inattendue : ${text.replace(/\s+/g, ' ').slice(0, 60)}` });
+      }
       this.#covers.set(key, { url: text, at: Date.now() });
       this.#failed.delete(key);
       this.#saveCache();
       return text;
-    } catch {
-      this.#failed.set(key, Date.now()); // hors ligne ou hébergeur indisponible : le logo de control reste affiché
+    } catch (err) {
+      // Hors ligne ou hébergeur indisponible : le logo de control reste affiché, et la raison l'est dans les réglages.
+      this.#failed.set(key, { at: Date.now(), detail: err.detail || `réseau (${String(err.message || err).slice(0, 60)})` });
       return null;
     }
   }

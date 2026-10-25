@@ -116,11 +116,16 @@ export function openSettings(initial = 'general') {
     const dc = window.control.discord;
     const sub = (key) => ({ get: () => settings.discord?.[key] !== false, set: (v) => update({ discord: { [key]: v } }) });
     const status = h('div.row-hint.dc-status');
+    const coverLine = h('div.row-hint.dc-cover');
     const input = h('input.text-input.key-input', { type: 'text', value: settings.discord?.clientId || '', placeholder: t('dc.idPlaceholder'), spellcheck: 'false', autocomplete: 'off', inputmode: 'numeric' });
     const paint = (s) => {
       const key = s?.state || 'off';
       status.textContent = key === 'connected' && s.detail ? t('dc.state.connectedAs', { name: s.detail }) : t(`dc.state.${key}`);
       status.dataset.state = key;
+      // Où en est la pochette de la lecture en cours : utile quand Discord n'affiche que le logo de control.
+      const c = s?.cover;
+      coverLine.textContent = c && key === 'connected' ? t(`dc.cover.${c.state}`, { detail: c.detail }) : '';
+      coverLine.dataset.state = c?.state || '';
     };
     dc.status().then(paint);
     offDiscord?.();
@@ -139,7 +144,7 @@ export function openSettings(initial = 'general') {
       row(t('dc.streaming'), toggle(sub('streaming')), { badge: badge('clapperboard', B.teal) }),
       row(t('dc.hide'), toggle('discord.hideTitles'), { hint: t('dc.hideHint'), badge: badge('eye-off', B.gray) }),
       row(t('dc.covers'), toggle(sub('covers')), { hint: t('dc.coversHint'), badge: badge('image', B.green) }),
-      h('div.row.row-block', {}, h('div.key-form', {}, input, button(t('dc.test'), { kind: 'primary', small: true, onClick: async () => { saveId(); status.textContent = t('dc.state.connecting'); paint(await dc.test()); } })), h('div.key-meta', {}, status)),
+      h('div.row.row-block', {}, h('div.key-form', {}, input, button(t('dc.test'), { kind: 'primary', small: true, onClick: async () => { saveId(); status.textContent = t('dc.state.connecting'); paint(await dc.test()); } })), h('div.key-meta', {}, status, coverLine)),
     ];
     return group(t('dc.title'), rows, { footer: t('dc.footer') });
   }
