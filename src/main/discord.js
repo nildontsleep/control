@@ -16,8 +16,9 @@ const APP_ID = process.env.CONTROL_DISCORD_ID || '1563182510202949733';
 // Discord n'affiche que des images accessibles par une adresse publique : la pochette d'un fichier local est donc
 // envoyée à un hébergeur temporaire (litterbox.catbox.moe, sans compte), qui l'efface au bout de 72 heures.
 const COVER_HOST = process.env.CONTROL_COVER_HOST_URL || 'https://litterbox.catbox.moe/resources/internals/api.php';
-const COVER_URL = /^https:\/\/(?:[\w-]+\.)?catbox\.moe\/[\w./-]+$|^https:\/\/(?:cdn|media)\.discordapp\.(?:com|net)\/attachments\/[\w./?=&%-]+$/;
+const COVER_URL = /^https:\/\/(?:[\w-]+\.)?catbox\.moe\/[\w./-]+$|^https:\/\/(?:cdn|media)\.discordapp\.(?:com|net)\/attachments\/\S+$/;
 // Webhook Discord (facultatif) : les pochettes sont alors postées dans un salon à soi plutôt que chez un hébergeur tiers.
+const COVER_WEBHOOK_URL = /^https:\/\/(?:cdn|media)\.discordapp\.(?:com|net)\//;
 const WEBHOOK = /^https:\/\/(?:(?:ptb|canary)\.)?discord(?:app)?\.com\/api\/webhooks\/\d{15,25}\/[\w-]{20,120}$/;
 const COVER_TTL = 60 * 3600 * 1000; // l'hébergeur garde 72 h : on renvoie un peu avant
 const COVER_RETRY = 2 * 60 * 1000;
@@ -28,6 +29,16 @@ const MIN_GAP = 3500; // Discord limite à 5 mises à jour par 20 s
 const RETRY = 15000;
 const HANDSHAKE_TIMEOUT = 6000;
 const DEBOUNCE = 120;
+
+/**
+ * Une image hébergée par Discord (pièce jointe d'un webhook) se désigne par son identifiant du « media proxy » :
+ * https://cdn.discordapp.com/attachments/… devient mp:attachments/… (que Discord relie à media.discordapp.net).
+ * Passer l'adresse complète est traité comme une image externe, que Discord ne sait pas aller chercher sur son propre CDN.
+ */
+function toAsset(url) {
+  const m = /^https:\/\/(?:cdn|media)\.discordapp\.(?:com|net)\/(attachments\/\S+)$/.exec(url || '');
+  return m ? `mp:${m[1]}` : url;
+}
 
 const clip = (value, max = 128) => {
   let s = String(value ?? '').replace(/\s+/g, ' ').trim();
@@ -194,7 +205,13 @@ class DiscordPresence extends EventEmitter {
   configure({ enabled, clientId, coverWebhook } = {}) {
     const wanted = String(coverWebhook || '').trim();
     const hook = WEBHOOK.test(wanted) || (process.env.CONTROL_COVER_HOST_URL && /^http:\/\/127\.0\.0\.1:\d+\/api\/webhooks\//.test(wanted)) ? wanted : '';
-    if (hook !== this.#webhook) { this.#webhook = hook; this.#failed.clear(); }
+    if (hook !== this.#webhook) {
+      // Nouvelle destination des pochettes : on réessaie tout de suite celle de la lecture en cours.
+      this.#webhook = hook;
+      this.#failed.clear();
+      this.#coverKey = '';
+      this.#syncCover();
+    }
     const id = /^\d{15,25}$/.test(String(clientId || '').trim()) ? String(clientId).trim() : '';
     const changed = id !== this.#override || !!enabled !== this.#enabled;
     this.#override = id;
@@ -210,6 +227,12 @@ class DiscordPresence extends EventEmitter {
   /** `null` efface la présence. */
   setActivity(raw) {
     this.#activity = sanitize(raw);
+    this.#syncCover();
+    this.#schedule();
+  }
+
+  /** Cherche la pochette de l'activité en cours si elle a changé (ou si on l'a oubliée pour réessayer). */
+  #syncCover() {
     const ref = this.#activity?.cover;
     const key = ref ? `${ref.kind}:${ref.id}` : '';
     if (key !== this.#coverKey) {
@@ -223,18 +246,30 @@ class DiscordPresence extends EventEmitter {
         this.#findCover(ref, key, this.#coverToken);
       }
     }
-    this.#schedule();
   }
 
   async #findCover(ref, key, token) {
+    const known = this.#covers.get(key);
+    if (!(known && Date.now() < (known.exp || known.at + COVER_TTL))) {
+      // On attend un instant : en passant vite d'un morceau à l'autre, on n'envoie pas toutes les pochettes traversées.
+      await new Promise((resolve) => { setTimeout(resolve, 1200); });
+      if (token !== this.#coverToken) return;
+    }
     const url = await this.#coverUrl(ref, key);
     if (token !== this.#coverToken) return;
     if (url) {
       this.#cover = url;
-      this.#setCover('ok');
+      this.#setCover('ok', COVER_WEBHOOK_URL.test(url) ? 'webhook Discord' : 'hébergeur');
       this.#schedule();
     } else {
       this.#setCover('failed', this.#failed.get(key)?.detail || 'réseau');
+      // Un échec n'est pas définitif (réseau coupé, hébergeur occupé…) : on réessaie un peu plus tard.
+      const timer = setTimeout(() => {
+        if (token !== this.#coverToken) return;
+        this.#coverKey = '';
+        this.#syncCover();
+      }, COVER_RETRY + 500);
+      timer.unref?.();
     }
   }
 
@@ -282,7 +317,7 @@ class DiscordPresence extends EventEmitter {
       if (this.#webhook) {
         // Webhook : Discord répond par le message créé, dont la pièce jointe a une adresse publique signée (valable un temps).
         const { res, text } = await post(`${this.#webhook}?wait=true`, { payload_json: JSON.stringify({ content: '', flags: 4096, attachments: [{ id: 0, filename: `cover.${type.ext}` }] }) }, 'files[0]');
-        if (!res.ok) throw Object.assign(new Error('http'), { detail: `Discord répond HTTP ${res.status} (${res.status === 404 || res.status === 401 ? 'webhook invalide ou supprimé' : flat(text, 80)})` });
+        if (!res.ok) throw Object.assign(new Error('http'), { detail: `Discord répond HTTP ${res.status} (${res.status === 404 || res.status === 401 ? 'webhook invalide ou supprimé' : res.status === 429 ? 'trop d’envois, nouvel essai automatique' : flat(text, 80)})` });
         let url = '';
         try { url = JSON.parse(text).attachments?.[0]?.url || ''; } catch { /* réponse non JSON */ }
         if (!COVER_URL.test(url)) throw Object.assign(new Error('reply'), { detail: `réponse inattendue du webhook : ${flat(text, 60)}` });
@@ -402,7 +437,7 @@ class DiscordPresence extends EventEmitter {
     const activity = {
       type: TYPE[a.kind],
       details: a.details,
-      assets: { large_image: this.#cover || a.image || 'control' },
+      assets: { large_image: this.#cover ? toAsset(this.#cover) : a.image || 'control' },
       instance: false,
       // « Écoute <artiste> » / « Regarde <titre> » dans la liste des membres.
       status_display_type: a.kind === 'listening' ? 1 : 2,
