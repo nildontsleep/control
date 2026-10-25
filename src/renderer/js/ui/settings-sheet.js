@@ -130,6 +130,14 @@ export function openSettings(initial = 'general') {
     dc.status().then(paint);
     offDiscord?.();
     offDiscord = dc.onStatus(paint);
+    const hook = h('input.text-input.key-input', { type: 'password', value: settings.discord?.coverWebhook || '', placeholder: 'https://discord.com/api/webhooks/…', spellcheck: 'false', autocomplete: 'off' });
+    const saveHook = () => {
+      const v = hook.value.trim();
+      if (v && !/^https:\/\/(?:(?:ptb|canary)\.)?discord(?:app)?\.com\/api\/webhooks\/\d{15,25}\/[\w-]{20,120}$/.test(v)) { toast(t('dc.webhookInvalid'), 'triangle-alert'); return; }
+      update({ discord: { coverWebhook: v } });
+    };
+    hook.addEventListener('change', saveHook);
+    hook.addEventListener('keydown', (e) => { if (e.key === 'Enter') saveHook(); });
     const saveId = () => {
       const v = input.value.trim();
       if (v && !/^\d{15,25}$/.test(v)) { status.textContent = t('dc.state.bad-id'); status.dataset.state = 'bad-id'; return; }
@@ -144,6 +152,7 @@ export function openSettings(initial = 'general') {
       row(t('dc.streaming'), toggle(sub('streaming')), { badge: badge('clapperboard', B.teal) }),
       row(t('dc.hide'), toggle('discord.hideTitles'), { hint: t('dc.hideHint'), badge: badge('eye-off', B.gray) }),
       row(t('dc.covers'), toggle(sub('covers')), { hint: t('dc.coversHint'), badge: badge('image', B.green) }),
+      row(t('dc.webhook'), hook, { hint: t('dc.webhookHint'), badge: badge('link', B.blue), className: 'row-stack' }),
       h('div.row.row-block', {}, h('div.key-form', {}, input, button(t('dc.test'), { kind: 'primary', small: true, onClick: async () => { saveId(); status.textContent = t('dc.state.connecting'); paint(await dc.test()); } })), h('div.key-meta', {}, status, coverLine)),
     ];
     return group(t('dc.title'), rows, { footer: t('dc.footer') });

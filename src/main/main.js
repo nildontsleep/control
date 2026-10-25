@@ -307,7 +307,7 @@ function setupPermissions() {
 // ─── IPC ─────────────────────────────────────────────────────────────────────
 function configureDiscord() {
   const d = store.get('discord', {}) || {};
-  discord.configure({ enabled: d.enabled !== false, clientId: d.clientId });
+  discord.configure({ enabled: d.enabled !== false, clientId: d.clientId, coverWebhook: d.coverWebhook });
 }
 
 /** Adresse vers laquelle `url` redirige, sans la suivre (null si la réponse est directe). */

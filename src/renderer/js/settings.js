@@ -49,6 +49,7 @@ export const DEFAULTS = {
     covers: true,
     hideTitles: false,
     clientId: '',
+    coverWebhook: '',
   },
 
   // Mises à jour de l'application
