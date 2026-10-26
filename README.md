@@ -138,7 +138,7 @@ Le même control, hébergé sur un serveur (ton PC, un NAS, un Raspberry Pi, un 
 ### Lancer
 
 ```bash
-npm ci --omit=dev       # Node.js 22 ou plus
+npm ci --omit=dev       # Node.js 22.13 ou plus
 CONTROL_LIBRARY=/chemin/vers/ma/musique npm run web
 # puis ouvrir http://localhost:5180
 ```
@@ -201,7 +201,7 @@ Dans une liste : `↑` `↓` pour se déplacer, `Maj` ou `Ctrl` pour sélectionn
 
 ## Développer
 
-Il faut Node.js 22 ou plus.
+Il faut Node.js 22.13 ou plus.
 
 ```bash
 npm install

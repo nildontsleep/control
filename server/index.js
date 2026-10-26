@@ -4,6 +4,13 @@
 // control, version web : un serveur Node qui héberge la bibliothèque et l'application, accessible depuis un navigateur.
 // Lancement : `npm run web` (voir la section « Version web » du README pour la configuration).
 
+// node:sqlite ne s'utilise sans option qu'à partir de Node 22.13 : mieux vaut un message clair qu'une erreur de module introuvable.
+const [major, minor] = process.versions.node.split('.').map(Number);
+if (major < 22 || (major === 22 && minor < 13)) {
+  console.error(`control (web) demande Node.js 22.13 ou plus (version installée : ${process.versions.node}).`);
+  process.exit(1);
+}
+
 const { loadConfig } = require('./config');
 const { Hub } = require('./hub');
 const { createApp } = require('./app');

@@ -6,6 +6,9 @@
   "author": "nildontsleep",
   "desktopName": "control.desktop",
   "private": true,
+  "engines": {
+    "node": ">=22.13"
+  },
   "main": "src/main/main.js",
   "scripts": {
     "start": "electron .",
