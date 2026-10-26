@@ -39,6 +39,7 @@ export const DEFAULTS = {
   lastView: { name: 'songs', param: null },
   statsRange: '30d',
   npTab: 'queue',
+  immersiveLyrics: true,
   recapSeen: '',
 
   // Discord (présence enrichie)

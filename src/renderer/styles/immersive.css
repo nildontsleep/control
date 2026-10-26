@@ -1,0 +1,459 @@
+/* control — mode immersif : pochette et paroles animées, rien d'autre. */
+
+@property --c1 { syntax: '<color>'; inherits: true; initial-value: hsl(255 62% 56%); }
+@property --c2 { syntax: '<color>'; inherits: true; initial-value: hsl(300 58% 48%); }
+@property --c3 { syntax: '<color>'; inherits: true; initial-value: hsl(215 66% 52%); }
+@property --c4 { syntax: '<color>'; inherits: true; initial-value: hsl(335 60% 52%); }
+
+/* Le reste de l'application s'efface : on retrouve le fond du thème (couleur, ambiance animée, pochette floue). */
+.app.immersive .sidebar,
+.app.immersive .main {
+  visibility: hidden;
+}
+
+.app.immersive .amb.on {
+  opacity: 0.85;
+}
+
+.np.immersive {
+  background: transparent;
+  --text: unset;
+  --text-2: unset;
+  --text-3: unset;
+  --fill: unset;
+  --fill-hover: unset;
+  --fill-strong: unset;
+  --control: unset;
+  --separator: unset;
+  --group: unset;
+  --group-border: unset;
+  --seg-thumb: unset;
+  --menu: unset;
+  --panel-border: unset;
+  --panel-edge: unset;
+  --bg: unset;
+  color-scheme: unset;
+}
+
+.np.immersive .np-bg,
+.np.immersive .np-shade,
+.np.immersive .np-top,
+.np.immersive .np-body {
+  display: none;
+}
+
+.np-immersive-btn {
+  margin-left: auto;
+}
+
+.np.has-video .np-immersive-btn {
+  display: none;
+}
+
+.im {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  overflow: hidden;
+  color: var(--text);
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity 0.7s var(--out), visibility 0s linear 0.7s, --c1 1.8s ease, --c2 1.8s ease, --c3 1.8s ease, --c4 1.8s ease;
+}
+
+.im.on {
+  visibility: visible;
+  opacity: 1;
+  transition: opacity 0.7s var(--out), visibility 0s, --c1 1.8s ease, --c2 1.8s ease, --c3 1.8s ease, --c4 1.8s ease;
+}
+
+/* ─── Fond : des nappes aux couleurs de la pochette qui dérivent lentement ──── */
+.im-bg {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.im-blob {
+  position: absolute;
+  width: 88vmax;
+  height: 88vmax;
+  border-radius: 50%;
+  opacity: 0.72;
+  background: radial-gradient(circle, var(--bc) 0%, transparent 62%);
+  will-change: transform;
+}
+
+.im-blob.b1 { --bc: var(--c1); left: -26vmax; top: -34vmax; animation: im-drift-a 41s ease-in-out infinite alternate; }
+.im-blob.b2 { --bc: var(--c2); right: -34vmax; top: -16vmax; animation: im-drift-b 53s ease-in-out infinite alternate; }
+.im-blob.b3 { --bc: var(--c3); left: -14vmax; bottom: -50vmax; animation: im-drift-c 47s ease-in-out infinite alternate; }
+.im-blob.b4 { --bc: var(--c4); right: -28vmax; bottom: -42vmax; animation: im-drift-a 67s ease-in-out infinite alternate-reverse; }
+
+@keyframes im-drift-a {
+  from { transform: translate3d(0, 0, 0) rotate(0deg) scale(1); }
+  to { transform: translate3d(14vmax, 9vmax, 0) rotate(40deg) scale(1.12); }
+}
+
+@keyframes im-drift-b {
+  from { transform: translate3d(0, 0, 0) rotate(0deg) scale(1.05); }
+  to { transform: translate3d(-12vmax, 14vmax, 0) rotate(-35deg) scale(0.92); }
+}
+
+@keyframes im-drift-c {
+  from { transform: translate3d(0, 0, 0) rotate(0deg) scale(0.95); }
+  to { transform: translate3d(16vmax, -10vmax, 0) rotate(28deg) scale(1.1); }
+}
+
+/* Un voile qui garde les bords calmes et le texte lisible, selon le thème. */
+.im-veil {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(110% 90% at 50% 46%, transparent 38%, rgb(0 0 0 / 0.46)),
+    linear-gradient(180deg, rgb(0 0 0 / 0.16), transparent 30%, transparent 70%, rgb(0 0 0 / 0.22));
+}
+
+:root[data-theme='light'] .im-blob {
+  opacity: 0.6;
+  background: radial-gradient(circle, color-mix(in oklab, var(--bc) 78%, white) 0%, transparent 62%);
+}
+
+:root[data-theme='light'] .im-veil {
+  background:
+    radial-gradient(110% 90% at 50% 46%, transparent 40%, rgb(255 255 255 / 0.5)),
+    linear-gradient(180deg, rgb(255 255 255 / 0.18), transparent 30%, transparent 70%, rgb(255 255 255 / 0.22));
+}
+
+:root[data-oled='1'] .im-blob {
+  opacity: 0.55;
+}
+
+/* ─── Mise en page ──────────────────────────────────────────────────────── */
+.im-body {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(36px, 6vw, 120px);
+  padding: 4vh 5vw;
+}
+
+.im-stage {
+  flex: none;
+  width: min(46vh, 38vw);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3.4vh;
+  transition: width 0.95s var(--spring);
+}
+
+.im.no-lyrics .im-stage {
+  width: min(60vh, 56vw);
+}
+
+.im-art {
+  width: 100%;
+  aspect-ratio: 1;
+  position: relative;
+  cursor: pointer;
+}
+
+.im-swap,
+.im-cover {
+  width: 100%;
+  height: 100%;
+}
+
+.im-swap {
+  animation: im-art-in 0.9s var(--spring) both;
+}
+
+@keyframes im-art-in {
+  from { opacity: 0; transform: scale(0.93) translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+
+.im-cover {
+  border-radius: calc(26px * var(--rk, 1));
+  box-shadow:
+    0 5vh 12vh rgb(0 0 0 / 0.5),
+    0 0 0 0.5px rgb(255 255 255 / 0.16),
+    0 0 14vh -3vh color-mix(in srgb, var(--c1) 70%, transparent);
+  transition: transform 0.9s var(--spring), box-shadow 0.9s;
+}
+
+.im.playing .im-cover {
+  animation: im-breathe 7s ease-in-out infinite;
+}
+
+.im.paused .im-cover {
+  transform: scale(0.92);
+}
+
+@keyframes im-breathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.018); }
+}
+
+.im-caption {
+  max-width: 100%;
+  text-align: center;
+}
+
+.im-title {
+  font-size: clamp(18px, 2.7vh, 32px);
+  font-weight: 740;
+  letter-spacing: -0.015em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.im-artist {
+  margin-top: 0.4vh;
+  font-size: clamp(14px, 2.1vh, 23px);
+  font-weight: 560;
+  color: var(--text-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ─── Paroles ───────────────────────────────────────────────────────────── */
+.im-lyrics {
+  position: relative;
+  flex: 0 1 min(54vw, 980px);
+  min-width: 0;
+  height: 90vh;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 13%, #000 78%, transparent 100%);
+  mask-image: linear-gradient(180deg, transparent 0, #000 13%, #000 78%, transparent 100%);
+  transition: flex-basis 0.95s var(--spring), margin 0.95s var(--spring), opacity 0.7s var(--out);
+}
+
+.im.no-lyrics .im-lyrics {
+  flex-basis: 0;
+  margin-left: calc(-1 * clamp(36px, 6vw, 120px));
+  opacity: 0;
+  pointer-events: none;
+}
+
+.im-lines {
+  position: relative;
+  padding: 0 4vw 0 0;
+}
+
+.im-line {
+  --d: 99;
+  position: relative;
+  margin: 0 0 0.5em;
+  font-size: clamp(28px, 5.4vh, 68px);
+  font-weight: 790;
+  line-height: 1.16;
+  letter-spacing: -0.03em;
+  text-wrap: pretty;
+  cursor: pointer;
+  transform-origin: 0 50%;
+  transform: translateY(var(--off, 0px)) scale(calc(1 - min(abs(var(--d)), 1) * 0.12));
+  opacity: calc(max(0.1, 0.44 - (abs(var(--d)) - 1) * 0.075));
+  filter: blur(calc(min(abs(var(--d)), 4) * 0.9px));
+  transition:
+    transform 0.95s var(--spring) calc(min(abs(var(--d)), 7) * 38ms),
+    opacity 0.6s var(--out),
+    filter 0.6s var(--out);
+}
+
+.im-line.past {
+  opacity: calc(max(0.08, 0.34 - (abs(var(--d)) - 1) * 0.07));
+}
+
+.im-line.active {
+  opacity: 1;
+  filter: none;
+}
+
+.im-line .w {
+  transition: opacity 0.35s var(--out), text-shadow 0.5s;
+}
+
+.im-line.active .w {
+  opacity: 0.38;
+}
+
+.im-line.active .w.on {
+  opacity: 1;
+  text-shadow: 0 0 0.7em color-mix(in srgb, var(--c1) 55%, transparent);
+}
+
+.im-lines.jump .im-line {
+  transition: none !important;
+}
+
+.im-lines.manual .im-line {
+  transition: transform 0.25s linear 0s, opacity 0.6s var(--out), filter 0.6s var(--out);
+}
+
+/* Interlude : trois points qui respirent. */
+.im-line.gap {
+  display: flex;
+  gap: 0.32em;
+  align-items: center;
+  height: 1.2em;
+}
+
+.im-line.gap i {
+  width: 0.3em;
+  height: 0.3em;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.im-line.gap.active i {
+  animation: im-dot 1.5s ease-in-out infinite;
+}
+
+.im-line.gap.active i:nth-child(2) { animation-delay: 0.2s; }
+.im-line.gap.active i:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes im-dot {
+  0%, 100% { transform: scale(0.7); opacity: 0.4; }
+  50% { transform: scale(1.15); opacity: 1; }
+}
+
+/* Paroles sans minutage : texte posé, qui défile doucement avec le morceau. */
+.im-lines.plain-mode .im-line {
+  font-size: clamp(20px, 3.5vh, 42px);
+  font-weight: 660;
+  line-height: 1.3;
+  letter-spacing: -0.02em;
+  cursor: default;
+  opacity: 0.92;
+  filter: none;
+  transform: translateY(var(--off, 0px));
+  transition: transform 1.2s linear;
+}
+
+.im-lines.plain-mode .im-line:empty {
+  height: 1.2em;
+}
+
+.im-lines.plain-mode.manual .im-line {
+  transition: transform 0.25s linear;
+}
+
+/* ─── Barre discrète et indication ──────────────────────────────────────── */
+.im-hud {
+  position: absolute;
+  left: 50%;
+  bottom: 4.5vh;
+  display: flex;
+  gap: 4px;
+  padding: 5px;
+  border-radius: 999px;
+  background: var(--panel);
+  border: 0.5px solid var(--panel-border);
+  -webkit-backdrop-filter: blur(30px) saturate(1.6);
+  backdrop-filter: blur(30px) saturate(1.6);
+  opacity: 0;
+  transform: translate(-50%, 14px);
+  pointer-events: none;
+  transition: opacity 0.4s var(--out), transform 0.6s var(--spring);
+}
+
+.im.awake .im-hud {
+  opacity: 1;
+  transform: translate(-50%, 0);
+  pointer-events: auto;
+}
+
+.im-btn {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--text-2);
+  transition: background-color 0.15s, color 0.15s, transform 0.3s var(--spring);
+}
+
+.im-btn:hover {
+  color: var(--text);
+  background: var(--fill-hover);
+}
+
+.im-btn:active {
+  transform: scale(0.9);
+}
+
+.im-btn.on {
+  color: var(--accent);
+}
+
+.im-btn:disabled {
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+.im-hint {
+  position: absolute;
+  left: 50%;
+  top: 4.5vh;
+  padding: 8px 16px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 560;
+  color: var(--text-2);
+  background: var(--fill);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.im.hint .im-hint {
+  animation: im-hint 4.4s var(--out) both;
+}
+
+@keyframes im-hint {
+  0% { opacity: 0; transform: translate(-50%, -10px); }
+  12%, 76% { opacity: 1; transform: translate(-50%, 0); }
+  100% { opacity: 0; transform: translate(-50%, -6px); }
+}
+
+/* Écran en hauteur (téléphone, fenêtre étroite) : pochette au-dessus, paroles dessous. */
+@media (max-aspect-ratio: 5/4) {
+  .im-body {
+    flex-direction: column;
+    gap: 2.4vh;
+    padding: 5vh 6vw 4vh;
+  }
+
+  .im-stage {
+    width: min(34vh, 66vw);
+    gap: 2vh;
+  }
+
+  .im.no-lyrics .im-stage {
+    width: min(52vh, 84vw);
+  }
+
+  .im-lyrics {
+    flex: 1 1 0;
+    width: 100%;
+    height: auto;
+    min-height: 0;
+  }
+
+  .im.no-lyrics .im-lyrics {
+    flex-basis: 0;
+    margin-left: 0;
+    margin-top: calc(-2.4vh);
+  }
+
+  .im-line {
+    font-size: clamp(24px, 4.2vh, 44px);
+  }
+}

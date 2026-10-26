@@ -10,6 +10,7 @@ import { navigate } from '../router.js';
 import { coverEl, coverUrl } from './cover.js';
 import { createTrackList } from './tracklist.js';
 import { createLyricsPanel } from './lyrics-panel.js';
+import { createImmersive } from './immersive.js';
 import { openMenu } from './menu.js';
 import { trafficLights } from './traffic.js';
 import { createScope, withScope, refreshScope, popup, toggle, segmented } from './controls.js';
@@ -36,6 +37,9 @@ export function createNowPlaying(root) {
   let tab = ['queue', 'lyrics', 'eq'].includes(settings.npTab) ? settings.npTab : 'queue';
   let list = null;
   const lyrics = createLyricsPanel(side);
+  const app = document.getElementById('app');
+  const immersive = createImmersive(root, { onExit: () => api.setImmersive(false) });
+  let imFullscreen = { entered: false, seen: false };
   let open = false;
   let idleTimer = null;
 
@@ -44,7 +48,8 @@ export function createNowPlaying(root) {
   const fsBtn = h('button.np-icon-btn', { type: 'button', 'data-tip': t('np.fullscreen'), html: icon('maximize', 17, 2), onclick: () => {
     win.setFullscreen(!root.classList.contains('fullscreen-mode'));
   } });
-  top.replaceChildren(trafficLights(), closeBtn, h('div.np-top-title', { text: t('np.title') }), fsBtn);
+  const imBtn = h('button.np-icon-btn.np-immersive-btn', { type: 'button', 'data-tip': t('np.immersive'), 'data-kbd': 'I', html: icon('sparkles', 17, 2), onclick: () => api.setImmersive(true) });
+  top.replaceChildren(trafficLights(), closeBtn, h('div.np-top-title', { text: t('np.title') }), imBtn, fsBtn);
 
   // ─── Informations ──────────────────────────────────────────────────────────
   const titleEl = h('h1.np-title');
@@ -312,6 +317,7 @@ export function createNowPlaying(root) {
       requestAnimationFrame(loop);
     },
     close() {
+      if (immersive.on) api.setImmersive(false);
       open = false;
       root.classList.remove('open', 'idle');
       root.setAttribute('aria-hidden', 'true');
@@ -326,7 +332,43 @@ export function createNowPlaying(root) {
     get isOpen() {
       return open;
     },
+    /** Mode immersif : plein écran, pochette et paroles seulement. */
+    setImmersive(on) {
+      if (on === immersive.on) return;
+      if (on) {
+        const track = player.track;
+        if (!track || track.kind === 'video') return;
+        if (!open) api.open();
+        root.classList.add('immersive');
+        app.classList.add('immersive');
+        immersive.show();
+        immersiveId = track.id;
+        const already = app.classList.contains('fullscreen');
+        imFullscreen = { entered: !already, seen: already };
+        if (!already) win.setFullscreen(true);
+      } else {
+        immersive.hide();
+        root.classList.remove('immersive');
+        app.classList.remove('immersive');
+        if (imFullscreen.entered && root.classList.contains('fullscreen-mode')) win.setFullscreen(false);
+        imFullscreen = { entered: false, seen: false };
+      }
+    },
+    toggleImmersive() {
+      api.setImmersive(!immersive.on);
+    },
+    toggleImmersiveLyrics() {
+      immersive.toggleLyrics();
+    },
+    get isImmersive() {
+      return immersive.on;
+    },
     setFullscreen(on) {
+      // Quitter le plein écran par un autre moyen (touche du système) quitte aussi le mode immersif.
+      if (immersive.on) {
+        if (on) imFullscreen.seen = true;
+        else if (imFullscreen.seen) setTimeout(() => api.setImmersive(false));
+      }
       root.classList.toggle('fullscreen-mode', !!on);
       fsBtn.innerHTML = icon(on ? 'minimize' : 'maximize', 17, 2);
       vFs.innerHTML = icon(on ? 'minimize' : 'maximize', 20, 1.9);
@@ -350,8 +392,17 @@ export function createNowPlaying(root) {
   root.addEventListener('pointermove', wake);
   root.addEventListener('pointerdown', wake);
 
-  onPlayer('track', () => { paintTrack(); if (open && tab === 'lyrics') lyrics.show(player.track); });
-  onPlayer('state', () => { paintState(); wake(); });
+  let immersiveId = null;
+  onPlayer('track', () => {
+    paintTrack();
+    if (open && tab === 'lyrics') lyrics.show(player.track);
+    if (!immersive.on) return;
+    const track = player.track;
+    if (!track || track.kind === 'video') api.setImmersive(false);
+    else if (track.id !== immersiveId) immersive.setTrack(track);
+    immersiveId = track?.id ?? null;
+  });
+  onPlayer('state', () => { paintState(); wake(); immersive.sync(); });
   onPlayer('queue', () => { if (open && tab === 'queue') renderQueue(); });
   onPlayer('settings', paintSettings);
   onPlayer('mix', (active) => automix.classList.toggle('mixing', !!active));

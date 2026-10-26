@@ -1,7 +1,7 @@
 {
   "name": "control",
   "productName": "control",
-  "version": "0.4.7",
+  "version": "0.5.0",
   "description": "Lecteur musique et vidéo, téléchargements yt-dlp et bibliothèque, dans un style macOS.",
   "author": "nildontsleep",
   "desktopName": "control.desktop",

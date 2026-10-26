@@ -12,9 +12,14 @@ function hashString(str) {
   return hash >>> 0;
 }
 
-export function gradientFor(seed) {
+/** Les deux teintes du dégradé de repli d'un morceau sans pochette. */
+export function seedHues(seed) {
   const hue = hashString(seed || '?') % 360;
-  const hue2 = (hue + 38 + (hashString(`${seed}x`) % 40)) % 360;
+  return [hue, (hue + 38 + (hashString(`${seed}x`) % 40)) % 360];
+}
+
+export function gradientFor(seed) {
+  const [hue, hue2] = seedHues(seed);
   return `linear-gradient(150deg, hsl(${hue} 64% 60%), hsl(${hue2} 58% 32%))`;
 }
 

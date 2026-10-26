@@ -222,7 +222,8 @@ function wireKeys() {
     if (e.altKey && key === 'ArrowRight') { e.preventDefault(); forward(); return; }
     if (key === 'Escape') {
       if (nowPlaying.isOpen) {
-        if (nowPlaying.isFullscreen) control.win.setFullscreen(false);
+        if (nowPlaying.isImmersive) nowPlaying.setImmersive(false);
+        else if (nowPlaying.isFullscreen) control.win.setFullscreen(false);
         else nowPlaying.close();
         e.preventDefault();
       }
@@ -248,7 +249,8 @@ function wireKeys() {
       case 'm': player.toggleMute(); break;
       case 'q': if (nowPlaying.isOpen) nowPlaying.close(); else nowPlaying.open('queue'); break;
       case 'e': nowPlaying.open('eq'); break;
-      case 'l': nowPlaying.open('lyrics'); break;
+      case 'l': if (nowPlaying.isImmersive) nowPlaying.toggleImmersiveLyrics(); else nowPlaying.open('lyrics'); break;
+      case 'i': if (player.track) nowPlaying.toggleImmersive(); else return; break;
       case 'f': if (nowPlaying.isOpen) control.win.state().then((st) => control.win.setFullscreen(!st.fullscreen)); break;
       case 'enter': if (tag !== 'BUTTON' && !e.target.closest?.('.tl')) nowPlaying.toggle(); else return; break;
       case '/': e.preventDefault(); sidebar.focusSearch(); break;

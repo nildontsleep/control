@@ -64,7 +64,8 @@ const fr = {
   'player.pause': 'Pause', 'player.seek': 'Position', 'player.mute': 'Muet', 'player.volume': 'Volume', 'player.queue': 'File d’attente',
   'player.nothing': 'Aucune lecture', 'player.nothingSub': 'Choisissez un morceau',
 
-  'np.title': 'À l’écoute', 'np.open': 'Ouvrir « À l’écoute »', 'np.close': 'Réduire', 'np.fullscreen': 'Plein écran',
+  'np.title': 'À l’écoute', 'np.open': 'Ouvrir « À l’écoute »', 'np.close': 'Réduire', 'np.fullscreen': 'Plein écran', 'np.immersive': 'Mode immersif',
+  'im.exit': 'Quitter le mode immersif', 'im.lyrics': 'Afficher ou masquer les paroles', 'im.hint': 'Échap pour quitter · L pour les paroles',
   'queue.title': 'File d’attente', 'queue.clear': 'Vider les suivants', 'queue.empty': 'La file d’attente est vide.', 'queue.remove': 'Retirer de la file',
   'eq.title': 'Égaliseur', 'eq.hint': 'Double-cliquez sur un curseur pour le remettre à zéro.', 'eq.custom': 'Personnalisé',
   'eq.flat': 'Neutre', 'eq.bass': 'Basses renforcées', 'eq.treble': 'Aigus renforcés', 'eq.vocal': 'Voix', 'eq.rock': 'Rock', 'eq.electronic': 'Électro',
@@ -123,7 +124,7 @@ const fr = {
   'kb.playPause': 'Lecture / pause', 'kb.next': 'Morceau suivant', 'kb.prev': 'Morceau précédent', 'kb.seekForward': 'Avancer de 10 s', 'kb.seekBack': 'Reculer de 10 s',
   'kb.volUp': 'Volume +', 'kb.volDown': 'Volume −', 'kb.shuffle': 'Aléatoire', 'kb.repeat': 'Répéter', 'kb.mute': 'Muet', 'kb.queue': 'File d’attente', 'kb.lyrics': 'Paroles', 'kb.tags': 'Modifier les tags',
   'kb.eq': 'Égaliseur', 'kb.nowPlaying': 'Ouvrir « À l’écoute »', 'kb.search': 'Rechercher', 'kb.back': 'Page précédente', 'kb.settings': 'Réglages',
-  'kb.fullscreen': 'Plein écran', 'kb.automix': 'AutoMix', 'kb.escape': 'Fermer',
+  'kb.fullscreen': 'Plein écran', 'kb.automix': 'AutoMix', 'kb.immersive': 'Mode immersif', 'kb.escape': 'Fermer',
 
   'toast.added_one': 'Ajouté à « {name} »', 'toast.added_other': '{n} morceaux ajoutés à « {name} »', 'toast.playNext': 'Sera lu ensuite', 'toast.queued': 'Ajouté à la file d’attente',
   'toast.playlistCreated': 'Playlist « {name} » créée', 'toast.playlistCreatedWith_one': 'Playlist « {name} » créée avec 1 morceau',
@@ -378,7 +379,8 @@ const en = {
   'player.pause': 'Pause', 'player.seek': 'Position', 'player.mute': 'Mute', 'player.volume': 'Volume', 'player.queue': 'Queue',
   'player.nothing': 'Not playing', 'player.nothingSub': 'Pick a song',
 
-  'np.title': 'Now Playing', 'np.open': 'Open Now Playing', 'np.close': 'Minimize', 'np.fullscreen': 'Full screen',
+  'np.title': 'Now Playing', 'np.open': 'Open Now Playing', 'np.close': 'Minimize', 'np.fullscreen': 'Full screen', 'np.immersive': 'Immersive mode',
+  'im.exit': 'Exit immersive mode', 'im.lyrics': 'Show or hide lyrics', 'im.hint': 'Esc to exit · L for lyrics',
   'queue.title': 'Queue', 'queue.clear': 'Clear upcoming', 'queue.empty': 'The queue is empty.', 'queue.remove': 'Remove from queue',
   'eq.title': 'Equalizer', 'eq.hint': 'Double-click a slider to reset it.', 'eq.custom': 'Custom',
   'eq.flat': 'Flat', 'eq.bass': 'Bass boost', 'eq.treble': 'Treble boost', 'eq.vocal': 'Vocal', 'eq.rock': 'Rock', 'eq.electronic': 'Electronic',
@@ -437,7 +439,7 @@ const en = {
   'kb.playPause': 'Play / pause', 'kb.next': 'Next song', 'kb.prev': 'Previous song', 'kb.seekForward': 'Forward 10 s', 'kb.seekBack': 'Back 10 s',
   'kb.volUp': 'Volume up', 'kb.volDown': 'Volume down', 'kb.shuffle': 'Shuffle', 'kb.repeat': 'Repeat', 'kb.mute': 'Mute', 'kb.queue': 'Queue', 'kb.lyrics': 'Lyrics', 'kb.tags': 'Edit tags',
   'kb.eq': 'Equalizer', 'kb.nowPlaying': 'Open Now Playing', 'kb.search': 'Search', 'kb.back': 'Go back', 'kb.settings': 'Settings',
-  'kb.fullscreen': 'Full screen', 'kb.automix': 'AutoMix', 'kb.escape': 'Close',
+  'kb.fullscreen': 'Full screen', 'kb.automix': 'AutoMix', 'kb.immersive': 'Immersive mode', 'kb.escape': 'Close',
 
   'toast.added_one': 'Added to “{name}”', 'toast.added_other': '{n} songs added to “{name}”', 'toast.playNext': 'Will play next', 'toast.queued': 'Added to the queue',
   'toast.playlistCreated': 'Playlist “{name}” created', 'toast.playlistCreatedWith_one': 'Playlist “{name}” created with 1 song',
