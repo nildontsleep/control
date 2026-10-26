@@ -99,6 +99,8 @@ jobs:
 
       - name: Construire et publier
         uses: docker/build-push-action@v6
+        env:
+          DOCKER_BUILD_RECORD_UPLOAD: 'false' # sinon un artefact « .dockerbuild » s’ajoute à ceux de la release
         with:
           context: .
           push: true
@@ -170,6 +172,7 @@ jobs:
         uses: actions/download-artifact@v6
         with:
           path: dist
+          pattern: control-*
           merge-multiple: true
 
       - name: Publier la release
