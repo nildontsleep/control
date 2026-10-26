@@ -266,10 +266,11 @@ async function init() {
   applyTheme();
   installTooltips();
   if (control.platform === 'win32') root.classList.add('platform-win');
+  if (control.platform === 'web') root.classList.add('platform-web');
 
   buildShell();
   wireKeys();
-  wireDrop();
+  if (control.platform !== 'web') wireDrop(); // des fichiers déposés n'ont pas de chemin utilisable par un serveur
 
   control.win.onState((s) => {
     app.classList.toggle('inactive', !s.focused);

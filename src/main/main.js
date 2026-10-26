@@ -7,17 +7,10 @@ const path = require('node:path');
 const fs = require('node:fs');
 const { Readable } = require('node:stream');
 const { pathToFileURL } = require('node:url');
-const { Store, isObj } = require('./store');
-const { open: openDb } = require('./db');
-const { Library } = require('./library');
-const { Tools } = require('./tools');
-const { Downloads } = require('./downloads');
-const { Tags } = require('./tags');
-const { Stats } = require('./stats');
-const { Lyrics } = require('./lyrics');
+const { Core } = require('./core');
 const { DiscordPresence } = require('./discord');
 const { Updater } = require('./updater');
-const { MediaService, frameOrigins, imageOrigins } = require('./media');
+const { frameOrigins, imageOrigins } = require('./media');
 
 // ─── Mode portable : les données restent à côté de l'exécutable ──────────────
 const PORTABLE_DIR = process.env.PORTABLE_EXECUTABLE_DIR;
@@ -58,6 +51,7 @@ protocol.registerSchemesAsPrivileged([{
 const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) app.quit();
 
+let core;
 let store;
 let library;
 let tools;
@@ -331,10 +325,10 @@ function scheduleUpdateChecks() {
   setInterval(run, 6 * 3600 * 1000).unref?.();
 }
 
-function applySettingEffects(patch) {
+function applySettingEffects(patch, { scan = true } = {}) {
   if ('libraryFolders' in patch || 'downloadDir' in patch) {
     setupWatchers();
-    library.scan(scanRoots());
+    if (scan) library.scan(scanRoots());
   }
   if ('discord' in patch) configureDiscord();
 }
@@ -343,19 +337,20 @@ function setupIpc() {
   const handle = (channel, fn) => ipcMain.handle(channel, (event, ...args) => fn(event, ...args));
   const winOf = (e) => BrowserWindow.fromWebContents(e.sender);
 
+  // Ce que le noyau partage avec le serveur web : réglages, bibliothèque, paroles, stats, tags, playlists, téléchargements.
+  core.register(ipcMain, {
+    scanRoots,
+    applySettingEffects,
+    emitOthers: (e, channel, payload) => {
+      for (const win of BrowserWindow.getAllWindows()) if (win.webContents !== e.sender) win.webContents.send(channel, payload);
+    },
+    onReset: () => {
+      setupWatchers();
+      configureDiscord();
+    },
+  });
+
   ipcMain.on('settings:get-all', (e) => { e.returnValue = store.settings; });
-  ipcMain.on('settings:set', (e, patch) => {
-    if (!isObj(patch)) return;
-    store.patch(patch);
-    applySettingEffects(patch);
-    for (const win of BrowserWindow.getAllWindows()) if (win.webContents !== e.sender) win.webContents.send('settings:changed', patch);
-  });
-  ipcMain.on('settings:reset', () => {
-    store.reset();
-    broadcast('settings:reset', null);
-    setupWatchers();
-    configureDiscord();
-  });
 
   handle('update:state', () => updater.status);
   handle('update:check', () => updater.check({ manual: true }));
@@ -378,11 +373,7 @@ function setupIpc() {
   ipcMain.on('win:set-fullscreen', (e, on) => winOf(e)?.setFullScreen(!!on));
   handle('win:state', (e) => (winOf(e) ? windowState(winOf(e)) : {}));
 
-  // Bibliothèque
-  handle('lib:tracks', () => library.tracks());
-  handle('lib:playlists', () => library.playlists());
-  handle('lib:scan', () => library.scan(scanRoots()));
-  handle('lib:add-paths', (e, paths) => library.addPaths((paths || []).filter((p) => typeof p === 'string')));
+  // Dossiers de la bibliothèque : choisis par une boîte de dialogue du système.
   handle('lib:add-folder', async (e) => {
     const res = await dialog.showOpenDialog(winOf(e), {
       title: 'Ajouter un dossier à la bibliothèque',
@@ -404,45 +395,11 @@ function setupIpc() {
     applySettingEffects({ libraryFolders: folders });
     return folders;
   });
-  handle('lib:remove-folder', async (e, folder) => {
-    const folders = (store.get('libraryFolders', []) || []).filter((f) => f !== folder);
-    store.patch({ libraryFolders: folders });
-    broadcast('settings:changed', { libraryFolders: folders });
-    setupWatchers();
-    // Retire de la bibliothèque les morceaux de ce dossier (les fichiers restent intacts).
-    const prefix = path.resolve(folder).toLowerCase() + path.sep;
-    const ids = library.tracks().filter((t) => t.path.toLowerCase().startsWith(prefix)).map((t) => t.id);
-    if (ids.length) await library.removeTracks(ids);
-    return folders;
-  });
-  handle('lib:remove-tracks', (e, ids, deleteFiles) => library.removeTracks(ids, { deleteFiles: !!deleteFiles }));
   ipcMain.on('lib:reveal', (e, id) => {
     const file = library.trackPath(id);
     if (file) shell.showItemInFolder(file);
   });
-  handle('lib:play-start', (e, id, duration) => library.playStart(id, duration));
 
-  // Paroles
-  const lyr = (fn) => async (e, id, ...rest) => {
-    if (!Number.isInteger(id)) return { ok: false, message: 'Morceau invalide.' };
-    try {
-      return { ok: true, data: await fn(id, ...rest) };
-    } catch (err) {
-      return { ok: false, message: String(err?.message || err), code: err?.code || null };
-    }
-  };
-  handle('lyrics:get', lyr((id, refresh) => lyrics.get(id, { refresh: !!refresh })));
-  handle('lyrics:set', lyr((id, text) => lyrics.set(id, String(text || '').slice(0, 200000))));
-  handle('lyrics:save-file', lyr((id) => lyrics.saveSidecar(id)));
-
-  // Statistiques
-  handle('stats:get', (e, range) => {
-    try {
-      return { ok: true, data: stats.get({ from: String(range?.from || ''), to: String(range?.to || '') }) };
-    } catch (err) {
-      return { ok: false, message: String(err?.message || err) };
-    }
-  });
   handle('stats:save-image', async (e, dataUrl, name) => {
     const match = /^data:image\/png;base64,([A-Za-z0-9+/=]+)$/.exec(String(dataUrl || ''));
     if (!match || match[1].length > 30 * 1024 * 1024) return false;
@@ -456,47 +413,21 @@ function setupIpc() {
     return res.filePath;
   });
 
-  // Éditeur de tags
-  const wrap = async (fn) => {
+  handle('tags:pick-cover', async (e) => {
     try {
-      return { ok: true, data: await fn() };
+      const res = await dialog.showOpenDialog(winOf(e), {
+        title: 'Choisir une pochette',
+        defaultPath: app.getPath('pictures'),
+        filters: [{ name: 'Images', extensions: ['jpg', 'jpeg', 'png', 'webp', 'bmp', 'gif'] }],
+        properties: ['openFile'],
+      });
+      if (res.canceled || !res.filePaths[0]) return { ok: true, data: null };
+      return { ok: true, data: await tags.stageCover({ path: res.filePaths[0] }) };
     } catch (err) {
       return { ok: false, message: String(err?.message || err) };
     }
-  };
-  const ids = (list) => (Array.isArray(list) ? list.filter(Number.isInteger).slice(0, 5000) : []);
-  handle('tags:read', (e, list) => wrap(() => tags.read(ids(list))));
-  handle('tags:write', (e, edits) => wrap(() => tags.write((Array.isArray(edits) ? edits : []).filter((x) => x && Number.isInteger(x.id)))));
-  handle('tags:undo', () => wrap(() => tags.undo()));
-  handle('tags:stage-cover', (e, src) => wrap(() => tags.stageCover(src && typeof src === 'object' ? src : {})));
-  handle('tags:pick-cover', (e) => wrap(async () => {
-    const res = await dialog.showOpenDialog(winOf(e), {
-      title: 'Choisir une pochette',
-      defaultPath: app.getPath('pictures'),
-      filters: [{ name: 'Images', extensions: ['jpg', 'jpeg', 'png', 'webp', 'bmp', 'gif'] }],
-      properties: ['openFile'],
-    });
-    if (res.canceled || !res.filePaths[0]) return null;
-    return tags.stageCover({ path: res.filePaths[0] });
-  }));
-  handle('tags:search-covers', (e, query) => wrap(() => tags.searchCovers({
-    artist: String(query?.artist || '').slice(0, 200),
-    album: String(query?.album || '').slice(0, 200),
-  })));
-  ipcMain.on('lib:play-end', (e, playId, seconds, completed) => library.playEnd(playId, seconds, completed));
-
-  // Playlists
-  handle('pl:create', (e, name, kind, rules, trackIds) => {
-    const id = library.createPlaylist(name, kind, rules);
-    if (trackIds?.length) library.addToPlaylist(id, trackIds);
-    return id;
   });
-  handle('pl:rename', (e, id, name) => library.renamePlaylist(id, name));
-  handle('pl:rules', (e, id, rules) => library.setPlaylistRules(id, rules));
-  handle('pl:delete', (e, id) => library.deletePlaylist(id));
-  handle('pl:add', (e, id, trackIds) => library.addToPlaylist(id, trackIds));
-  handle('pl:remove', (e, entryIds) => library.removeFromPlaylist(entryIds));
-  handle('pl:reorder', (e, id, entryIds) => library.reorderPlaylist(id, entryIds));
+
   handle('pl:import', async (e) => {
     const res = await dialog.showOpenDialog(winOf(e), {
       title: 'Importer une playlist',
@@ -516,37 +447,6 @@ function setupIpc() {
     return { file: res.filePath, count: library.exportM3U(res.filePath, trackIds) };
   });
 
-  // Outils et téléchargements
-  handle('tools:status', () => tools.status());
-  handle('tools:install', async () => {
-    try {
-      await tools.install();
-      return { ok: true };
-    } catch (err) {
-      return { ok: false, error: err.message };
-    }
-  });
-  handle('tools:update', () => tools.update());
-  handle('dl:list', () => downloads.list());
-  handle('dl:info', async (e, url) => {
-    try {
-      return { ok: true, info: await downloads.info(url) };
-    } catch (err) {
-      return { ok: false, error: err.message };
-    }
-  });
-  handle('dl:add', (e, opts) => downloads.add(opts));
-  handle('dl:search', async (e, source, query) => {
-    try {
-      return { ok: true, results: await downloads.search(String(source || ''), String(query || '')) };
-    } catch (err) {
-      return { ok: false, error: String(err?.message || err) };
-    }
-  });
-  ipcMain.on('dl:cancel', (e, id) => downloads.cancel(id));
-  ipcMain.on('dl:retry', (e, id) => downloads.retry(id));
-  ipcMain.on('dl:remove', (e, id) => downloads.remove(id));
-  ipcMain.on('dl:clear', () => downloads.clearFinished());
   handle('dl:choose-cookies', async (e) => {
     const res = await dialog.showOpenDialog(winOf(e), {
       title: 'Fichier cookies.txt',
@@ -601,21 +501,8 @@ app.on('second-instance', showMain);
 app.whenReady().then(() => {
   if (!gotLock) return;
   const userData = app.getPath('userData');
-  store = new Store(path.join(userData, 'settings.json'));
-  const db = openDb(path.join(userData, 'library.db'));
-  library = new Library({
-    db,
-    coversDir: path.join(userData, 'covers'),
-    thumbsDir: path.join(userData, 'thumbs'),
-    emit: broadcast,
-  });
-  tags = new Tags({ library });
-  stats = new Stats(db);
-  lyrics = new Lyrics({ db, library, tags });
-  tools = new Tools({ binDir: path.join(userData, 'bin'), tmpDir: path.join(userData, 'tmp'), emit: broadcast });
-  downloads = new Downloads({ tools, library, store, file: path.join(userData, 'downloads.json'), emit: broadcast });
-  downloads.defaultDir = defaultDownloadDir();
-  media = new MediaService({ db, store, emit: broadcast });
+  core = new Core({ dir: userData, coversDir: path.join(userData, 'covers'), emit: broadcast, defaultDownloadDir: defaultDownloadDir() });
+  ({ store, library, tools, downloads, media, tags, stats, lyrics } = core);
   discord = new DiscordPresence({
     cacheFile: path.join(userData, 'discord-covers.json'),
     // Pochette intégrée au fichier (ou du dossier), ou image extraite d'une vidéo : déjà rangées par la bibliothèque.
@@ -647,7 +534,6 @@ app.whenReady().then(() => {
   registerProtocol();
   setupPermissions();
   setupIpc();
-  media.register(ipcMain);
   createWindow();
   configureDiscord();
   scheduleUpdateChecks();

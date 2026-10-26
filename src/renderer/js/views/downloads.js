@@ -10,7 +10,8 @@ import { player } from '../player.js';
 import { lib } from '../data.js';
 import { segmented, popup, toggle, button, createScope, withScope, refreshScope } from '../ui/controls.js';
 import { toast } from '../ui/feedback.js';
-import { pageHead } from './shared.js';
+import { pageHead, emptyState } from './shared.js';
+import { isWeb, can } from '../web.js';
 
 const api = window.control.downloads;
 const tools = window.control.tools;
@@ -96,6 +97,11 @@ function jobRow(job) {
 }
 
 export function downloadsView(root) {
+  // Sur un serveur, les téléchargements se font chez lui : réservés à qui en a le droit.
+  if (!can('download')) {
+    root.append(pageHead({ title: t('nav.downloads'), subtitle: t('dl.subtitle') }), emptyState({ icon: 'cloud-download', title: t('web.dlTitle'), text: t('web.dlText') }));
+    return {};
+  }
   let jobs = [];
   let info = null;
   let toolStatus = null;
@@ -356,7 +362,7 @@ export function downloadsView(root) {
   });
 
   root.append(
-    pageHead({ title: t('nav.downloads'), subtitle: t('dl.subtitle'), actions: button(t('dl.openFolder'), { icon: 'folder-open', onClick: () => api.openDir() }) }),
+    pageHead({ title: t('nav.downloads'), subtitle: t('dl.subtitle'), actions: isWeb ? null : button(t('dl.openFolder'), { icon: 'folder-open', onClick: () => api.openDir() }) }),
     h('div.dl-composer', {}, h('div.url-field', {}, h('span.url-icon', { html: icon('link-2', 18, 1.8) }), urlInput,
       h('button.url-paste', { type: 'button', 'data-tip': t('dl.paste'), html: icon('clipboard-paste', 17, 1.8), onclick: async () => {
         try {

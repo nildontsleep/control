@@ -11,6 +11,8 @@ import { DRAG_TRACKS, addToPlaylist, createPlaylistWith } from './actions.js';
 import { openSmartEditor } from './smart.js';
 import { renamePlaylist, deletePlaylist, exportPlaylist } from '../views/playlist.js';
 import { toast } from './feedback.js';
+import { isWeb, can } from '../web.js';
+import { openAccountMenu } from './account.js';
 
 const playlistsApi = window.control.playlists;
 const NAV = [
@@ -102,7 +104,7 @@ export function createSidebar(root, { openSettings }) {
       openMenu({ getBoundingClientRect: () => ({ left: e.clientX, top: e.clientY, right: e.clientX, bottom: e.clientY, width: 0, height: 0 }), classList: { add() {}, remove() {} }, contains: () => false }, [
         { label: t('pl.rename'), icon: 'square-pen', action: () => renamePlaylist(pl) },
         smart ? { label: t('pl.editRules'), icon: 'sliders-horizontal', action: () => openSmartEditor(pl) } : null,
-        { label: t('pl.export'), icon: 'upload', action: () => exportPlaylist(pl) },
+        isWeb ? null : { label: t('pl.export'), icon: 'upload', action: () => exportPlaylist(pl) },
         { separator: true },
         { label: t('common.delete'), icon: 'trash-2', action: async () => { if (await deletePlaylist(pl) && currentRoute()?.name === 'playlist' && Number(currentRoute().param) === pl.id) navigate('songs'); } },
       ].filter(Boolean));
@@ -144,15 +146,14 @@ export function createSidebar(root, { openSettings }) {
     openMenu(addMenu, [
       { label: t('pl.new'), icon: 'list-plus', action: () => createPlaylistWith().then((id) => id && navigate('playlist', id)) },
       { label: t('pl.newSmart'), icon: 'sparkles', action: () => openSmartEditor(null) },
-      { separator: true },
-      { label: t('pl.import'), icon: 'import', action: async () => {
+      ...(isWeb ? [] : [{ separator: true }, { label: t('pl.import'), icon: 'import', action: async () => {
         const res = await playlistsApi.import();
         if (res) {
           await loadPlaylists();
           toast(t('toast.imported', { n: res.matched, total: res.total }), 'check');
           navigate('playlist', res.id);
         }
-      } },
+      } }]),
     ], { align: 'start' });
   });
 
@@ -160,8 +161,16 @@ export function createSidebar(root, { openSettings }) {
   const settingsBtn = h('button.sb-item.sb-settings', { type: 'button', onclick: () => openSettings() },
     h('span.sb-icon', { html: icon('settings', 17, 1.9) }), h('span.sb-label', { text: t('nav.settings') }), settingsDot);
 
+  // Sur le web : le nom du serveur à la place des boutons de fenêtre, et le compte au-dessus des réglages.
+  const brand = isWeb ? h('div.sb-brand', {}, h('img', { src: '/assets/icon.png', alt: '' }), h('span', { text: window.control.web.server.name })) : null;
+  const accountBtn = isWeb
+    ? h('button.sb-item.sb-account', { type: 'button', onclick: (e) => openAccountMenu(e.currentTarget) },
+      h('span.sb-avatar', { text: window.control.web.user.username.slice(0, 1).toUpperCase() }),
+      h('span.sb-label', { text: window.control.web.user.username }))
+    : null;
+
   root.replaceChildren(
-    h('div.sb-top', {}, trafficLights()),
+    h('div.sb-top', {}, trafficLights(), brand),
     h('div.sb-search', {}, h('span.sb-search-icon', { html: icon('search', 14, 2.2) }), search, clearBtn),
     h('nav.sb-scroll', {},
       navBox,
@@ -169,7 +178,7 @@ export function createSidebar(root, { openSettings }) {
         h('div.sb-heading.with-action', {}, h('span', { text: t('nav.playlists') }), addMenu),
         playlistsBox)),
     status,
-    h('div.sb-foot', {}, settingsBtn),
+    h('div.sb-foot', {}, accountBtn, settingsBtn),
   );
   renderNav();
   renderPlaylists();

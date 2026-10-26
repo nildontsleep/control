@@ -713,12 +713,40 @@ body.np-open .playerbar {
   transition: opacity 0.4s;
 }
 
+.np-side-toggle {
+  display: none;
+}
+
 @media (max-width: 1000px) {
   .np-body {
     grid-template-columns: minmax(0, 1fr);
   }
 
   .np-side {
+    display: none;
+  }
+
+  /* La file, les paroles et l'égaliseur passent par-dessus l'écran, derrière un bouton de l'en-tête. */
+  .np-side-toggle {
+    display: grid;
+  }
+
+  .np.side-open .np-side {
+    display: flex;
+    position: absolute;
+    z-index: 6;
+    left: 12px;
+    right: 12px;
+    top: 56px;
+    bottom: 12px;
+    background: rgb(24 24 30 / 0.82);
+  }
+
+  .np.side-open .np-side-toggle {
+    color: var(--accent);
+  }
+
+  .np.has-video .np-side-toggle {
     display: none;
   }
 }

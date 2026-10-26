@@ -7,7 +7,7 @@ const fsp = fs.promises;
 const path = require('node:path');
 const crypto = require('node:crypto');
 const { spawn } = require('node:child_process');
-const { nativeImage, shell } = require('electron');
+const { nativeImage, shell } = require('./platform');
 const { transaction, TRACK_COLUMNS, plain } = require('./db');
 
 const AUDIO_EXT = new Set(['.mp3', '.flac', '.m4a', '.m4b', '.aac', '.ogg', '.oga', '.opus', '.wav']);

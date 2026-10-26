@@ -54,6 +54,58 @@ jobs:
           path: dist/*-setup.exe
           if-no-files-found: error
 
+  # Tests du serveur web (comptes, droits, médias, événements) sur une installation de production.
+  web:
+    name: Serveur web — tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Installer les dépendances
+        run: npm ci --omit=dev --ignore-scripts
+
+      - name: Tests
+        run: npm run test:web
+
+  # Image Docker du serveur web, publiée sur la branche par défaut (ghcr.io/<propriétaire>/control).
+  docker:
+    name: Serveur web — image Docker
+    needs: [web]
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    if: github.event_name == 'push' && github.ref_name == github.event.repository.default_branch
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Lire la version
+        id: version
+        run: echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Construire et publier
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/control:latest
+            ghcr.io/${{ github.repository_owner }}/control:${{ steps.version.outputs.version }}
+
   linux:
     name: Linux — AppImage + deb
     runs-on: ubuntu-latest

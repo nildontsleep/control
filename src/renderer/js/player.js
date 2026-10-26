@@ -4,6 +4,8 @@ import { settings, update, subscribe as onSettings } from './settings.js';
 import { lib, bumpPlay } from './data.js';
 import { planMix } from './automix/analysis.js';
 import { peekAnalysis, warm } from './automix/analyzer.js';
+import { mediaUrl, coverFile } from './urls.js';
+import { isWeb } from './web.js';
 
 const api = window.control?.library;
 // Deux « platines » : l'élément vidéo (aussi utilisé pour l'audio et pour toutes les vidéos) et un élément audio
@@ -54,11 +56,17 @@ const deckGain = new Map();
 const deckBass = new Map();
 const BASS_CUT = -30;
 
+// Sur un téléphone, passer par Web Audio peut couper la musique quand l'écran s'éteint (iOS surtout) : tant que ni
+// l'égaliseur, ni le fondu, ni AutoMix n'en ont besoin, les éléments média jouent directement.
+const nativeFirst = isWeb && typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
+const graphWanted = () => !nativeFirst || !!settings.eq?.enabled || Number(settings.crossfade) > 0 || !!settings.automix;
+
 function ensureAudioGraph() {
   if (audioCtx) {
     if (audioCtx.state === 'suspended') audioCtx.resume();
     return;
   }
+  if (!graphWanted()) return;
   try {
     audioCtx = new AudioContext();
     preamp = audioCtx.createGain();
@@ -205,7 +213,7 @@ function load(index, { autoplay = true, position = 0 } = {}) {
   }
   resetListen(track.id);
   state.loading = true;
-  media.src = `app://nilcam/media/${track.id}`;
+  media.src = mediaUrl(track.id);
   media.playbackRate = settings.rate;
   if (position > 0) {
     const seek = () => {
@@ -394,7 +402,7 @@ function startCrossfade(index, seconds, startAt = 0) {
   const incoming = outgoing === videoEl ? audioEl : videoEl;
   const next = state.queue[index];
   finishListen(true);
-  incoming.src = `app://nilcam/media/${next.id}`;
+  incoming.src = mediaUrl(next.id);
   incoming.playbackRate = settings.rate;
   seekWhenReady(incoming, startAt);
   setGain(incoming, 0);
@@ -465,7 +473,7 @@ function startAutomix(index, plan) {
   const outgoing = media;
   const incoming = outgoing === videoEl ? audioEl : videoEl;
   const next = state.queue[index];
-  incoming.src = `app://nilcam/media/${next.id}`;
+  incoming.src = mediaUrl(next.id);
   incoming.playbackRate = plan.rateIn;
   setGain(incoming, 0);
   setGain(outgoing, 1);
@@ -804,7 +812,10 @@ onSettings((patch) => {
     cancelEase();
     for (const el of decks) el.playbackRate = settings.rate;
   }
-  if ('eq' in patch) applyEq();
+  if ('eq' in patch || 'crossfade' in patch || 'automix' in patch) {
+    if (state.playing) ensureAudioGraph();
+    if ('eq' in patch) applyEq();
+  }
   emit('settings', patch);
 });
 applyVolume();
@@ -824,7 +835,7 @@ function updateMediaSession(track) {
   }
   if (!track.cover) return;
   // MediaSession n'accepte que http, data et blob : on convertit la pochette.
-  fetch(`app://nilcam/cover/${track.cover}.jpg`)
+  fetch(coverFile(track.cover))
     .then((res) => res.blob())
     .then((blob) => {
       if (player.track?.id !== track.id) return;

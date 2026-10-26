@@ -267,6 +267,13 @@ const fr = {
   'wrapped.timeDetailShort': 'Sur {tracks} morceaux différents, pour {plays} lectures.',
   'wrapped.today': 'Aujourd’hui', 'wrapped.yesterday': 'Hier', 'wrapped.thisWeek': 'Cette semaine', 'wrapped.lastWeek': 'La semaine dernière',
   'stats.byWeek': 'Par semaine', 'stats.byDay': 'Par jour', 'wrapped.weekReady': 'Votre récap de la semaine est prêt',
+  'web.pickTitle': 'Choisir un dossier du serveur', 'web.pickChoose': 'Choisir ce dossier',
+  'web.account': 'Compte', 'web.roleAdmin': 'Administrateur', 'web.roleUser': 'Utilisateur', 'web.admin': 'Administration',
+  'web.password': 'Changer le mot de passe', 'web.passwordCurrent': 'Mot de passe actuel', 'web.passwordNew': 'Nouveau mot de passe', 'web.passwordAgain': 'Confirmer le nouveau mot de passe',
+  'web.passwordMismatch': 'Les deux mots de passe ne sont pas identiques.', 'web.passwordSaved': 'Mot de passe modifié', 'web.logout': 'Se déconnecter',
+  'web.emptyAdmin': 'Aucune musique sur ce serveur pour l’instant. Ajoutez un dossier : il sera analysé, puis surveillé.',
+  'web.emptyUser': 'Aucune musique sur ce serveur pour l’instant. L’administrateur doit d’abord ajouter un dossier.',
+  'web.dlTitle': 'Téléchargements réservés', 'web.dlText': 'Les téléchargements se font sur le serveur : l’administrateur doit les autoriser pour votre compte.', 'about.web': 'Version web',
 
   'video.back10': 'Reculer de 10 s', 'video.fwd10': 'Avancer de 10 s', 'video.pip': 'Image dans l’image', 'video.exitFullscreen': 'Quitter le plein écran', 'player.rate': 'Vitesse de lecture',
 
@@ -592,6 +599,13 @@ const en = {
   'wrapped.timeDetailShort': 'Across {tracks} different songs, with {plays} plays.',
   'wrapped.today': 'Today', 'wrapped.yesterday': 'Yesterday', 'wrapped.thisWeek': 'This week', 'wrapped.lastWeek': 'Last week',
   'stats.byWeek': 'By week', 'stats.byDay': 'By day', 'wrapped.weekReady': 'Your weekly replay is ready',
+  'web.pickTitle': 'Choose a folder on the server', 'web.pickChoose': 'Choose this folder',
+  'web.account': 'Account', 'web.roleAdmin': 'Administrator', 'web.roleUser': 'User', 'web.admin': 'Administration',
+  'web.password': 'Change password', 'web.passwordCurrent': 'Current password', 'web.passwordNew': 'New password', 'web.passwordAgain': 'Confirm new password',
+  'web.passwordMismatch': 'The two passwords don’t match.', 'web.passwordSaved': 'Password changed', 'web.logout': 'Sign out',
+  'web.emptyAdmin': 'No music on this server yet. Add a folder: it will be scanned, then watched.',
+  'web.emptyUser': 'No music on this server yet. The administrator needs to add a folder first.',
+  'web.dlTitle': 'Downloads are restricted', 'web.dlText': 'Downloads happen on the server: the administrator has to allow them for your account.', 'about.web': 'Web version',
 
   'video.back10': 'Back 10 seconds', 'video.fwd10': 'Forward 10 seconds', 'video.pip': 'Picture in Picture', 'video.exitFullscreen': 'Exit Full Screen', 'player.rate': 'Playback speed',
 

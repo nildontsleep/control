@@ -1,6 +1,7 @@
 // Éditeur de tags façon mp3tag : un ou plusieurs morceaux, pochette, outils par lot, renommage des fichiers.
 // Rien n'est écrit tant qu'on n'a pas cliqué sur « Enregistrer » ; le dernier lot peut ensuite être annulé.
 
+import { can } from '../web.js';
 import { h } from '../dom.js';
 import { icon } from '../icons.js';
 import { t } from '../i18n.js';
@@ -36,6 +37,7 @@ const remembered = { filename: '%track% - %title%', rename: '%track% - %title%' 
 let lastIds = [];
 
 export async function openTagEditor(tracks) {
+  if (!can('editFiles')) return;
   const unique = [...new Map(tracks.map((x) => [x.id, x])).values()];
   if (!unique.length) return;
 

@@ -13,6 +13,7 @@ import { promptSheet, confirmSheet } from '../ui/sheet.js';
 import { toast } from '../ui/feedback.js';
 import { openSmartEditor } from '../ui/smart.js';
 import { playButtons, emptyState } from './shared.js';
+import { isWeb } from '../web.js';
 
 const api = window.control.playlists;
 
@@ -77,7 +78,7 @@ export function playlistView(root, id, { scroller }) {
     openMenu(more, [
       { label: t('pl.rename'), icon: 'square-pen', action: () => renamePlaylist(playlist) },
       smart ? { label: t('pl.editRules'), icon: 'sliders-horizontal', action: () => openSmartEditor(playlist) } : null,
-      { label: t('pl.export'), icon: 'upload', action: () => exportPlaylist(playlist) },
+      isWeb ? null : { label: t('pl.export'), icon: 'upload', action: () => exportPlaylist(playlist) },
       { separator: true },
       { label: t('common.delete'), icon: 'trash-2', action: () => deletePlaylist(playlist).then((ok) => ok && navigate('songs')) },
     ].filter(Boolean), { align: 'end' });

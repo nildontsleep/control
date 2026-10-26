@@ -1,7 +1,7 @@
 {
   "name": "control",
   "productName": "control",
-  "version": "0.5.1",
+  "version": "0.6.0",
   "description": "Lecteur musique et vidéo, téléchargements yt-dlp et bibliothèque, dans un style macOS.",
   "author": "nildontsleep",
   "desktopName": "control.desktop",
@@ -12,11 +12,15 @@
     "dist": "electron-builder --win --x64 --publish never",
     "dist:portable": "electron-builder --win portable --x64 --publish never",
     "dist:setup": "electron-builder --win nsis --x64 --publish never",
-    "dist:linux": "electron-builder --linux AppImage deb --x64 --publish never"
+    "dist:linux": "electron-builder --linux AppImage deb --x64 --publish never",
+    "web": "node server/index.js",
+    "test:web": "node --test server/test/server.test.js"
   },
   "dependencies": {
+    "jpeg-js": "0.4.4",
     "music-metadata": "12.2.3",
-    "node-taglib-sharp": "6.0.3"
+    "node-taglib-sharp": "6.0.3",
+    "pngjs": "7.0.0"
   },
   "devDependencies": {
     "electron": "44.7.0",
@@ -37,6 +41,7 @@
     },
     "files": [
       "src/**/*",
+      "!src/web/**/*",
       "package.json",
       "THIRD-PARTY.md"
     ],
@@ -137,3 +142,4 @@
     }
   }
 }
+

@@ -7,7 +7,7 @@ const fs = require('node:fs');
 const fsp = fs.promises;
 const path = require('node:path');
 const crypto = require('node:crypto');
-const { nativeImage, net } = require('electron');
+const { nativeImage, net } = require('./platform');
 const tl = require('node-taglib-sharp');
 
 // Les anciens lecteurs (Explorateur Windows, autoradios) lisent mieux l'ID3v2.3 que la 2.4.
@@ -190,9 +190,12 @@ class Tags {
   }
 
   /** Prépare une pochette (fichier ou adresse) : redimensionnée, aperçu prêt à afficher. */
-  async stageCover({ path: file, url }) {
+  async stageCover({ path: file, url, data }) {
     let buffer;
-    if (file) {
+    if (typeof data === 'string' && data) {
+      // Image envoyée par le navigateur (version web), en base64.
+      buffer = Buffer.from(data.replace(/^data:[^,]*,/, ''), 'base64');
+    } else if (file) {
       const stat = await fsp.stat(file);
       if (!stat.isFile() || stat.size > MAX_IMAGE) throw new Error('Image trop volumineuse.');
       buffer = await fsp.readFile(file);

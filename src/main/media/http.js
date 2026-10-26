@@ -2,7 +2,7 @@
 
 // Requêtes JSON vers les catalogues (TMDB, AniList) : délai, erreurs typées, aucune dépendance.
 
-const { net } = require('electron');
+const { net } = require('../platform');
 
 class MediaError extends Error {
   constructor(code, message, status = 0) {

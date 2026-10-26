@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="fr" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0c0c0f">
+  <title>{{SERVER_NAME}}</title>
+  <link rel="icon" href="/assets/icon.png">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="stylesheet" href="/styles/base.css">
+  <link rel="stylesheet" href="/styles/controls.css">
+  <link rel="stylesheet" href="/styles/app.css">
+  <link rel="stylesheet" href="/web/web.css">
+</head>
+<body>
+  <div class="web-bg" aria-hidden="true"><i></i><i></i><i></i></div>
+  <main class="card">
+    <div class="brand">
+      <img src="/assets/icon.png" alt="">
+      <div><h1>{{SERVER_NAME}}</h1><span id="sub">Connexion</span></div>
+    </div>
+    <form id="form" autocomplete="on">
+      <label class="field"><span>Nom</span><input class="text-input" id="username" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" required autofocus></label>
+      <label class="field"><span>Mot de passe</span><input class="text-input" id="password" name="password" type="password" autocomplete="current-password" required></label>
+      <p class="error" id="error" role="alert"></p>
+      <button class="btn btn-primary" id="submit" type="submit">Se connecter</button>
+    </form>
+    <p class="alt" id="register" hidden>Pas encore de compte ? <a href="#" id="toggle">Créer un compte</a></p>
+  </main>
+  <script src="/web/login.js"></script>
+</body>
+</html>

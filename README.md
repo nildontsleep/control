@@ -4,7 +4,8 @@
 
 <h1 align="center">control</h1>
 
-<p align="center">Lecteur musique et vidéo pour Windows et Linux : téléchargements yt-dlp (YouTube, SoundCloud…), éditeur de tags, paroles synchronisées, statistiques d’écoute, films, séries et animés, Discord Rich Presence.<br>
+<p align="center">Lecteur musique et vidéo pour Windows, Linux et le web : téléchargements yt-dlp (YouTube, SoundCloud…), éditeur de tags, paroles synchronisées, statistiques d’écoute, films, séries et animés, Discord Rich Presence.<br>
+Utilisable aussi **depuis un navigateur ou un téléphone**, hébergé chez toi (voir *Version web*).<br>
 Un design façon macOS : verre dépoli, pochettes qui teintent la fenêtre, animations à ressort, et des ambiances en un clic.</p>
 
 <p align="center">
@@ -128,6 +129,50 @@ L’exécutable Windows n’est pas signé : au premier lancement, SmartScreen p
   <img src="docs/equalizer.jpg" width="49%" alt="Égaliseur">
 </p>
 
+## Version web
+
+Le même control, hébergé sur un serveur (ton PC, un NAS, un Raspberry Pi, un VPS) et utilisable depuis **n’importe quel navigateur, téléphone compris** : la musique reste chez toi, l’interface (lecteur, AutoMix, paroles, mode immersif, statistiques, récaps, playlists, films et séries) est la même. Sur un téléphone, la barre latérale devient un tiroir, la barre de lecture se compacte, et l’application peut être **installée sur l’écran d’accueil** (PWA) ; les touches multimédia et l’écran verrouillé fonctionnent comme sur le bureau.
+
+**Comptes, à la manière de [vie](https://github.com/nildontsleep/vie)** : au premier lancement, un assistant crée le compte *administrateur* (nom du serveur, dossier de musique, mot de passe). Ensuite on se connecte (cookie de session `HttpOnly`, mots de passe hachés avec scrypt, essais limités). L’administrateur crée des comptes ou ouvre les inscriptions depuis `/admin` ; chaque compte a **sa propre bibliothèque d’écoute** : réglages, statistiques, récaps, playlists, films et séries vus. Les dossiers de musique, eux, sont communs.
+
+### Lancer
+
+```bash
+npm ci --omit=dev       # Node.js 22 ou plus
+CONTROL_LIBRARY=/chemin/vers/ma/musique npm run web
+# puis ouvrir http://localhost:5180
+```
+
+Avec Docker (image `ghcr.io/nildontsleep/control`, ou `docker compose up -d` après avoir adapté `docker-compose.yml`) :
+
+```bash
+docker run -d --name control -p 5180:5180 \
+  -e CONTROL_SETUP_TOKEN=un-code-secret \
+  -v ./data:/data -v /chemin/vers/ma/musique:/music:ro \
+  ghcr.io/nildontsleep/control:latest
+```
+
+### Configuration (variables d’environnement)
+
+| Variable | Rôle |
+| --- | --- |
+| `PORT` (ou `CONTROL_PORT`) / `CONTROL_HOST` | Port (5180) et adresse d’écoute (0.0.0.0). |
+| `CONTROL_DATA` | Dossier des données du serveur : comptes, réglages, bibliothèques, pochettes, outils (`./data`, `/data` dans Docker). |
+| `CONTROL_LIBRARY` | Dossiers de musique proposés au premier lancement (séparés par `:`, ou `;` sous Windows). L’administrateur peut ensuite en ajouter ou en retirer dans les réglages, qui offrent un sélecteur de dossiers du serveur. |
+| `CONTROL_SETUP_TOKEN` | Si défini, le premier compte ne peut être créé qu’avec ce code : **à définir dès que le serveur est joignable depuis Internet**. |
+| `CONTROL_TRUST_PROXY` | `1` derrière un reverse proxy (nginx, Caddy, Traefik) : adresse réelle du client et cookie `Secure` en HTTPS. |
+| `CONTROL_TMDB_KEY` | Clé TMDB offerte à tous les comptes (films et séries) ; chacun peut aussi mettre la sienne. |
+| `CONTROL_SESSION_DAYS`, `CONTROL_RESCAN_MINUTES` | Durée d’une session (30 jours) ; période de la réanalyse complète des dossiers (30 min, en plus de la surveillance des fichiers). |
+
+### Droits et limites
+
+- **Administrateur** : dossiers du serveur, comptes, outils de téléchargement, édition des tags et suppression de fichiers. **Utilisateur** : écouter, playlists, paroles, statistiques, films et séries ; les téléchargements peuvent lui être ouverts (`/admin`).
+- Ce que le serveur lit : seulement les dossiers de musique configurés (un fichier hors de ces dossiers n’est jamais servi). Monte la musique en lecture seule (`:ro`) si tu ne veux pas que l’éditeur de tags la modifie.
+- Mets un **HTTPS** devant dès que le serveur sort de ton réseau local (Caddy, nginx, Cloudflare Tunnel, Tailscale…).
+- Les navigateurs lisent MP3, AAC/M4A, FLAC, Ogg, Opus, WAV et les vidéos MP4 (H.264) ou WebM ; les autres formats (MKV surtout) ne sont pas convertis à la volée.
+- Pas de Discord Rich Presence ni de mise à jour automatique sur le web (c’est le serveur qu’on met à jour) ; la lecture de fichiers déposés dans la fenêtre n’existe pas non plus : la musique se range dans les dossiers du serveur.
+- AutoMix lit en avance le morceau suivant pour l’analyser : sur une connexion mobile mesurée, il se rabat sur un fondu simple.
+
 ## Raccourcis clavier
 
 | Touche | Action |
@@ -152,6 +197,7 @@ Dans une liste : `↑` `↓` pour se déplacer, `Maj` ou `Ctrl` pour sélectionn
 ## Idées pour la suite
 
 - Mini-lecteur flottant.
+- Version web : conversion à la volée des vidéos que les navigateurs ne lisent pas (MKV), envoi de musique depuis le navigateur.
 
 ## Développer
 
@@ -179,6 +225,10 @@ src/main/           processus principal : fenêtre, protocole app://, SQLite, sc
   discord.js        Rich Presence : canal local de Discord, mises à jour limitées, recherche de pochette
   updater.js        mise à jour : release GitHub, téléchargement vérifié (SHA-256), installation
   media/            films, séries, animés : TMDB, AniList, cache, progression, ma liste
+  core.js           services d’un utilisateur (réglages, base, bibliothèque, tags, stats…) et leurs commandes, partagés avec le serveur
+  platform.js       ce qui dépend d’Electron (réseau, images, corbeille) ; image-lite.js remplace nativeImage sur le serveur
+server/             version web : HTTP, comptes et sessions, un noyau par compte, RPC, événements en direct, médias (Range)
+src/web/            côté navigateur : pont window.control, pages de connexion / installation / administration, PWA, mise en page mobile
 src/renderer/       interface (modules ES, sans framework ni bundler)
   js/player.js      moteur de lecture : file, égaliseur, MediaSession, comptage d’écoutes
   js/data.js        bibliothèque en mémoire, albums et artistes dérivés, playlists intelligentes

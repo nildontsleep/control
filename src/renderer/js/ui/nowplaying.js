@@ -14,6 +14,7 @@ import { createImmersive } from './immersive.js';
 import { openMenu } from './menu.js';
 import { trafficLights } from './traffic.js';
 import { createScope, withScope, refreshScope, popup, toggle, segmented } from './controls.js';
+import { isWeb } from '../web.js';
 
 const win = window.control.win;
 
@@ -49,7 +50,11 @@ export function createNowPlaying(root) {
     win.setFullscreen(!root.classList.contains('fullscreen-mode'));
   } });
   const imBtn = h('button.np-icon-btn.np-immersive-btn', { type: 'button', 'data-tip': t('np.immersive'), 'data-kbd': 'I', html: icon('sparkles', 17, 2), onclick: () => api.setImmersive(true) });
-  top.replaceChildren(trafficLights(), closeBtn, h('div.np-top-title', { text: t('np.title') }), imBtn, fsBtn);
+  // Fenêtre étroite (moins de 1000 px, téléphone) : la file, les paroles et l'égaliseur s'ouvrent par-dessus.
+  const sideBtn = h('button.np-icon-btn.np-side-toggle', { type: 'button', 'data-tip': t('queue.title'), html: icon('list-music', 18, 2), onclick: () => root.classList.toggle('side-open') });
+  // Un navigateur sans plein écran de page (iPhone) : le bouton ne servirait à rien.
+  if (isWeb && !document.documentElement.requestFullscreen) fsBtn.hidden = true;
+  top.replaceChildren(trafficLights(), closeBtn, h('div.np-top-title', { text: t('np.title') }), sideBtn, imBtn, fsBtn);
 
   // ─── Informations ──────────────────────────────────────────────────────────
   const titleEl = h('h1.np-title');
@@ -319,7 +324,7 @@ export function createNowPlaying(root) {
     close() {
       if (immersive.on) api.setImmersive(false);
       open = false;
-      root.classList.remove('open', 'idle');
+      root.classList.remove('open', 'idle', 'side-open');
       root.setAttribute('aria-hidden', 'true');
       document.body.classList.remove('np-open');
       destroyList();

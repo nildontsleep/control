@@ -9,6 +9,7 @@ import { settings } from '../settings.js';
 import { coverEl } from './cover.js';
 import { openContextMenu, trackMenuItems, startTrackDrag, removeFromLibrary } from './actions.js';
 import { openTagEditor } from './tag-editor.js';
+import { can, isWeb } from '../web.js';
 
 const OVERSCAN = 6;
 const REORDER = 'application/x-control-reorder';
@@ -80,7 +81,7 @@ export function createTrackList(options) {
       if (cell === 'title') {
         out.push(h('div.tl-cell.title', {},
           layout.cover ? coverEl(track, { small: true, className: 'row-cover' }) : null,
-          h('div.title-text', {}, h('span.t', { text: track.title }), layoutName === 'queue' ? h('span.s', { text: track.artist || '' }) : null)));
+          h('div.title-text', {}, h('span.t', { text: track.title }), layoutName === 'queue' ? h('span.s', { text: track.artist || '' }) : isWeb ? h('span.ms', { text: track.artist || '' }) : null)));
       } else if (cell === 'artist') {
         out.push(h('div.tl-cell.artist', {}, h('span', { text: track.artist || '—' })));
       } else if (cell === 'album') {
@@ -88,7 +89,8 @@ export function createTrackList(options) {
       } else if (cell === 'plays') {
         out.push(h('div.tl-cell.plays.right', {}, h('span', { text: track.playCount ? String(track.playCount) : '' })));
       } else if (cell === 'time') {
-        out.push(h('div.tl-cell.time.right', {}, h('span', { text: fmtTime(track.duration) })));
+        out.push(h('div.tl-cell.time.right', {}, h('span', { text: fmtTime(track.duration) }),
+          isWeb ? h('button.tl-more', { type: 'button', 'aria-label': t('common.more'), html: icon('ellipsis', 18, 2), onclick: (e) => { e.stopPropagation(); rowMenu(e, i); } }) : null));
       }
     }
     return out;
@@ -175,10 +177,14 @@ export function createTrackList(options) {
     else if (top + rowHeight > sc.height - 110) scroller.scrollTop += top + rowHeight - sc.height + 110;
   }
 
+  const touch = () => isWeb && matchMedia('(pointer: coarse)').matches;
   body.addEventListener('click', (e) => {
     const row = e.target.closest('.tl-row');
     if (!row) return;
-    select(Number(row.dataset.i), { additive: e.ctrlKey || e.metaKey, range: e.shiftKey });
+    const i = Number(row.dataset.i);
+    select(i, { additive: e.ctrlKey || e.metaKey, range: e.shiftKey });
+    // Au doigt, un seul toucher lance le morceau (il n'y a pas de double-clic).
+    if (touch() && !e.target.closest('.idx-play')) play(i);
   });
   body.addEventListener('dblclick', (e) => {
     const row = e.target.closest('.tl-row');
@@ -186,8 +192,9 @@ export function createTrackList(options) {
   });
   body.addEventListener('contextmenu', (e) => {
     const row = e.target.closest('.tl-row');
-    if (!row) return;
-    const i = Number(row.dataset.i);
+    if (row) rowMenu(e, Number(row.dataset.i));
+  });
+  function rowMenu(e, i) {
     if (!selected.has(i)) select(i);
     const idx = selectedIndices();
     const tracks = tracksAt(idx);
@@ -199,7 +206,7 @@ export function createTrackList(options) {
     ctx.play = () => (tracks.length === 1 ? play(idx[0]) : player.playQueue(tracks, 0));
     if (layoutName === 'queue') ctx.removeLabel = ctx.removeLabel || t('queue.remove');
     openContextMenu(e, trackMenuItems(tracks, ctx));
-  });
+  }
 
   el.addEventListener('keydown', (e) => {
     const last = items.length - 1;
@@ -212,7 +219,7 @@ export function createTrackList(options) {
     } else if (e.key === 'Enter' && selected.size) {
       e.preventDefault();
       play(selectedIndices()[0]);
-    } else if ((e.key === 'i' || e.key === 'I') && (e.ctrlKey || e.metaKey) && selected.size) {
+    } else if ((e.key === 'i' || e.key === 'I') && (e.ctrlKey || e.metaKey) && selected.size && can('editFiles')) {
       e.preventDefault();
       openTagEditor(tracksAt(selectedIndices()));
     } else if ((e.key === 'a' || e.key === 'A') && (e.ctrlKey || e.metaKey)) {

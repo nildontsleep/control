@@ -7,7 +7,7 @@ const fsp = fs.promises;
 const path = require('node:path');
 const { once } = require('node:events');
 const { spawn } = require('node:child_process');
-const { net } = require('electron');
+const { net } = require('./platform');
 
 const GH = 'https://github.com';
 const ASSETS = {

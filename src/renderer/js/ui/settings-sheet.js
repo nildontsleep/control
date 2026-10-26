@@ -10,6 +10,8 @@ import { openSheet, confirmSheet, promptSheet } from './sheet.js';
 import { media } from '../media/api.js';
 import { toast } from './feedback.js';
 import { fmtBytes } from '../format.js';
+import { isWeb, can } from '../web.js';
+import { openPasswordSheet } from './account.js';
 import { onUpdate, checkNow, updateNow } from '../update/state.js';
 import { SCENES } from '../theme/scenes.js';
 import { PRESETS, DEFAULT_PRESET, currentLook, matchingPreset, swatchFor } from '../theme/presets.js';
@@ -45,7 +47,7 @@ export function openSettings(initial = 'general') {
     { id: 'streaming', icon: 'clapperboard' },
     { id: 'downloads', icon: 'cloud-download' },
     { id: 'about', icon: 'info' },
-  ];
+  ].filter((tab) => tab.id !== 'downloads' || can('download'));
 
   let offDiscord = null;
   let offUpdate = null;
@@ -124,6 +126,18 @@ export function openSettings(initial = 'general') {
     return row(t('set.cookiesFile'), h('div.row-buttons', {}, name, choose, clear), { hint: t('set.cookiesFileHint'), badge: badge('key-round', B.gray) });
   }
 
+  /** Version web : le compte connecté. */
+  function accountGroup() {
+    const { user } = window.control.web;
+    return group(t('web.account'), [
+      row(user.username, h('span.row-hint', { text: t(user.role === 'admin' ? 'web.roleAdmin' : 'web.roleUser') }), { badge: badge('user', B.blue) }),
+      h('div.row.row-block', {}, h('div.row-buttons', {},
+        button(t('web.password'), { icon: 'key-round', small: true, onClick: openPasswordSheet }),
+        can('manageServer') ? button(t('web.admin'), { icon: 'settings', small: true, onClick: () => window.open('/admin', '_blank', 'noopener') }) : null,
+        button(t('web.logout'), { icon: 'power', small: true, kind: 'danger', onClick: () => window.control.web.logout() }))),
+    ]);
+  }
+
   /** Discord : présence enrichie (musique, vidéo, streaming) et état de la connexion. */
   function discordGroup() {
     const dc = window.control.discord;
@@ -173,7 +187,7 @@ export function openSettings(initial = 'general') {
         group(t('set.playback'), [
           sliderRow(t('set.crossfade'), 'crossfade', { min: 0, max: 12, step: 1, format: (v) => (v ? t('set.seconds', { n: v }) : t('set.off')) }),
         ], { footer: t('set.crossfadeHint') }),
-        discordGroup(),
+        isWeb ? accountGroup() : discordGroup(),
         group(t('set.language'), [
           row(t('set.language'), popup('language', langs), { badge: badge('languages', B.blue) }),
         ], { footer: t('set.languageHint') }),
@@ -263,7 +277,7 @@ export function openSettings(initial = 'general') {
           ? list.map((f) => h('div.folder-row', {},
             h('span.folder-icon', { html: icon('folder', 17, 1.8) }),
             h('span.folder-path', { text: f, title: f }),
-            h('button.icon-btn', { type: 'button', 'data-tip': t('common.remove'), html: icon('x', 15, 2), onclick: async () => { await library.removeFolder(f); } })))
+            can('manageServer') ? h('button.icon-btn', { type: 'button', 'data-tip': t('common.remove'), html: icon('x', 15, 2), onclick: async () => { await library.removeFolder(f); } }) : null))
           : [h('div.folder-empty', { text: t('set.noFolders') })]));
       };
       live(renderFolders);
@@ -279,7 +293,7 @@ export function openSettings(initial = 'general') {
         group(t('set.folders'), [
           h('div.row.row-block', {}, folders),
           h('div.row.row-block', {}, h('div.row-buttons', {},
-            button(t('set.addFolder'), { icon: 'folder-plus', kind: 'primary', small: true, onClick: () => library.addFolder() }),
+            can('manageServer') ? button(t('set.addFolder'), { icon: 'folder-plus', kind: 'primary', small: true, onClick: () => library.addFolder() }) : null,
             button(t('set.scanNow'), { icon: 'refresh-cw', small: true, onClick: async () => { toast(t('set.scanning'), 'refresh-cw'); await library.scan(); } }))),
         ], { footer: t('set.foldersHint') }),
         group(t('set.inLibrary'), [stats]),
@@ -362,7 +376,7 @@ export function openSettings(initial = 'general') {
       return [
         group(t('set.dlFolder'), [
           h('div.row.row-block', {}, dir),
-          h('div.row.row-block', {}, h('div.row-buttons', {},
+          isWeb ? null : h('div.row.row-block', {}, h('div.row-buttons', {},
             button(t('common.change'), { icon: 'folder-open', small: true, onClick: () => downloads.chooseDir() }),
             button(t('dl.openFolder'), { icon: 'external-link', small: true, onClick: () => downloads.openDir() }))),
         ]),
@@ -371,12 +385,12 @@ export function openSettings(initial = 'general') {
             get: () => settings.dl.concurrency,
             set: (v) => update({ dl: { concurrency: v } }),
           }, [1, 2, 3, 4].map((n) => ({ value: n, label: String(n) })), { compact: true })),
-          row(t('set.cookies'), popup({
+          isWeb ? null : row(t('set.cookies'), popup({
             get: () => settings.dl.cookies || '',
             set: (v) => update({ dl: { cookies: v } }),
           }, [{ value: '', label: t('cookies.none') }, ...['firefox', 'chrome', 'edge', 'brave', 'opera', 'vivaldi', 'chromium'].map((b) => ({ value: b, label: b[0].toUpperCase() + b.slice(1) }))]),
           { hint: t('set.cookiesHint'), badge: badge('globe', B.blue) }),
-          cookiesFileRow(),
+          isWeb ? null : cookiesFileRow(),
           row(t('set.autoUpdate'), toggle({
             get: () => settings.dl.autoUpdate !== false,
             set: (v) => update({ dl: { autoUpdate: v } }),
@@ -410,17 +424,17 @@ export function openSettings(initial = 'general') {
         resetAll();
         setTimeout(() => location.reload(), 150);
       });
-      const edition = !info ? '' : info.portable ? t('about.portable') : info.appimage ? t('about.appimage') : t('about.installed');
+      const edition = !info ? '' : isWeb ? t('about.web') : info.portable ? t('about.portable') : info.appimage ? t('about.appimage') : t('about.installed');
       return [
         h('div.about-card', {},
           h('img.about-icon', { src: 'assets/icon.png', alt: '' }),
           h('div.about-name', { text: 'control' }),
           h('div.about-tagline', { text: t('about.tagline') }),
           h('div.about-meta', { text: `${t('about.version', { v: info?.version || '0.1.0' })}${edition ? ` · ${edition}` : ''}` })),
-        updateGroup(),
+        isWeb ? null : updateGroup(),
         group(t('set.shortcuts'), SHORTCUTS.map(([keys, label]) => row(t(label), h('span.kbds', {}, ...keys.map((k) => h('kbd', { text: k === 'Espace' ? space : k })))))),
         group(t('set.data'), [
-          h('div.row.row-block', {}, h('div.row-buttons', {}, reset, button(t('about.dataDir'), { icon: 'folder-open', small: true, onClick: () => app.openDataDir() }))),
+          h('div.row.row-block', {}, h('div.row-buttons', {}, reset, isWeb ? null : button(t('about.dataDir'), { icon: 'folder-open', small: true, onClick: () => app.openDataDir() }))),
         ], { footer: t('about.credits') }),
       ];
     },

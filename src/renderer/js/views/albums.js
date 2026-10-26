@@ -14,6 +14,7 @@ import { coverEl } from '../ui/cover.js';
 import { openContextMenu, trackMenuItems } from '../ui/actions.js';
 import { popup, slider, button } from '../ui/controls.js';
 import { openTagEditor } from '../ui/tag-editor.js';
+import { can } from '../web.js';
 import { pageHead, playButtons, emptyLibrary } from './shared.js';
 
 const SORTERS = {
@@ -79,7 +80,7 @@ export function albumView(root, key, { scroller }) {
           ? h('div.hero-artist.plain', { text: t('album.various') })
           : h('button.hero-artist.link', { type: 'button', text: album.artist || t('album.unknown'), onclick: () => artistEntry && navigate('artist', artistEntry.key) }),
         h('p.hero-meta', { text: [meta, t('count.tracks', { n: album.tracks.length }), fmtLong(album.duration), discs.size > 1 ? t('album.discs', { n: discs.size }) : null].filter(Boolean).join(' · ') }),
-        h('div.hero-actions', {}, ...playButtons(() => album.tracks), button(null, { icon: 'tags', tip: t('tag.menu'), onClick: () => openTagEditor(album.tracks) })))),
+        h('div.hero-actions', {}, ...playButtons(() => album.tracks), can('editFiles') ? button(null, { icon: 'tags', tip: t('tag.menu'), onClick: () => openTagEditor(album.tracks) }) : null))),
     list.el,
     h('div.page-foot'),
   );

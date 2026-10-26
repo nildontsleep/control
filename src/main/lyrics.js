@@ -6,7 +6,7 @@
 const fs = require('node:fs');
 const fsp = fs.promises;
 const path = require('node:path');
-const { net } = require('electron');
+const { net } = require('./platform');
 
 const API = process.env.CONTROL_LRCLIB_URL || 'https://lrclib.net/api';
 const AGENT = 'control/0.3 (https://github.com/nildontsleep/control)';

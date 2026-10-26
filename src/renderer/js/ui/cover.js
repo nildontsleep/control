@@ -2,6 +2,7 @@
 
 import { h } from '../dom.js';
 import { icon } from '../icons.js';
+import { coverFile, videoThumbUrl } from '../urls.js';
 
 function hashString(str) {
   let hash = 2166136261;
@@ -23,7 +24,7 @@ export function gradientFor(seed) {
   return `linear-gradient(150deg, hsl(${hue} 64% 60%), hsl(${hue2} 58% 32%))`;
 }
 
-export const coverUrl = (hash, small = false) => (hash ? `app://nilcam/cover/${hash}${small ? '-s' : ''}.jpg` : null);
+export const coverUrl = (hash, small = false) => (hash ? coverFile(hash, small) : null);
 
 /**
  * item : morceau, album, artiste ou playlist ({ cover, title|name, kind, id }).
@@ -35,7 +36,7 @@ export function coverEl(item, { small = false, className = '', round = false } =
   if (round) el.classList.add('round');
   const isVideo = item.kind === 'video';
   el.append(h('span.cover-icon', { html: icon(isVideo ? 'film' : item.isPlaylist ? 'list-music' : item.isArtist ? 'user' : 'music-2', 22, 1.6) }));
-  const src = item.cover ? coverUrl(item.cover, small) : isVideo && item.id ? `app://nilcam/vthumb/${item.id}` : null;
+  const src = item.cover ? coverUrl(item.cover, small) : isVideo && item.id ? videoThumbUrl(item.id) : null;
   if (src) {
     const img = h('img', { src, loading: 'lazy', decoding: 'async', alt: '', draggable: 'false' });
     img.addEventListener('load', () => el.classList.add('loaded'));

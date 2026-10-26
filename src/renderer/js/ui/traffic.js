@@ -2,6 +2,7 @@
 
 import { h } from '../dom.js';
 import { t } from '../i18n.js';
+import { isWeb } from '../web.js';
 
 const GLYPH = {
   close: '<svg viewBox="0 0 12 12" width="12" height="12"><path d="M3.75 3.75l4.5 4.5M8.25 3.75l-4.5 4.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/></svg>',
@@ -10,6 +11,7 @@ const GLYPH = {
 };
 
 export function trafficLights() {
+  if (isWeb) return null; // un navigateur a déjà sa propre barre de fenêtre
   const win = window.control.win;
   const light = (kind, label, onClick) => h(`button.tlight.tlight-${kind}`, { type: 'button', 'aria-label': label, html: GLYPH[kind], onclick: onClick });
   return h('div.traffic', {},

@@ -1,0 +1,21 @@
+# control (web) : `docker compose up -d`, puis ouvrir http://localhost:5180
+services:
+  control:
+    build: .
+    # Ou l'image publiée : image: ghcr.io/nildontsleep/control:latest
+    container_name: control
+    restart: unless-stopped
+    ports:
+      - "5180:5180"
+    environment:
+      # Code exigé pour créer le tout premier compte (administrateur) : à définir tant que le serveur est exposé.
+      CONTROL_SETUP_TOKEN: "change-moi"
+      # Derrière un reverse proxy (HTTPS) : décommenter.
+      # CONTROL_TRUST_PROXY: "1"
+      # Clé TMDB gratuite (films et séries), facultative : chaque compte peut aussi avoir la sienne.
+      # CONTROL_TMDB_KEY: ""
+    volumes:
+      # Comptes, réglages, bibliothèques, pochettes, outils.
+      - ./data:/data
+      # Votre musique (lecture seule suffit ; retirez « :ro » pour pouvoir modifier les tags et supprimer des fichiers).
+      - /chemin/vers/votre/musique:/music:ro

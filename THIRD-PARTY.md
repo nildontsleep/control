@@ -63,3 +63,10 @@ https://github.com/benrr101/node-taglib-sharp — licence **GNU LGPL 2.1 ou ult�
 ## Services en ligne
 
 control interroge, à ta demande, des services publics : [LRCLIB](https://lrclib.net) (paroles), Apple Music et Deezer (recherche de pochettes), [TMDB](https://www.themoviedb.org) et [AniList](https://anilist.co) (catalogues). Aucune donnée personnelle n'est envoyée en dehors du titre, de l'artiste ou de la recherche demandés.
+
+## Version web : jpeg-js et pngjs
+
+Utilisés par le serveur web (`src/main/image-lite.js`) pour réduire les pochettes sans Electron.
+
+- **jpeg-js** — licence BSD à 3 clauses, © 2014 Eugene Ware (https://github.com/jpeg-js/jpeg-js).
+- **pngjs** — licence MIT, © 2015 Luke Page et contributeurs, © 2012 Kuba Niegowski (https://github.com/pngjs/pngjs).

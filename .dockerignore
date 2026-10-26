@@ -1,0 +1,9 @@
+node_modules
+dist
+data
+docs
+build
+.git
+.github
+*.md
+!README.md
