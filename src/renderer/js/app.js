@@ -244,6 +244,7 @@ function wireKeys() {
     switch (key.toLowerCase()) {
       case 's': player.toggleShuffle(); break;
       case 'r': player.cycleRepeat(); break;
+      case 'a': player.toggleAutomix(); break;
       case 'm': player.toggleMute(); break;
       case 'q': if (nowPlaying.isOpen) nowPlaying.close(); else nowPlaying.open('queue'); break;
       case 'e': nowPlaying.open('eq'); break;

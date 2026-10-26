@@ -29,6 +29,7 @@ export const DEFAULTS = {
   repeat: 'off',
   rate: 1,
   crossfade: 0,
+  automix: false,
   eq: { enabled: false, preset: 'flat', gains: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0] },
   session: null,
 

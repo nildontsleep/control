@@ -81,13 +81,15 @@ export function createNowPlaying(root) {
   const play = h('button.np-play', { type: 'button', onclick: (e) => { player.toggle(); e.currentTarget.blur(); } });
   const next = ctl('skip-forward', t('player.next'), () => player.next());
   const repeat = ctl('repeat', t('player.repeat'), () => player.cycleRepeat(), '.toggle');
+  const automix = ctl('blend', t('player.automixTip'), () => player.toggleAutomix(), '.toggle');
+  automix.dataset.kbd = 'A';
   const volIcon = h('button.np-icon-btn', { type: 'button', 'data-tip': t('player.mute'), onclick: (e) => { player.toggleMute(); e.currentTarget.blur(); } });
   const volume = h('input.slider.volume', { type: 'range', min: '0', max: '1', step: '0.01' });
   volume.addEventListener('input', () => player.setVolume(Number(volume.value)));
   const rate = withScope(scope, () => popup({ get: () => String(settings.rate), set: (v) => player.setRate(Number(v)) },
     ['0.75', '1', '1.25', '1.5', '2'].map((v) => ({ value: v, label: `${v}×` }))));
   controls.replaceChildren(
-    h('div.np-transport', {}, shuffle, prev, play, next, repeat),
+    h('div.np-transport', {}, shuffle, prev, play, next, repeat, automix),
     h('div.np-extra', {}, volIcon, volume, h('span.spacer'), rate));
 
   // ─── Barre de lecture sur l'image (vidéos) ─────────────────────────────────
@@ -261,6 +263,8 @@ export function createNowPlaying(root) {
     shuffle.classList.toggle('on', !!settings.shuffle);
     repeat.classList.toggle('on', settings.repeat !== 'off');
     repeat.innerHTML = icon(settings.repeat === 'one' ? 'repeat-1' : 'repeat', 22, 1.9);
+    automix.classList.toggle('on', !!settings.automix);
+    automix.setAttribute('aria-pressed', settings.automix ? 'true' : 'false');
     volume.value = String(settings.muted ? 0 : settings.volume);
     paintRange(volume, (settings.muted ? 0 : settings.volume) * 100);
     volIcon.innerHTML = icon(settings.muted || settings.volume === 0 ? 'volume-x' : settings.volume < 0.4 ? 'volume-1' : 'volume-2', 18, 1.9);
@@ -350,6 +354,7 @@ export function createNowPlaying(root) {
   onPlayer('state', () => { paintState(); wake(); });
   onPlayer('queue', () => { if (open && tab === 'queue') renderQueue(); });
   onPlayer('settings', paintSettings);
+  onPlayer('mix', (active) => automix.classList.toggle('mixing', !!active));
   subscribe(() => refreshScope(scope));
   paintTrack();
   paintState();

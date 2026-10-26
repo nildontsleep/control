@@ -26,7 +26,7 @@ const B = { blue: '#0a84ff', pink: '#ff375f', green: '#30d158', orange: '#ff9f0a
 
 export const SHORTCUTS = [
   [['Espace'], 'kb.playPause'], [['Ctrl', '→'], 'kb.next'], [['Ctrl', '←'], 'kb.prev'], [['→'], 'kb.seekForward'], [['←'], 'kb.seekBack'],
-  [['Ctrl', '↑'], 'kb.volUp'], [['Ctrl', '↓'], 'kb.volDown'], [['S'], 'kb.shuffle'], [['R'], 'kb.repeat'], [['M'], 'kb.mute'],
+  [['Ctrl', '↑'], 'kb.volUp'], [['Ctrl', '↓'], 'kb.volDown'], [['S'], 'kb.shuffle'], [['R'], 'kb.repeat'], [['A'], 'kb.automix'], [['M'], 'kb.mute'],
   [['Q'], 'kb.queue'], [['L'], 'kb.lyrics'], [['E'], 'kb.eq'], [['Ctrl', 'I'], 'kb.tags'], [['Entrée'], 'kb.nowPlaying'], [['Ctrl', 'F'], 'kb.search'], [['Alt', '←'], 'kb.back'],
   [['Ctrl', ','], 'kb.settings'], [['F'], 'kb.fullscreen'], [['Échap'], 'kb.escape'],
 ];

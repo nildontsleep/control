@@ -60,6 +60,7 @@ const fr = {
   'search.noneTitle': 'Aucun résultat', 'search.noneText': 'Rien ne correspond à « {q} ».',
 
   'player.shuffle': 'Aléatoire', 'player.prev': 'Précédent', 'player.next': 'Suivant', 'player.repeat': 'Répéter', 'player.play': 'Lecture',
+  'player.automix': 'AutoMix', 'player.automixTip': 'AutoMix : enchaîne les morceaux en calant leurs tempos',
   'player.pause': 'Pause', 'player.seek': 'Position', 'player.mute': 'Muet', 'player.volume': 'Volume', 'player.queue': 'File d’attente',
   'player.nothing': 'Aucune lecture', 'player.nothingSub': 'Choisissez un morceau',
 
@@ -122,7 +123,7 @@ const fr = {
   'kb.playPause': 'Lecture / pause', 'kb.next': 'Morceau suivant', 'kb.prev': 'Morceau précédent', 'kb.seekForward': 'Avancer de 10 s', 'kb.seekBack': 'Reculer de 10 s',
   'kb.volUp': 'Volume +', 'kb.volDown': 'Volume −', 'kb.shuffle': 'Aléatoire', 'kb.repeat': 'Répéter', 'kb.mute': 'Muet', 'kb.queue': 'File d’attente', 'kb.lyrics': 'Paroles', 'kb.tags': 'Modifier les tags',
   'kb.eq': 'Égaliseur', 'kb.nowPlaying': 'Ouvrir « À l’écoute »', 'kb.search': 'Rechercher', 'kb.back': 'Page précédente', 'kb.settings': 'Réglages',
-  'kb.fullscreen': 'Plein écran', 'kb.escape': 'Fermer',
+  'kb.fullscreen': 'Plein écran', 'kb.automix': 'AutoMix', 'kb.escape': 'Fermer',
 
   'toast.added_one': 'Ajouté à « {name} »', 'toast.added_other': '{n} morceaux ajoutés à « {name} »', 'toast.playNext': 'Sera lu ensuite', 'toast.queued': 'Ajouté à la file d’attente',
   'toast.playlistCreated': 'Playlist « {name} » créée', 'toast.playlistCreatedWith_one': 'Playlist « {name} » créée avec 1 morceau',
@@ -249,7 +250,7 @@ const fr = {
   'lyr.noneTitle': 'Pas de paroles', 'lyr.noneText': 'Aucune parole trouvée pour ce morceau. Vous pouvez en coller, ou poser un fichier .lrc à côté.',
   'lyr.paste': 'Coller des paroles…', 'lyr.noTrack': 'Aucun morceau en cours', 'lyr.searching': 'Recherche des paroles…',
   'lyr.errorTitle': 'Paroles indisponibles', 'lyr.errorNetwork': 'Impossible de joindre LRCLIB : vérifiez votre connexion.', 'lyr.errorBusy': 'Le service de paroles (LRCLIB) est surchargé en ce moment. Réessayez dans quelques minutes.',
-  'set.crossfade': 'Fondu enchaîné', 'set.crossfadeHint': 'Les morceaux se mélangent à la fin. 0 pour désactiver.', 'set.playback': 'Lecture', 'set.seconds': '{n} s', 'set.off': 'Désactivé',
+  'set.crossfade': 'Fondu enchaîné', 'set.crossfadeHint': 'Les morceaux se mélangent à la fin. 0 pour désactiver. Avec AutoMix, sert de repli quand les tempos ne vont pas ensemble.', 'set.playback': 'Lecture', 'set.seconds': '{n} s', 'set.off': 'Désactivé',
 
   'wrapped.introMusicMonth': 'Votre mois en musique', 'wrapped.introVideoMonth': 'Votre mois en images', 'wrapped.youListenedMonth': 'Ce mois-ci, vous avez écouté',
   'wrapped.emptyMonth': 'Rien d’écouté ce mois-ci.', 'wrapped.modeYear': 'Année', 'wrapped.modeMonth': 'Mois',
@@ -373,6 +374,7 @@ const en = {
   'search.noneTitle': 'No results', 'search.noneText': 'Nothing matches “{q}”.',
 
   'player.shuffle': 'Shuffle', 'player.prev': 'Previous', 'player.next': 'Next', 'player.repeat': 'Repeat', 'player.play': 'Play',
+  'player.automix': 'AutoMix', 'player.automixTip': 'AutoMix: blends songs by matching their tempos',
   'player.pause': 'Pause', 'player.seek': 'Position', 'player.mute': 'Mute', 'player.volume': 'Volume', 'player.queue': 'Queue',
   'player.nothing': 'Not playing', 'player.nothingSub': 'Pick a song',
 
@@ -435,7 +437,7 @@ const en = {
   'kb.playPause': 'Play / pause', 'kb.next': 'Next song', 'kb.prev': 'Previous song', 'kb.seekForward': 'Forward 10 s', 'kb.seekBack': 'Back 10 s',
   'kb.volUp': 'Volume up', 'kb.volDown': 'Volume down', 'kb.shuffle': 'Shuffle', 'kb.repeat': 'Repeat', 'kb.mute': 'Mute', 'kb.queue': 'Queue', 'kb.lyrics': 'Lyrics', 'kb.tags': 'Edit tags',
   'kb.eq': 'Equalizer', 'kb.nowPlaying': 'Open Now Playing', 'kb.search': 'Search', 'kb.back': 'Go back', 'kb.settings': 'Settings',
-  'kb.fullscreen': 'Full screen', 'kb.escape': 'Close',
+  'kb.fullscreen': 'Full screen', 'kb.automix': 'AutoMix', 'kb.escape': 'Close',
 
   'toast.added_one': 'Added to “{name}”', 'toast.added_other': '{n} songs added to “{name}”', 'toast.playNext': 'Will play next', 'toast.queued': 'Added to the queue',
   'toast.playlistCreated': 'Playlist “{name}” created', 'toast.playlistCreatedWith_one': 'Playlist “{name}” created with 1 song',
@@ -562,7 +564,7 @@ const en = {
   'lyr.noneTitle': 'No lyrics', 'lyr.noneText': 'No lyrics found for this song. You can paste some, or put a .lrc file next to it.',
   'lyr.paste': 'Paste Lyrics…', 'lyr.noTrack': 'Nothing is playing', 'lyr.searching': 'Looking for lyrics…',
   'lyr.errorTitle': 'Lyrics unavailable', 'lyr.errorNetwork': 'Could not reach LRCLIB: check your connection.', 'lyr.errorBusy': 'The lyrics service (LRCLIB) is overloaded right now. Try again in a few minutes.',
-  'set.crossfade': 'Crossfade', 'set.crossfadeHint': 'Songs blend together at the end. 0 to turn off.', 'set.playback': 'Playback', 'set.seconds': '{n} s', 'set.off': 'Off',
+  'set.crossfade': 'Crossfade', 'set.crossfadeHint': 'Songs blend together at the end. 0 to turn off. With AutoMix, used as a fallback when tempos don’t match.', 'set.playback': 'Playback', 'set.seconds': '{n} s', 'set.off': 'Off',
 
   'wrapped.introMusicMonth': 'Your month in music', 'wrapped.introVideoMonth': 'Your month on screen', 'wrapped.youListenedMonth': 'This month, you listened to',
   'wrapped.emptyMonth': 'Nothing played this month.', 'wrapped.modeYear': 'Year', 'wrapped.modeMonth': 'Month',

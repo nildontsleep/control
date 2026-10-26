@@ -26,6 +26,8 @@ export function createPlayerBar(root, { openNowPlaying, openQueue, openLyrics })
   const playBtn = h('button.pb-play', { type: 'button', 'data-tip': t('player.play'), 'data-kbd': 'Espace', onclick: (e) => { player.toggle(); e.currentTarget.blur(); } });
   const next = btn('next', 'skip-forward', t('player.next'), () => player.next(), '.skip');
   const repeat = btn('repeat', 'repeat', t('player.repeat'), () => player.cycleRepeat(), '.toggle');
+  const automix = btn('automix', 'blend', t('player.automixTip'), () => player.toggleAutomix(), '.toggle');
+  automix.dataset.kbd = 'A';
 
   const cur = h('span.pb-time', { text: '0:00' });
   const total = h('span.pb-time.right', { text: '0:00' });
@@ -57,7 +59,7 @@ export function createPlayerBar(root, { openNowPlaying, openQueue, openLyrics })
   root.replaceChildren(
     h('div.pb-left', {}, art, info),
     h('div.pb-center', {},
-      h('div.pb-transport', {}, shuffle, prev, playBtn, next, repeat),
+      h('div.pb-transport', {}, shuffle, prev, playBtn, next, repeat, automix),
       h('div.pb-seek', {}, cur, seek, total)),
     h('div.pb-right', {}, lyricsBtn, queueBtn, volIcon, volume, expand));
 
@@ -93,6 +95,8 @@ export function createPlayerBar(root, { openNowPlaying, openQueue, openLyrics })
     shuffle.classList.toggle('on', !!settings.shuffle);
     repeat.classList.toggle('on', settings.repeat !== 'off');
     repeat.innerHTML = icon(settings.repeat === 'one' ? 'repeat-1' : 'repeat', 18, 1.9);
+    automix.classList.toggle('on', !!settings.automix);
+    automix.setAttribute('aria-pressed', settings.automix ? 'true' : 'false');
     volume.value = String(settings.muted ? 0 : settings.volume);
     paintRange(volume, (settings.muted ? 0 : settings.volume) * 100);
     const level = settings.muted || settings.volume === 0 ? 'volume-x' : settings.volume < 0.4 ? 'volume-1' : 'volume-2';
@@ -112,6 +116,7 @@ export function createPlayerBar(root, { openNowPlaying, openQueue, openLyrics })
   onPlayer('track', () => { paintTrack(); paintState(); });
   onPlayer('state', paintState);
   onPlayer('settings', paintSettings);
+  onPlayer('mix', (active) => automix.classList.toggle('mixing', !!active));
   paintTrack();
   paintState();
   paintSettings();

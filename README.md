@@ -48,6 +48,7 @@ L’exécutable Windows n’est pas signé : au premier lancement, SmartScreen p
 - File d’attente modifiable par glisser-déposer, aléatoire, répétition (tout / un seul), vitesse de lecture.
 - **Égaliseur 10 bandes** avec 10 préréglages.
 - **Fondu enchaîné** réglable de 1 à 12 s (*Réglages* → *Général*) : la fin d’un morceau se mêle au début du suivant, à puissance constante.
+- **AutoMix** (bouton à côté d’aléatoire et répéter, ou touche `A`) : à la manière d’Apple Music, les morceaux s’enchaînent comme un DJ le ferait. Chaque morceau est analysé en arrière-plan (tempo et grille de temps, résultat gardé en cache) ; le suivant est ajusté au tempo du morceau en cours (sans changer la hauteur), entre sur un temps, puis les deux sont fondus sur 8 à 16 temps avec un échange des basses. Un asservissement garde les deux sur le même temps pendant tout l’enchaînement. Quand les tempos sont trop éloignés ou non détectables (classique, ambiances…), AutoMix se rabat sur un fondu simple, calé sur la fin audible du morceau (sans le silence final).
 - **Paroles synchronisées** : onglet *Paroles* de « À l’écoute » (`L`). Les lignes défilent avec la musique, un clic sur une ligne s’y rend. Elles viennent d’un fichier `.lrc` posé à côté du morceau, des paroles intégrées au fichier, ou de [LRCLIB](https://lrclib.net) (gratuit, sans compte) ; une fois trouvées, elles sont gardées. On peut aussi en coller, ou les enregistrer en `.lrc`.
 - Touches multimédia du clavier et panneau multimédia de Windows (pochette, titre, position).
 - Reprise de la session au lancement (file d’attente, morceau, position).
@@ -133,7 +134,7 @@ L’exécutable Windows n’est pas signé : au premier lancement, SmartScreen p
 | `Ctrl` + `→` / `←` | Morceau suivant / précédent |
 | `→` / `←` | Avancer / reculer de 10 s |
 | `Ctrl` + `↑` / `↓` | Volume |
-| `S` / `R` / `M` | Aléatoire / répéter / muet |
+| `S` / `R` / `A` / `M` | Aléatoire / répéter / AutoMix / muet |
 | `Q` / `E` / `L` | File d’attente / égaliseur / paroles |
 | `Ctrl` + `I` | Modifier les tags de la sélection |
 | `Entrée` | Ouvrir ou fermer « À l’écoute » |
