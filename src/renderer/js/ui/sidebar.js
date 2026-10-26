@@ -13,6 +13,7 @@ import { renamePlaylist, deletePlaylist, exportPlaylist } from '../views/playlis
 import { toast } from './feedback.js';
 import { isWeb, can } from '../web.js';
 import { openAccountMenu } from './account.js';
+import { hasSources, mountSourceSwitcher } from './sources.js';
 
 const playlistsApi = window.control.playlists;
 const NAV = [
@@ -169,8 +170,13 @@ export function createSidebar(root, { openSettings }) {
       h('span.sb-label', { text: window.control.web.user.username }))
     : null;
 
+  // Serveurs control (application de bureau) : le sélecteur n'apparaît qu'une fois un serveur ajouté.
+  const sourceBox = h('div.sb-source', { hidden: true });
+  if (hasSources) mountSourceSwitcher(sourceBox, { openSettings });
+
   root.replaceChildren(
     h('div.sb-top', {}, trafficLights(), brand),
+    sourceBox,
     h('div.sb-search', {}, h('span.sb-search-icon', { html: icon('search', 14, 2.2) }), search, clearBtn),
     h('nav.sb-scroll', {},
       navBox,

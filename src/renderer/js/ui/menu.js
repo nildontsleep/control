@@ -17,7 +17,7 @@ export function isMenuOpen() {
  * items : [{ label, action, checked, icon, shortcut, disabled } | { separator: true } | { header }]
  * align : 'start' | 'end' | 'selected' (l’élément coché se place sur le bouton, comme un pop-up macOS)
  */
-export function openMenu(anchor, items, { align = 'start', placement = 'below', minWidth } = {}) {
+export function openMenu(anchor, items, { align = 'start', placement = 'below', minWidth, onClose } = {}) {
   closeMenu();
   const hasChecks = items.some((i) => 'checked' in i);
   const menu = h('div.menu', { role: 'menu' });
@@ -109,6 +109,7 @@ export function openMenu(anchor, items, { align = 'start', placement = 'below', 
     menu.classList.remove('open');
     menu.classList.add('closing');
     setTimeout(() => menu.remove(), 160);
+    onClose?.();
   }
 
   setTimeout(() => {

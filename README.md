@@ -164,6 +164,16 @@ docker run -d --name control -p 5180:5180 \
 | `CONTROL_TMDB_KEY` | Clé TMDB offerte à tous les comptes (films et séries) ; chacun peut aussi mettre la sienne. |
 | `CONTROL_SESSION_DAYS`, `CONTROL_RESCAN_MINUTES` | Durée d’une session (30 jours) ; période de la réanalyse complète des dossiers (30 min, en plus de la surveillance des fichiers). |
 
+### Se connecter à un serveur depuis l’application de bureau
+
+L’application de bureau peut afficher un ou plusieurs serveurs **à côté de cet ordinateur**. *Réglages* → *Serveurs* : colle l’adresse du serveur (`ma-maison.example`, `192.168.1.20:5180`, avec ou sans `http(s)://` : l’application essaie les deux et vérifie que c’est bien un serveur control). Dès qu’un serveur est ajouté, un sélecteur apparaît sous le logo de la barre latérale : *Cet ordinateur*, puis tes serveurs.
+
+- Un serveur s’affiche dans la fenêtre, sous une fine barre (feux tricolores, sélecteur, rechargement) : c’est sa propre interface, avec ses comptes et sa bibliothèque. Tu t’y connectes une fois, la connexion est gardée (et oubliée si tu retires le serveur).
+- Les deux côtés restent ouverts : passer de l’un à l’autre est instantané et ne coupe rien. **Une seule source joue à la fois** : quand l’une démarre, l’autre se met en pause.
+- Au lancement suivant, l’application reprend sur la dernière source affichée.
+- Le serveur n’a aucun accès à ton ordinateur : sa page tourne isolée, sans pont vers le système, et ses liens externes s’ouvrent dans ton navigateur.
+- Limites : la Rich Presence Discord ne suit que la lecture locale ; un film ou un épisode lancé depuis le serveur met la musique locale en pause, mais l’inverse ne l’arrête pas. Un certificat HTTPS auto-signé est refusé (utilise un vrai certificat, ou passe par Tailscale / un tunnel).
+
 ### Droits et limites
 
 - **Administrateur** : dossiers du serveur, comptes, outils de téléchargement, édition des tags et suppression de fichiers. **Utilisateur** : écouter, playlists, paroles, statistiques, films et séries ; les téléchargements peuvent lui être ouverts (`/admin`).
@@ -227,6 +237,7 @@ src/main/           processus principal : fenêtre, protocole app://, SQLite, sc
   media/            films, séries, animés : TMDB, AniList, cache, progression, ma liste
   core.js           services d’un utilisateur (réglages, base, bibliothèque, tags, stats…) et leurs commandes, partagés avec le serveur
   platform.js       ce qui dépend d’Electron (réseau, images, corbeille) ; image-lite.js remplace nativeImage sur le serveur
+  sources.js        serveurs control affichés dans la fenêtre (vue web isolée par serveur, bascule, pause de l’autre source)
 server/             version web : HTTP, comptes et sessions, un noyau par compte, RPC, événements en direct, médias (Range)
 src/web/            côté navigateur : pont window.control, pages de connexion / installation / administration, PWA, mise en page mobile
 src/renderer/       interface (modules ES, sans framework ni bundler)

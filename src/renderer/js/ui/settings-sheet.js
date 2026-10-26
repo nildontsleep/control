@@ -12,6 +12,7 @@ import { toast } from './feedback.js';
 import { fmtBytes } from '../format.js';
 import { isWeb, can } from '../web.js';
 import { openPasswordSheet } from './account.js';
+import { hasSources, serversTab } from './sources.js';
 import { onUpdate, checkNow, updateNow } from '../update/state.js';
 import { SCENES } from '../theme/scenes.js';
 import { PRESETS, DEFAULT_PRESET, currentLook, matchingPreset, swatchFor } from '../theme/presets.js';
@@ -44,10 +45,11 @@ export function openSettings(initial = 'general') {
     { id: 'general', icon: 'settings' },
     { id: 'appearance', icon: 'palette' },
     { id: 'library', icon: 'hard-drive' },
+    { id: 'servers', icon: 'globe' },
     { id: 'streaming', icon: 'clapperboard' },
     { id: 'downloads', icon: 'cloud-download' },
     { id: 'about', icon: 'info' },
-  ].filter((tab) => tab.id !== 'downloads' || can('download'));
+  ].filter((tab) => (tab.id !== 'downloads' || can('download')) && (tab.id !== 'servers' || hasSources));
 
   let offDiscord = null;
   let offUpdate = null;
@@ -352,6 +354,10 @@ export function openSettings(initial = 'general') {
             } }))),
         ]),
       ];
+    },
+
+    servers() {
+      return serversTab({ close: () => sheet.close() });
     },
 
     downloads() {

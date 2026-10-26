@@ -15,6 +15,7 @@ import { createSidebar } from './ui/sidebar.js';
 import { createPlayerBar } from './ui/playerbar.js';
 import { createNowPlaying } from './ui/nowplaying.js';
 import { openSettings } from './ui/settings-sheet.js';
+import { initSources } from './ui/sources.js';
 import { isSheetOpen } from './ui/sheet.js';
 import { isMenuOpen } from './ui/menu.js';
 import { toast, installTooltips } from './ui/feedback.js';
@@ -113,7 +114,7 @@ function buildShell() {
   registerView('stats', statsView);
 
   nowPlaying = createNowPlaying($('#nowPlaying'));
-  sidebar = createSidebar($('#sidebar'), { openSettings: () => openSettings() });
+  sidebar = createSidebar($('#sidebar'), { openSettings: (tab) => openSettings(tab) });
   playerBar = createPlayerBar($('#playerbar'), {
     openNowPlaying: () => nowPlaying.open(),
     openQueue: () => nowPlaying.isOpen ? nowPlaying.close() : nowPlaying.open('queue'),
@@ -210,7 +211,7 @@ function wireKeys() {
     if (btn && !btn.closest('.sheet, .menu')) setTimeout(() => btn.blur());
   });
   document.addEventListener('keydown', (e) => {
-    if (isSheetOpen() || isMenuOpen()) return;
+    if (isSheetOpen() || isMenuOpen() || document.body.classList.contains('source-remote')) return; // un serveur est affiché : ses touches sont les siennes
     const tag = e.target?.tagName;
     const typing = tag === 'INPUT' && !['range', 'checkbox'].includes(e.target.type) || tag === 'TEXTAREA';
     const ctrl = e.ctrlKey || e.metaKey;
@@ -269,6 +270,7 @@ async function init() {
   if (control.platform === 'web') root.classList.add('platform-web');
 
   buildShell();
+  initSources({ openSettings, pause: () => player.pause() }); // serveurs control (application de bureau uniquement)
   wireKeys();
   if (control.platform !== 'web') wireDrop(); // des fichiers déposés n'ont pas de chemin utilisable par un serveur
 

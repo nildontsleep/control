@@ -10,6 +10,7 @@ const { pathToFileURL } = require('node:url');
 const { Core } = require('./core');
 const { DiscordPresence } = require('./discord');
 const { Updater } = require('./updater');
+const { Sources } = require('./sources');
 const { frameOrigins, imageOrigins } = require('./media');
 
 // ─── Mode portable : les données restent à côté de l'exécutable ──────────────
@@ -62,6 +63,7 @@ let stats;
 let lyrics;
 let discord;
 let updater;
+let sources;
 let mainWin = null;
 let quitting = false;
 let boundsTimer = null;
@@ -115,6 +117,51 @@ function windowState(win) {
   };
 }
 
+/**
+ * Fenêtres et navigations d'une page. Au premier clic, le lecteur vidrift vérifie qu'il peut ouvrir une fenêtre (c'est
+ * ainsi qu'il détecte un iframe « sandboxé ») et affiche « Remove sandboxing » si window.open() échoue. On accepte donc
+ * cette fenêtre blanche, mais cachée, sans réseau et refermée aussitôt : toute vraie page (publicité…) reste refusée.
+ * Pour un serveur affiché dans la fenêtre (origine donnée), les liens vers l'extérieur s'ouvrent dans le navigateur.
+ */
+function guardPopups(contents, remoteOrigin = null) {
+  const external = (url) => {
+    if (remoteOrigin && /^https?:\/\//i.test(url)) shell.openExternal(url);
+  };
+  contents.setWindowOpenHandler(({ url }) => {
+    if (url !== 'about:blank') {
+      external(url);
+      return { action: 'deny' };
+    }
+    return {
+      action: 'allow',
+      overrideBrowserWindowOptions: {
+        show: false,
+        width: 1,
+        height: 1,
+        skipTaskbar: true,
+        focusable: false,
+        frame: false,
+        webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false },
+      },
+    };
+  });
+  contents.on('did-create-window', (probe) => {
+    probe.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+    for (const ev of ['will-navigate', 'will-redirect']) probe.webContents.on(ev, (e) => e.preventDefault());
+    // Le lecteur la ferme lui-même ; filet de sécurité s'il ne le faisait pas.
+    const timer = setTimeout(() => { if (!probe.isDestroyed()) probe.destroy(); }, 4000);
+    probe.once('closed', () => clearTimeout(timer));
+  });
+  const stay = (e, url) => {
+    const allowed = remoteOrigin ? url.startsWith(`${remoteOrigin}/`) || url === remoteOrigin : url.startsWith('app://nilcam/');
+    if (allowed) return;
+    e.preventDefault();
+    external(url);
+  };
+  contents.on('will-navigate', stay);
+  if (remoteOrigin) contents.on('will-redirect', stay); // un serveur ne renvoie pas la vue vers un autre site
+}
+
 function createWindow() {
   const saved = store.data.window.main || {};
   const opts = {
@@ -140,36 +187,10 @@ function createWindow() {
   else opts.center = true;
 
   mainWin = new BrowserWindow(opts);
-  // Au premier clic, le lecteur vidrift vérifie qu'il peut ouvrir une fenêtre (c'est ainsi qu'il détecte un iframe
-  // « sandboxé ») et affiche « Remove sandboxing » si window.open() échoue. On accepte donc cette fenêtre blanche, mais
-  // cachée, sans réseau et refermée aussitôt : toute vraie page (publicité…) reste refusée.
-  mainWin.webContents.setWindowOpenHandler(({ url }) => {
-    if (url !== 'about:blank') return { action: 'deny' };
-    return {
-      action: 'allow',
-      overrideBrowserWindowOptions: {
-        show: false,
-        width: 1,
-        height: 1,
-        skipTaskbar: true,
-        focusable: false,
-        frame: false,
-        webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false },
-      },
-    };
-  });
-  mainWin.webContents.on('did-create-window', (probe) => {
-    probe.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
-    for (const ev of ['will-navigate', 'will-redirect']) probe.webContents.on(ev, (e) => e.preventDefault());
-    // Le lecteur la ferme lui-même ; filet de sécurité s'il ne le faisait pas.
-    const timer = setTimeout(() => { if (!probe.isDestroyed()) probe.destroy(); }, 4000);
-    probe.once('closed', () => clearTimeout(timer));
-  });
-  mainWin.webContents.on('will-navigate', (e, url) => {
-    if (!url.startsWith('app://nilcam/')) e.preventDefault();
-  });
+  guardPopups(mainWin.webContents);
   if (saved.maximized) mainWin.maximize();
   mainWin.loadURL('app://nilcam/index.html');
+  sources.attach(mainWin);
   mainWin.once('ready-to-show', () => mainWin.show());
 
   const push = () => mainWin && !mainWin.isDestroyed() && mainWin.webContents.send('window:state', windowState(mainWin));
@@ -361,6 +382,16 @@ function setupIpc() {
   handle('discord:status', () => discord.status);
   handle('discord:test', () => discord.test());
 
+  // Serveurs control (la version web) affichés dans la fenêtre, à côté de cet ordinateur.
+  handle('sources:state', () => sources.state());
+  handle('sources:add', (_e, input) => sources.add(input));
+  handle('sources:rename', (_e, id, name) => sources.rename(id, name));
+  handle('sources:remove', (_e, id) => sources.remove(id));
+  handle('sources:switch', (_e, id) => sources.switch(id));
+  handle('sources:reload', () => sources.reload());
+  handle('sources:peek', () => sources.peek());
+  handle('sources:unpeek', () => sources.unpeek());
+
   ipcMain.on('win:close', (e) => winOf(e)?.close());
   ipcMain.on('win:minimize', (e) => winOf(e)?.minimize());
   ipcMain.on('win:toggle-maximize', (e) => {
@@ -529,6 +560,12 @@ app.whenReady().then(() => {
   });
   updater.on('state', (state) => broadcast('update:state', state));
   updater.cleanup();
+
+  sources = new Sources({
+    store,
+    send: (channel, payload) => { if (mainWin && !mainWin.isDestroyed()) mainWin.webContents.send(channel, payload); },
+    guard: guardPopups,
+  });
 
   Menu.setApplicationMenu(null);
   registerProtocol();

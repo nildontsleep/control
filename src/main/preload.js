@@ -147,6 +147,20 @@ contextBridge.exposeInMainWorld('control', {
     onChange: listen('watch:changed'),
   },
 
+  // Serveurs control affichés dans la fenêtre (absent de la version web).
+  sources: {
+    state: invoke('sources:state'),
+    add: invoke('sources:add'),
+    rename: invoke('sources:rename'),
+    remove: invoke('sources:remove'),
+    switch: invoke('sources:switch'),
+    reload: invoke('sources:reload'),
+    peek: invoke('sources:peek'),
+    unpeek: invoke('sources:unpeek'),
+    onChange: listen('sources:changed'),
+    onPauseRequest: listen('sources:pause'),
+  },
+
   app: {
     info: invoke('app:info'),
     openDataDir: send('app:open-data-dir'),

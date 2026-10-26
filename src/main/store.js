@@ -17,11 +17,16 @@ function deepMerge(target, patch) {
 class Store {
   constructor(file) {
     this.file = file;
-    this.data = { settings: {}, window: {} };
+    this.data = { settings: {}, window: {}, servers: [], source: 'local' };
     this.timer = null;
     try {
       const raw = JSON.parse(fs.readFileSync(file, 'utf8'));
-      this.data = { settings: raw.settings || {}, window: raw.window || {} };
+      this.data = {
+        settings: raw.settings || {},
+        window: raw.window || {},
+        servers: Array.isArray(raw.servers) ? raw.servers : [],
+        source: typeof raw.source === 'string' ? raw.source : 'local',
+      };
     } catch { /* premier lancement ou fichier illisible */ }
   }
 
