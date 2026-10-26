@@ -42,6 +42,18 @@
   white-space: nowrap;
 }
 
+/* iOS, appli sur l'écran d'accueil : hauteur mesurée par app-web.js quand la fenêtre est annoncée trop courte. */
+.platform-web .app,
+.platform-web .nav-scrim,
+.platform-web .wrapped {
+  height: var(--app-h, auto);
+}
+
+.no-volume .np-extra .volume,
+.no-volume .vvolume {
+  display: none;
+}
+
 /* Un navigateur n'a pas de zone de glissement de fenêtre. */
 .platform-web .sb-top,
 .platform-web .np-top {
@@ -98,6 +110,7 @@
     bottom: 0;
     left: 0;
     width: var(--sidebar-w);
+    height: var(--app-h, auto);
     padding-top: env(safe-area-inset-top);
     padding-bottom: env(safe-area-inset-bottom);
     transform: translateX(-104%);
@@ -288,10 +301,108 @@
     left: 10px;
     right: 10px;
   }
+
+  /* Fiches (album, artiste, playlist) : la pochette passe au-dessus du texte. */
+  .hero {
+    flex-direction: column;
+    align-items: center;
+    gap: 18px;
+    padding: 6px 0 22px;
+    text-align: center;
+  }
+
+  .hero-art {
+    width: min(260px, 70vw);
+    height: min(260px, 70vw);
+  }
+
+  .hero-text {
+    width: 100%;
+    padding-bottom: 0;
+  }
+
+  .hero-kind,
+  .hero-actions {
+    justify-content: center;
+  }
+
+  .hero-actions {
+    flex-wrap: wrap;
+  }
+
+  .hero-text h1 {
+    font-size: 28px;
+    overflow-wrap: break-word;
+  }
+
+  .hero-text h1.editable {
+    margin-left: 0;
+  }
+
+  .hero-artist {
+    font-size: 17px;
+    text-align: center;
+  }
+
+  .hero-meta {
+    margin: 6px 0 16px;
+  }
+
+  /* Albums : deux colonnes, sans curseur de taille. */
+  .grid.albums {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 22px 14px;
+  }
+
+  .size-icons {
+    display: none;
+  }
+
+  /* « À l'écoute » : les six boutons tiennent sur une ligne et le bouton lecture reste rond. */
+  .np-transport {
+    gap: 4px;
+    justify-content: space-between;
+  }
+
+  .np-btn {
+    flex: 0 1 46px;
+    min-width: 36px;
+  }
+
+  .seg-btn {
+    padding: 0 4px;
+  }
+
+  .settings-tab {
+    min-width: 76px;
+    padding: 8px 8px 6px;
+  }
 }
 
 @media (max-width: 860px) and (max-height: 520px) {
   .np-body {
     padding-bottom: 8px;
+  }
+}
+
+/* ─── Écrans tactiles ─────────────────────────────────────────────────── */
+html {
+  overscroll-behavior: none;
+}
+
+@media (hover: none) and (pointer: coarse) {
+  /* iOS zoome sur un champ dont le texte fait moins de 16 px. */
+  .platform-web input:not([type='range'], [type='checkbox'], [type='radio'], [type='color'], [type='file']),
+  .platform-web textarea,
+  .platform-web select {
+    font-size: 16px;
+  }
+
+  /* L'appui long ouvre le menu de l'application, pas l'aperçu du système. */
+  .platform-web img,
+  .platform-web .cover,
+  .platform-web .tl-row,
+  .platform-web .card {
+    -webkit-touch-callout: none;
   }
 }

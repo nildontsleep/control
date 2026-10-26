@@ -47,8 +47,10 @@ body.np-open .playerbar {
   transition: transform 0.4s var(--spring);
 }
 
-.pb-art:hover {
-  transform: scale(1.06);
+@media (hover: hover) {
+  .pb-art:hover {
+    transform: scale(1.06);
+  }
 }
 
 .pb-art .cover {
@@ -79,10 +81,12 @@ body.np-open .playerbar {
   color: var(--text-2);
 }
 
-.pb-sub:hover {
-  color: var(--text);
-  text-decoration: underline;
-  text-underline-offset: 2px;
+@media (hover: hover) {
+  .pb-sub:hover {
+    color: var(--text);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
 }
 
 .playerbar.no-track .pb-art,
@@ -115,9 +119,11 @@ body.np-open .playerbar {
   transition: color 0.15s, background-color 0.15s, transform 0.3s var(--spring);
 }
 
-.pb-btn:hover {
-  color: var(--text);
-  background: var(--fill);
+@media (hover: hover) {
+  .pb-btn:hover {
+    color: var(--text);
+    background: var(--fill);
+  }
 }
 
 .pb-btn:active {
@@ -154,8 +160,10 @@ body.np-open .playerbar {
   transition: transform 0.35s var(--spring), filter 0.15s;
 }
 
-.pb-play:hover {
-  transform: scale(1.07);
+@media (hover: hover) {
+  .pb-play:hover {
+    transform: scale(1.07);
+  }
 }
 
 .pb-play:active {
@@ -218,9 +226,11 @@ body.np-open .playerbar {
   transition: height 0.15s;
 }
 
-.slider.seek:hover::-webkit-slider-runnable-track,
-.slider.volume:hover::-webkit-slider-runnable-track {
-  height: 6px;
+@media (hover: hover) {
+  .slider.seek:hover::-webkit-slider-runnable-track,
+  .slider.volume:hover::-webkit-slider-runnable-track {
+    height: 6px;
+  }
 }
 
 .slider.seek::-webkit-slider-thumb,
@@ -232,11 +242,17 @@ body.np-open .playerbar {
   transition: opacity 0.15s, transform 0.2s var(--spring);
 }
 
-.slider.seek:hover::-webkit-slider-thumb,
-.slider.volume:hover::-webkit-slider-thumb,
 .slider.seek:active::-webkit-slider-thumb {
   opacity: 1;
   margin-top: -3px;
+}
+
+@media (hover: hover) {
+  .slider.seek:hover::-webkit-slider-thumb,
+  .slider.volume:hover::-webkit-slider-thumb {
+    opacity: 1;
+    margin-top: -3px;
+  }
 }
 
 /* ─── À l'écoute ────────────────────────────────────────────────────────── */
@@ -323,10 +339,12 @@ body.np-open .playerbar {
   transition: background-color 0.15s, color 0.15s;
 }
 
-.np-close:hover,
-.np-icon-btn:hover {
-  background: var(--fill-hover);
-  color: var(--text);
+@media (hover: hover) {
+  .np-close:hover,
+  .np-icon-btn:hover {
+    background: var(--fill-hover);
+    color: var(--text);
+  }
 }
 
 .np-top-title {
@@ -458,9 +476,11 @@ body.np-open .playerbar {
   display: none;
 }
 
-.np-artist:hover {
-  text-decoration: underline;
-  text-underline-offset: 3px;
+@media (hover: hover) {
+  .np-artist:hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
 }
 
 .np-album {
@@ -515,8 +535,10 @@ body.np-open .playerbar {
   transition: color 0.15s, background-color 0.15s, transform 0.3s var(--spring);
 }
 
-.np-btn:hover {
-  background: var(--fill-hover);
+@media (hover: hover) {
+  .np-btn:hover {
+    background: var(--fill-hover);
+  }
 }
 
 .np-btn:active {
@@ -539,6 +561,7 @@ body.np-open .playerbar {
 .np-play {
   width: 68px;
   height: 68px;
+  flex: none;
   display: grid;
   place-items: center;
   border-radius: 50%;
@@ -548,8 +571,10 @@ body.np-open .playerbar {
   transition: transform 0.4s var(--spring);
 }
 
-.np-play:hover {
-  transform: scale(1.06);
+@media (hover: hover) {
+  .np-play:hover {
+    transform: scale(1.06);
+  }
 }
 
 .np-play:active {
@@ -822,10 +847,12 @@ body.np-open .playerbar {
   filter: blur(0.3px);
 }
 
-.ly-body.synced .ly-line:not(.gap):hover {
-  color: rgb(255 255 255 / 0.85);
-  filter: none;
-  background: rgb(255 255 255 / 0.07);
+@media (hover: hover) {
+  .ly-body.synced .ly-line:not(.gap):hover {
+    color: rgb(255 255 255 / 0.85);
+    filter: none;
+    background: rgb(255 255 255 / 0.07);
+  }
 }
 
 .ly-line.past {
@@ -1031,8 +1058,10 @@ body.np-open .playerbar {
   transition: background-color 0.15s, transform 0.3s var(--spring);
 }
 
-.vbtn:hover {
-  background: rgb(255 255 255 / 0.16);
+@media (hover: hover) {
+  .vbtn:hover {
+    background: rgb(255 255 255 / 0.16);
+  }
 }
 
 .vbtn:active {
@@ -1065,8 +1094,10 @@ body.np-open .playerbar {
   fill: currentColor;
 }
 
-.vplay:hover {
-  transform: scale(1.07);
+@media (hover: hover) {
+  .vplay:hover {
+    transform: scale(1.07);
+  }
 }
 
 .vplay:active {
@@ -1084,8 +1115,10 @@ body.np-open .playerbar {
   transition: background-color 0.15s;
 }
 
-.vchip:hover {
-  background: rgb(255 255 255 / 0.24);
+@media (hover: hover) {
+  .vchip:hover {
+    background: rgb(255 255 255 / 0.24);
+  }
 }
 
 .vvolume {

@@ -215,13 +215,28 @@
 .settings-tabs {
   flex: none;
   display: flex;
-  justify-content: center;
   gap: 4px;
   padding: 14px 14px 10px;
+  overflow-x: auto;
+  scrollbar-width: none;
   border-bottom: 0.5px solid var(--separator);
 }
 
+.settings-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+/* Centrés quand il y a de la place, défilants (depuis le premier) quand il n'y en a pas. */
+.settings-tab:first-child {
+  margin-left: auto;
+}
+
+.settings-tab:last-child {
+  margin-right: auto;
+}
+
 .settings-tab {
+  flex: none;
   min-width: 92px;
   display: flex;
   flex-direction: column;
@@ -235,9 +250,11 @@
   transition: background-color 0.15s, color 0.15s;
 }
 
-.settings-tab:hover {
-  background: var(--fill);
-  color: var(--text);
+@media (hover: hover) {
+  .settings-tab:hover {
+    background: var(--fill);
+    color: var(--text);
+  }
 }
 
 .settings-tab.on {
@@ -343,8 +360,10 @@
   transition: background-color 0.15s, box-shadow 0.15s, transform 0.25s var(--spring, cubic-bezier(0.3, 1.4, 0.5, 1));
 }
 
-.amb-tile:hover {
-  background: var(--fill);
+@media (hover: hover) {
+  .amb-tile:hover {
+    background: var(--fill);
+  }
 }
 
 .amb-tile:active {
@@ -420,9 +439,14 @@
   transition: opacity 0.15s;
 }
 
-.amb-tile:hover .amb-del,
 .amb-del:focus-visible {
   opacity: 1;
+}
+
+@media (hover: hover) {
+  .amb-tile:hover .amb-del {
+    opacity: 1;
+  }
 }
 
 .row[hidden] {

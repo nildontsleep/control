@@ -117,8 +117,10 @@
   transition: transform 0.4s var(--spring), box-shadow 0.3s;
 }
 
-.tg-cover:hover {
-  transform: scale(1.015);
+@media (hover: hover) {
+  .tg-cover:hover {
+    transform: scale(1.015);
+  }
 }
 
 .tg-cover img,
@@ -172,9 +174,14 @@
   transition: opacity 0.2s;
 }
 
-.tg-cover:hover .tg-cover-drop,
 .tg-cover.over .tg-cover-drop {
   opacity: 1;
+}
+
+@media (hover: hover) {
+  .tg-cover:hover .tg-cover-drop {
+    opacity: 1;
+  }
 }
 
 .tg-cover.over {
@@ -507,8 +514,10 @@
   transition: transform 0.35s var(--spring), opacity 0.2s;
 }
 
-.tg-result:hover {
-  transform: translateY(-2px) scale(1.02);
+@media (hover: hover) {
+  .tg-result:hover {
+    transform: translateY(-2px) scale(1.02);
+  }
 }
 
 .tg-result.busy {
@@ -557,13 +566,23 @@
 
   .tg-left {
     position: static;
-    flex-direction: row;
-    align-items: flex-start;
+    flex-direction: column;
+    align-items: stretch;
   }
 
   .tg-cover {
     width: 150px;
     height: 150px;
+    align-self: center;
+  }
+
+  /* Téléphone : un champ par ligne, les nombres deux par deux. */
+  .tg-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .tg-row-nums {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -586,6 +605,8 @@
   background: rgb(var(--accent-rgb) / 0.14);
 }
 
-.toast-action:hover {
-  background: rgb(var(--accent-rgb) / 0.24);
+@media (hover: hover) {
+  .toast-action:hover {
+    background: rgb(var(--accent-rgb) / 0.24);
+  }
 }

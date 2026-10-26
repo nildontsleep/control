@@ -225,8 +225,10 @@
   transition: background-color 0.15s;
 }
 
-.sb-item:hover {
-  background: var(--fill);
+@media (hover: hover) {
+  .sb-item:hover {
+    background: var(--fill);
+  }
 }
 
 .sb-item.active {
@@ -330,9 +332,11 @@
   transition: background-color 0.15s, color 0.15s, opacity 0.2s;
 }
 
-.nav-btn:hover:not(:disabled) {
-  background: var(--fill);
-  color: var(--text);
+@media (hover: hover) {
+  .nav-btn:hover:not(:disabled) {
+    background: var(--fill);
+    color: var(--text);
+  }
 }
 
 .nav-btn:disabled {
@@ -632,8 +636,10 @@
   transition: opacity 0.12s;
 }
 
-.traffic:hover .tlight svg {
-  opacity: 0.9;
+@media (hover: hover) {
+  .traffic:hover .tlight svg {
+    opacity: 0.9;
+  }
 }
 
 .tlight:active {
@@ -644,8 +650,10 @@
 .tlight-min { background: #febc2e; color: #995700; }
 .tlight-zoom { background: #28c840; color: #006500; }
 
-.inactive .traffic:not(:hover) .tlight {
-  background: rgb(255 255 255 / 0.2);
+@media (hover: hover) {
+  .inactive .traffic:not(:hover) .tlight {
+    background: rgb(255 255 255 / 0.2);
+  }
 }
 
 .spinner {

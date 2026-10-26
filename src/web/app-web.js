@@ -12,6 +12,26 @@ if (web) {
 
   const app = document.getElementById('app');
   const topbar = document.getElementById('topbar');
+  const root = document.documentElement;
+
+  // iOS, appli ajoutée à l'écran d'accueil : la fenêtre est parfois annoncée plus courte que l'écran (de la hauteur de l'encoche),
+  // ce qui laisse une bande vide en bas. On mesure l'écart et on rallonge l'application (--app-h, voir app-web.css).
+  const fitScreen = () => {
+    root.style.removeProperty('--app-h');
+    if (navigator.standalone !== true) return;
+    const full = innerHeight >= innerWidth ? Math.max(screen.width, screen.height) : Math.min(screen.width, screen.height);
+    const gap = full - app.getBoundingClientRect().height;
+    if (gap > 4 && gap < 100) root.style.setProperty('--app-h', `${full}px`);
+  };
+  fitScreen();
+  for (const ev of ['resize', 'orientationchange', 'pageshow']) addEventListener(ev, () => setTimeout(fitScreen, 60));
+
+  // iOS ignore audio.volume (le volume se règle avec les boutons de l'appareil) : le curseur ne servirait à rien.
+  try {
+    const probe = new Audio();
+    probe.volume = 0.5;
+    if (probe.volume !== 0.5) root.classList.add('no-volume');
+  } catch { /* pas d'élément audio : rien à régler */ }
 
   // Bouton « menu » et voile : la barre latérale glisse par-dessus quand l'écran est étroit (voir app-web.css).
   const toggle = h('button.nav-toggle', { type: 'button', 'aria-label': 'Menu', html: icon('list', 20, 2), onclick: () => app.classList.toggle('nav-open') });

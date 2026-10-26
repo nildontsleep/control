@@ -30,7 +30,7 @@ export function createImmersive(host, { onExit }) {
     h('div.im-bg', {}, h('i.im-blob.b1'), h('i.im-blob.b2'), h('i.im-blob.b3'), h('i.im-blob.b4'), h('div.im-veil')),
     h('div.im-body', {}, stage, lyrics),
     h('div.im-hud', {}, lyricsBtn, exitBtn),
-    h('div.im-hint', { text: t('im.hint') }));
+    h('div.im-hint', { text: t(matchMedia('(hover: none) and (pointer: coarse)').matches ? 'im.hintTouch' : 'im.hint') }));
   host.append(root);
 
   let on = false;

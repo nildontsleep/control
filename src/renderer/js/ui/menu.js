@@ -52,7 +52,8 @@ export function openMenu(anchor, items, { align = 'start', placement = 'below', 
   document.body.append(menu);
   const r = anchor.getBoundingClientRect();
   if (minWidth || align === 'selected') menu.style.minWidth = `${Math.max(minWidth || 0, r.width + 28)}px`;
-  const m = menu.getBoundingClientRect();
+  // offsetWidth : la taille réelle, sans la légère réduction de l'animation d'ouverture (sinon le menu déborde à l'arrivée).
+  const m = { width: menu.offsetWidth, height: menu.offsetHeight };
   const vw = window.innerWidth;
   const vh = window.innerHeight;
 

@@ -206,12 +206,16 @@
   }
 }
 
-.st-bars:hover .st-bar:not(:hover) .st-bar-fill {
-  opacity: 0.5;
+@media (hover: hover) {
+  .st-bars:hover .st-bar:not(:hover) .st-bar-fill {
+    opacity: 0.5;
+  }
 }
 
-.st-bar:hover .st-bar-fill {
-  filter: brightness(1.12);
+@media (hover: hover) {
+  .st-bar:hover .st-bar-fill {
+    filter: brightness(1.12);
+  }
 }
 
 .st-bar-label {
@@ -312,9 +316,11 @@
 .st-cell.l3 { background: rgb(var(--accent-rgb) / 0.75); }
 .st-cell.l4 { background: rgb(var(--accent-rgb)); }
 
-.st-heat .st-cell:not(.void):hover {
-  transform: scale(1.35);
-  box-shadow: 0 0 0 2px var(--panel-solid);
+@media (hover: hover) {
+  .st-heat .st-cell:not(.void):hover {
+    transform: scale(1.35);
+    box-shadow: 0 0 0 2px var(--panel-solid);
+  }
 }
 
 .st-heat-legend {
@@ -356,10 +362,16 @@
   cursor: pointer;
 }
 
-.st-row[role='link']:hover,
 .st-row[role='link']:focus-visible {
   background: var(--fill);
   outline: none;
+}
+
+@media (hover: hover) {
+  .st-row[role='link']:hover {
+    background: var(--fill);
+    outline: none;
+  }
 }
 
 .st-rank-n {
@@ -466,8 +478,10 @@
   transition: transform 0.35s var(--spring);
 }
 
-.st-poster:hover {
-  transform: translateY(-3px);
+@media (hover: hover) {
+  .st-poster:hover {
+    transform: translateY(-3px);
+  }
 }
 
 .st-poster-art {
@@ -655,9 +669,11 @@
   transition: background-color 0.2s, transform 0.3s var(--spring);
 }
 
-.w-close:hover {
-  background: rgb(255 255 255 / 0.3);
-  transform: scale(1.08);
+@media (hover: hover) {
+  .w-close:hover {
+    background: rgb(255 255 255 / 0.3);
+    transform: scale(1.08);
+  }
 }
 
 .w-head {
@@ -725,8 +741,10 @@
   transition: background-color 0.2s, opacity 0.2s;
 }
 
-.w-mstep:hover:not(:disabled) {
-  background: rgb(255 255 255 / 0.22);
+@media (hover: hover) {
+  .w-mstep:hover:not(:disabled) {
+    background: rgb(255 255 255 / 0.22);
+  }
 }
 
 .w-mstep:disabled {
@@ -1135,9 +1153,11 @@
   transition: background-color 0.2s, transform 0.3s var(--spring);
 }
 
-.w-nav:hover {
-  background: rgb(255 255 255 / 0.28);
-  transform: scale(1.08);
+@media (hover: hover) {
+  .w-nav:hover {
+    background: rgb(255 255 255 / 0.28);
+    transform: scale(1.08);
+  }
 }
 
 .w-nav.prev { left: max(16px, calc(50% - 400px)); }

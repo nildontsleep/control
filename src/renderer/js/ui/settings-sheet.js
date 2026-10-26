@@ -452,6 +452,9 @@ export function openSettings(initial = 'general') {
     }));
     body.replaceChildren(...withScope(scope, () => builders[tabId]()).filter(Boolean));
     body.scrollTop = 0;
+    // Fenêtre étroite : la barre d'onglets défile, l'onglet actif doit rester visible.
+    const on = nav.querySelector('.on');
+    if (on) nav.scrollLeft = on.offsetLeft - (nav.clientWidth - on.offsetWidth) / 2;
   }
 
   const unsub = subscribe(() => refreshScope(scope));

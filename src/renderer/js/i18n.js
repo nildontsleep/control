@@ -65,7 +65,7 @@ const fr = {
   'player.nothing': 'Aucune lecture', 'player.nothingSub': 'Choisissez un morceau',
 
   'np.title': 'À l’écoute', 'np.open': 'Ouvrir « À l’écoute »', 'np.close': 'Réduire', 'np.fullscreen': 'Plein écran', 'np.immersive': 'Mode immersif',
-  'im.exit': 'Quitter le mode immersif', 'im.lyrics': 'Afficher ou masquer les paroles', 'im.hint': 'Échap pour quitter · L pour les paroles',
+  'im.exit': 'Quitter le mode immersif', 'im.lyrics': 'Afficher ou masquer les paroles', 'im.hint': 'Échap pour quitter · L pour les paroles', 'im.hintTouch': 'Touchez l’écran pour afficher les boutons',
   'queue.title': 'File d’attente', 'queue.clear': 'Vider les suivants', 'queue.empty': 'La file d’attente est vide.', 'queue.remove': 'Retirer de la file',
   'eq.title': 'Égaliseur', 'eq.hint': 'Double-cliquez sur un curseur pour le remettre à zéro.', 'eq.custom': 'Personnalisé',
   'eq.flat': 'Neutre', 'eq.bass': 'Basses renforcées', 'eq.treble': 'Aigus renforcés', 'eq.vocal': 'Voix', 'eq.rock': 'Rock', 'eq.electronic': 'Électro',
@@ -397,7 +397,7 @@ const en = {
   'player.nothing': 'Not playing', 'player.nothingSub': 'Pick a song',
 
   'np.title': 'Now Playing', 'np.open': 'Open Now Playing', 'np.close': 'Minimize', 'np.fullscreen': 'Full screen', 'np.immersive': 'Immersive mode',
-  'im.exit': 'Exit immersive mode', 'im.lyrics': 'Show or hide lyrics', 'im.hint': 'Esc to exit · L for lyrics',
+  'im.exit': 'Exit immersive mode', 'im.lyrics': 'Show or hide lyrics', 'im.hint': 'Esc to exit · L for lyrics', 'im.hintTouch': 'Tap the screen to show the buttons',
   'queue.title': 'Queue', 'queue.clear': 'Clear upcoming', 'queue.empty': 'The queue is empty.', 'queue.remove': 'Remove from queue',
   'eq.title': 'Equalizer', 'eq.hint': 'Double-click a slider to reset it.', 'eq.custom': 'Custom',
   'eq.flat': 'Flat', 'eq.bass': 'Bass boost', 'eq.treble': 'Treble boost', 'eq.vocal': 'Vocal', 'eq.rock': 'Rock', 'eq.electronic': 'Electronic',

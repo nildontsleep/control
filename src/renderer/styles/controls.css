@@ -130,7 +130,7 @@
   --i: 0;
   position: relative;
   display: grid;
-  grid-template-columns: repeat(var(--n), 1fr);
+  grid-template-columns: repeat(var(--n), minmax(0, 1fr));
   padding: 2px;
   border-radius: calc(8px * var(--rk, 1));
   background: var(--fill);
@@ -163,13 +163,25 @@
   font-size: 12.5px;
   font-weight: 500;
   white-space: nowrap;
+  min-width: 0;
   color: var(--text-2);
   transition: color 0.2s;
 }
 
-.seg-btn:hover,
+.seg-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .seg-btn.on {
   color: var(--text);
+}
+
+@media (hover: hover) {
+  .seg-btn:hover {
+    color: var(--text);
+  }
 }
 
 .seg-icon {
@@ -206,9 +218,14 @@
   box-shadow: 0 0.5px 2px rgb(0 0 0 / 0.2), 0 0 0 0.5px rgb(0 0 0 / 0.07);
 }
 
-.popup:hover,
 .popup.menu-anchor {
   filter: brightness(1.08);
+}
+
+@media (hover: hover) {
+  .popup:hover {
+    filter: brightness(1.08);
+  }
 }
 
 .popup-label {
@@ -247,8 +264,10 @@
   transition: transform 0.25s var(--spring);
 }
 
-.swatch:hover {
-  transform: scale(1.14);
+@media (hover: hover) {
+  .swatch:hover {
+    transform: scale(1.14);
+  }
 }
 
 .swatch.on::after {
@@ -313,8 +332,10 @@
   box-shadow: 0 1px 2px rgb(0 0 0 / 0.24), inset 0 0.5px 0 rgb(255 255 255 / 0.28);
 }
 
-.btn-primary:hover {
-  filter: brightness(1.08);
+@media (hover: hover) {
+  .btn-primary:hover {
+    filter: brightness(1.08);
+  }
 }
 
 .btn-secondary {
@@ -333,8 +354,10 @@
   background: rgb(255 255 255 / 0.14);
 }
 
-.btn-secondary:hover {
-  filter: brightness(1.12);
+@media (hover: hover) {
+  .btn-secondary:hover {
+    filter: brightness(1.12);
+  }
 }
 
 .btn-plain {
@@ -342,8 +365,10 @@
   color: var(--accent);
 }
 
-.btn-plain:hover {
-  background: rgb(var(--accent-rgb) / 0.13);
+@media (hover: hover) {
+  .btn-plain:hover {
+    background: rgb(var(--accent-rgb) / 0.13);
+  }
 }
 
 .btn-danger {
@@ -351,8 +376,10 @@
   background: rgb(255 69 58 / 0.13);
 }
 
-.btn-danger:hover {
-  background: rgb(255 69 58 / 0.22);
+@media (hover: hover) {
+  .btn-danger:hover {
+    background: rgb(255 69 58 / 0.22);
+  }
 }
 
 .icon-btn {
@@ -365,7 +392,9 @@
   transition: background-color 0.15s, color 0.15s;
 }
 
-.icon-btn:hover {
-  background: var(--fill);
-  color: var(--text);
+@media (hover: hover) {
+  .icon-btn:hover {
+    background: var(--fill);
+    color: var(--text);
+  }
 }

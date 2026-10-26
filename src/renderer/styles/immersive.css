@@ -348,7 +348,7 @@
 .im-hud {
   position: absolute;
   left: 50%;
-  bottom: 4.5vh;
+  bottom: calc(4.5vh + env(safe-area-inset-bottom));
   display: flex;
   gap: 4px;
   padding: 5px;
@@ -379,9 +379,11 @@
   transition: background-color 0.15s, color 0.15s, transform 0.3s var(--spring);
 }
 
-.im-btn:hover {
-  color: var(--text);
-  background: var(--fill-hover);
+@media (hover: hover) {
+  .im-btn:hover {
+    color: var(--text);
+    background: var(--fill-hover);
+  }
 }
 
 .im-btn:active {
@@ -400,8 +402,9 @@
 .im-hint {
   position: absolute;
   left: 50%;
-  top: 4.5vh;
+  top: calc(4.5vh + env(safe-area-inset-top));
   padding: 8px 16px;
+  white-space: nowrap;
   border-radius: 999px;
   font-size: 13px;
   font-weight: 560;

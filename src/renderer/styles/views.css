@@ -193,10 +193,16 @@
   height: 100%;
 }
 
-.card:hover .card-art,
 .card:focus-visible .card-art {
   transform: translateY(-4px) scale(1.012);
   box-shadow: 0 18px 40px rgb(0 0 0 / 0.42), 0 0 0 0.5px rgb(255 255 255 / 0.14);
+}
+
+@media (hover: hover) {
+  .card:hover .card-art {
+    transform: translateY(-4px) scale(1.012);
+    box-shadow: 0 18px 40px rgb(0 0 0 / 0.42), 0 0 0 0.5px rgb(255 255 255 / 0.14);
+  }
 }
 
 .card:focus-visible .card-art {
@@ -225,15 +231,23 @@
   transition: opacity 0.2s, transform 0.45s var(--spring), filter 0.15s;
 }
 
-.card:hover .card-play,
 .card:focus-visible .card-play {
   opacity: 1;
   transform: none;
 }
 
-.card-play:hover {
-  filter: brightness(1.1);
-  transform: scale(1.08) !important;
+@media (hover: hover) {
+  .card:hover .card-play {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (hover: hover) {
+  .card-play:hover {
+    filter: brightness(1.1);
+    transform: scale(1.08) !important;
+  }
 }
 
 .card-play .i {
@@ -338,8 +352,10 @@
   transition: background-color 0.15s;
 }
 
-.hero-text h1.editable:hover {
-  background: var(--fill);
+@media (hover: hover) {
+  .hero-text h1.editable:hover {
+    background: var(--fill);
+  }
 }
 
 .hero-artist {
@@ -353,9 +369,11 @@
   color: var(--text-2);
 }
 
-.hero-artist.link:hover {
-  text-decoration: underline;
-  text-underline-offset: 3px;
+@media (hover: hover) {
+  .hero-artist.link:hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
 }
 
 .hero-meta {
@@ -410,9 +428,14 @@
   transition: color 0.15s;
 }
 
-.tl-head .sortable:hover,
 .tl-head .sortable.active {
   color: var(--text);
+}
+
+@media (hover: hover) {
+  .tl-head .sortable:hover {
+    color: var(--text);
+  }
 }
 
 .tl-head .right,
@@ -444,8 +467,10 @@
   will-change: transform;
 }
 
-.tl-row:hover {
-  background: var(--fill);
+@media (hover: hover) {
+  .tl-row:hover {
+    background: var(--fill);
+  }
 }
 
 .tl-row.selected {
@@ -536,17 +561,26 @@
   background: var(--accent);
 }
 
-.tl-row:hover .idx-num {
+@media (hover: hover) {
+  .tl-row:hover .idx-num {
+    display: none;
+  }
+}
+
+@media (hover: hover) {
+  .tl-row:hover .idx-play {
+    display: grid;
+  }
+}
+
+.tl-row.current .idx-num {
   display: none;
 }
 
-.tl-row:hover .idx-play {
-  display: grid;
-}
-
-.tl-row.current .idx-num,
-.tl-row.current:hover .idx-play {
-  display: none;
+@media (hover: hover) {
+  .tl-row.current:hover .idx-play {
+    display: none;
+  }
 }
 
 .tl-row.current .idx-eq {
@@ -707,9 +741,11 @@
   color: var(--text-2);
 }
 
-.url-paste:hover {
-  background: var(--fill-hover);
-  color: var(--text);
+@media (hover: hover) {
+  .url-paste:hover {
+    background: var(--fill-hover);
+    color: var(--text);
+  }
 }
 
 .dl-hint {
@@ -829,8 +865,10 @@
   border-top: 0.5px solid var(--separator);
 }
 
-.dl-result:hover {
-  background: var(--fill);
+@media (hover: hover) {
+  .dl-result:hover {
+    background: var(--fill);
+  }
 }
 
 .dl-result-thumb {
@@ -968,8 +1006,10 @@
   transition: background-color 0.15s;
 }
 
-.dl-job:hover {
-  background: var(--fill);
+@media (hover: hover) {
+  .dl-job:hover {
+    background: var(--fill);
+  }
 }
 
 .dl-job + .dl-job {
@@ -1088,8 +1128,10 @@
   transition: background-color 0.15s, transform 0.25s var(--spring);
 }
 
-.chip:hover {
-  background: var(--fill-hover);
+@media (hover: hover) {
+  .chip:hover {
+    background: var(--fill-hover);
+  }
 }
 
 .chip:active {

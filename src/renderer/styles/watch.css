@@ -19,8 +19,10 @@
   transition: color 0.2s, background-color 0.25s;
 }
 
-.tab:hover {
-  color: var(--text);
+@media (hover: hover) {
+  .tab:hover {
+    color: var(--text);
+  }
 }
 
 .tab.on {
@@ -47,9 +49,11 @@
   color: var(--accent);
 }
 
-.link-btn:hover {
-  text-decoration: underline;
-  text-underline-offset: 3px;
+@media (hover: hover) {
+  .link-btn:hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
 }
 
 /* ─── Affiches, rangées, reprise ────────────────────────────────────────── */
@@ -86,8 +90,10 @@
   color: var(--accent);
 }
 
-.shelf-more:hover {
-  filter: brightness(1.15);
+@media (hover: hover) {
+  .shelf-more:hover {
+    filter: brightness(1.15);
+  }
 }
 
 .shelf-body {
@@ -134,18 +140,28 @@
 .shelf-arrow.prev { left: -14px; }
 .shelf-arrow.next { right: -14px; }
 
-.shelf-body:hover .shelf-arrow {
-  opacity: 1;
+@media (hover: hover) {
+  .shelf-body:hover .shelf-arrow {
+    opacity: 1;
+  }
 }
 
-.shelf-arrow:hover {
-  transform: scale(1.08);
+@media (hover: hover) {
+  .shelf-arrow:hover {
+    transform: scale(1.08);
+  }
 }
 
-.shelf-arrow.hide,
-.shelf-body:hover .shelf-arrow.hide {
+.shelf-arrow.hide {
   opacity: 0;
   pointer-events: none;
+}
+
+@media (hover: hover) {
+  .shelf-body:hover .shelf-arrow.hide {
+    opacity: 0;
+    pointer-events: none;
+  }
 }
 
 .pcard {
@@ -182,10 +198,16 @@
   object-fit: cover;
 }
 
-.pcard:hover .pcard-art,
 .pcard:focus-visible .pcard-art {
   transform: translateY(-5px) scale(1.02);
   box-shadow: 0 20px 44px rgb(0 0 0 / 0.42), 0 0 0 0.5px rgb(255 255 255 / 0.16);
+}
+
+@media (hover: hover) {
+  .pcard:hover .pcard-art {
+    transform: translateY(-5px) scale(1.02);
+    box-shadow: 0 20px 44px rgb(0 0 0 / 0.42), 0 0 0 0.5px rgb(255 255 255 / 0.16);
+  }
 }
 
 .pcard:focus-visible .pcard-art {
@@ -300,9 +322,11 @@
   object-fit: cover;
 }
 
-.rcard:hover .rcard-art {
-  transform: translateY(-4px) scale(1.015);
-  box-shadow: 0 20px 44px rgb(0 0 0 / 0.42);
+@media (hover: hover) {
+  .rcard:hover .rcard-art {
+    transform: translateY(-4px) scale(1.015);
+    box-shadow: 0 20px 44px rgb(0 0 0 / 0.42);
+  }
 }
 
 .rcard-play {
@@ -329,9 +353,11 @@
   margin-left: 2px;
 }
 
-.rcard:hover .rcard-play {
-  opacity: 1;
-  transform: none;
+@media (hover: hover) {
+  .rcard:hover .rcard-play {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 .rcard-title {
@@ -888,8 +914,10 @@
   transition: background-color 0.15s;
 }
 
-.ep-row:hover {
-  background: var(--fill);
+@media (hover: hover) {
+  .ep-row:hover {
+    background: var(--fill);
+  }
 }
 
 .ep-art {
@@ -932,8 +960,10 @@
   fill: currentColor;
 }
 
-.ep-row:hover .ep-play {
-  opacity: 1;
+@media (hover: hover) {
+  .ep-row:hover .ep-play {
+    opacity: 1;
+  }
 }
 
 .ep-text {
@@ -1148,9 +1178,14 @@
   transition: background-color 0.15s;
 }
 
-.hist-row:hover,
 .hist-row:focus-visible {
   background: var(--fill);
+}
+
+@media (hover: hover) {
+  .hist-row:hover {
+    background: var(--fill);
+  }
 }
 
 .hist-art {
