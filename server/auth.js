@@ -87,8 +87,13 @@ class Accounts {
   list() {
     return this.db.prepare(`
       SELECT u.id, u.username, u.role, u.disabled, u.created_at AS createdAt, u.last_login AS lastLogin,
+             u.display_name AS displayName, u.avatar, u.color, u.folders,
              (SELECT COUNT(*) FROM sessions s WHERE s.user_id = u.id AND s.expires_at > ?) AS sessions
-      FROM users u ORDER BY u.created_at`).all(Date.now()).map((r) => ({ ...r, disabled: !!r.disabled }));
+      FROM users u ORDER BY u.created_at`).all(Date.now()).map(({ folders, ...r }) => {
+      let list = [];
+      try { list = JSON.parse(folders || '[]'); } catch { /* liste illisible */ }
+      return { ...r, disabled: !!r.disabled, folders: list };
+    });
   }
 
   async create({ username, password, role = 'user' }) {

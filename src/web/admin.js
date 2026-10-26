@@ -58,6 +58,7 @@
       h('input', { type: 'checkbox', checked: !!s[key], onchange: guard(async (e) => { await rpc('srv:settings', { [key]: e.target.checked }); flash('Enregistré.', false); }) }));
     const name = h('input', { class: 'text-input', value: s.serverName, maxlength: '60' });
     const tmdb = h('input', { class: 'text-input', type: 'password', placeholder: s.tmdbKey ? '•••••••• (définie)' : 'Clé d’API v3', autocomplete: 'off' });
+    const usersRoot = h('input', { class: 'text-input', placeholder: '/music/comptes (vide : aucun)', value: s.usersRoot || '', spellcheck: 'false' });
     return h('section', { class: 'group' },
       h('h2', { text: 'Serveur' }),
       h('p', { text: 'Ces réglages valent pour tout le monde.' }),
@@ -67,7 +68,10 @@
       toggle('Téléchargements pour tous', 'sinon réservés aux administrateurs', 'allowUserDownloads'),
       h('div', { class: 'inline-form' }, tmdb,
         h('button', { class: 'btn btn-secondary', text: 'Enregistrer la clé TMDB', onclick: guard(async () => { if (!tmdb.value.trim()) return; await rpc('srv:settings', { tmdbKey: tmdb.value.trim() }); tmdb.value = ''; flash('Clé enregistrée.', false); reload(); }) })),
-      h('p', { class: 'hint', text: 'La clé TMDB (gratuite) sert aux films et séries ; chaque compte peut aussi renseigner la sienne dans ses réglages.' }));
+      h('p', { class: 'hint', text: 'La clé TMDB (gratuite) sert aux films et séries ; chaque compte peut aussi renseigner la sienne dans ses réglages.' }),
+      h('p', { text: 'Dossier des comptes : s’il est défini, chaque nouveau compte reçoit un dossier de musique à son nom à l’intérieur (par exemple /music/alice).' }),
+      h('div', { class: 'inline-form' }, usersRoot,
+        h('button', { class: 'btn btn-secondary', text: 'Enregistrer', onclick: guard(async () => { await rpc('srv:settings', { usersRoot: usersRoot.value.trim() }); flash('Enregistré.', false); reload(); }) })));
   }
 
   // ─── Dossiers ──────────────────────────────────────────────────────────────
@@ -78,16 +82,17 @@
     async function browse(dir) {
       const res = await rpc('srv:browse', dir);
       picker.hidden = false;
-      picker.replaceChildren(
+      picker.replaceChildren(...[
         h('div', { class: 'path', text: res.path }),
         res.parent ? h('button', { type: 'button', text: '↰  ..', onclick: guard(() => browse(res.parent)) }) : null,
         ...res.dirs.map((d) => h('button', { type: 'button', text: `📁  ${d}`, onclick: guard(() => browse(`${res.path.replace(/[\\/]$/, '')}/${d}`.replace(/\/\//g, '/'))) })),
-        h('button', { type: 'button', class: 'btn btn-primary', text: 'Ajouter ce dossier', onclick: guard(async () => { await rpc('srv:add-folder', res.path); picker.hidden = true; flash('Dossier ajouté : analyse en cours.', false); reload(); }) }));
+        h('button', { type: 'button', class: 'btn btn-primary', text: 'Ajouter ce dossier', onclick: guard(async () => { await rpc('srv:add-folder', res.path); picker.hidden = true; flash('Dossier ajouté : analyse en cours.', false); reload(); }) }),
+      ].filter(Boolean));
     }
 
     return h('section', { class: 'group' },
-      h('h2', { text: 'Dossiers de musique' }),
-      h('p', { text: 'Chemins tels que le serveur les voit. Les fichiers ne sont jamais modifiés par un retrait de dossier.' }),
+      h('h2', { text: 'Dossiers communs' }),
+      h('p', { text: 'Ces dossiers sont dans la bibliothèque de tous les comptes. Pour que chacun ait la sienne, laissez cette liste vide et attribuez des dossiers à chaque compte plus bas. Les fichiers ne sont jamais modifiés par un retrait de dossier.' }),
       ...s.libraryFolders.map((f) => h('div', { class: 'row' }, h('span', { class: 'grow', text: f }),
         h('button', { class: 'btn btn-secondary btn-small', text: 'Retirer', onclick: guard(async () => { await rpc('srv:remove-folder', f); reload(); }) }))),
       !s.libraryFolders.length ? h('p', { text: 'Aucun dossier pour l’instant.' }) : null,
@@ -98,29 +103,95 @@
       picker);
   }
 
+  // ─── Détails d'un compte : dossiers de musique et partage ─────────────────
+  function userDetails(user, users, settings) {
+    const box = h('div', { class: 'details' }, h('p', { class: 'hint', text: 'Chargement…' }));
+    const picker = h('div', { class: 'picker', hidden: true });
+    const folderInput = h('input', { class: 'text-input', placeholder: '/music/' + user.username, spellcheck: 'false' });
+
+    async function paint() {
+      const detail = await rpc('srv:users:detail', user.id);
+      const grants = new Map(detail.grants.map((g) => [g.viewerId, { browse: g.browse, compare: g.compare }]));
+      const save = guard(async () => {
+        const list = [...grants].map(([viewerId, g]) => ({ viewerId, browse: g.browse, compare: g.compare })).filter((g) => g.browse || g.compare);
+        await rpc('srv:users:set-grants', user.id, list);
+        flash('Partage enregistré.', false);
+      });
+      const check = (viewerId, key) => {
+        const input = h('input', { type: 'checkbox', checked: !!grants.get(viewerId)?.[key] });
+        input.addEventListener('change', () => {
+          const g = { ...(grants.get(viewerId) || { browse: false, compare: false }), [key]: input.checked };
+          grants.set(viewerId, g);
+          save();
+        });
+        return input;
+      };
+      const browse = async (dir) => {
+        const res = await rpc('srv:browse', dir);
+        picker.hidden = false;
+        picker.replaceChildren(...[
+          h('div', { class: 'path', text: res.path }),
+          res.parent ? h('button', { type: 'button', text: '↰  ..', onclick: guard(() => browse(res.parent)) }) : null,
+          ...res.dirs.map((d) => h('button', { type: 'button', text: `📁  ${d}`, onclick: guard(() => browse(`${res.path.replace(/[\\/]$/, '')}/${d}`.replace(/\/\//g, '/'))) })),
+          h('button', { type: 'button', class: 'btn btn-primary', text: 'Attribuer ce dossier', onclick: guard(async () => { await rpc('srv:users:add-folder', user.id, res.path); picker.hidden = true; flash('Dossier attribué : analyse en cours.', false); paint(); }) }),
+        ].filter(Boolean));
+      };
+      const others = users.filter((u) => u.id !== user.id && !u.disabled);
+      box.replaceChildren(...[
+        h('h3', { text: `Dossiers de ${user.username}` }),
+        ...detail.folders.map((f) => h('div', { class: 'row' }, h('span', { class: 'grow', text: f }),
+          h('button', { class: 'btn btn-secondary btn-small', text: 'Retirer', onclick: guard(async () => { await rpc('srv:users:remove-folder', user.id, f); paint(); }) }))),
+        !detail.folders.length ? h('p', { class: 'hint', text: 'Aucun dossier : sa bibliothèque ne contient que les dossiers communs.' }) : null,
+        h('div', { class: 'inline-form' }, folderInput,
+          h('button', { class: 'btn btn-primary', text: 'Attribuer', onclick: guard(async () => { await rpc('srv:users:add-folder', user.id, folderInput.value.trim()); folderInput.value = ''; paint(); }) }),
+          h('button', { class: 'btn btn-secondary', text: 'Parcourir…', onclick: guard(() => browse(folderInput.value.trim() || detail.folders[0] || settings.usersRoot || '/')) }),
+          settings.usersRoot ? h('button', { class: 'btn btn-secondary', text: 'Créer son dossier', onclick: guard(async () => { await rpc('srv:users:personal-folder', user.id); flash('Dossier créé et attribué.', false); paint(); }) }) : null),
+        picker,
+        h('p', { class: 'hint', text: `Téléchargements : ${detail.downloadDir}` }),
+        h('h3', { text: `Qui peut voir la bibliothèque et les récaps de ${user.username}` }),
+        h('p', { class: 'hint', text: 'Les administrateurs parcourent toutes les bibliothèques, jamais les récaps. Chaque compte règle aussi son propre partage depuis son profil.' }),
+        h('div', { class: 'share-head' }, h('span', { class: 'grow' }), h('span', { text: 'Bibliothèque' }), h('span', { text: 'Récaps' })),
+        ...[{ id: '*', username: 'Tout le monde' }, ...others].map((u) => h('div', { class: 'share-row' }, h('span', { class: 'grow', text: u.username }), check(u.id, 'browse'), check(u.id, 'compare'))),
+      ].filter(Boolean));
+    }
+    paint().catch((err) => flash(err.message));
+    return box;
+  }
+
   // ─── Comptes ───────────────────────────────────────────────────────────────
-  function usersGroup(users, me, reload) {
+  function usersGroup(users, me, reload, settings) {
     const username = h('input', { class: 'text-input', placeholder: 'Nom', autocapitalize: 'none', spellcheck: 'false' });
     const password = h('input', { class: 'text-input', type: 'password', placeholder: 'Mot de passe (8 minimum)', autocomplete: 'new-password' });
     const role = h('select', { class: 'text-input' }, h('option', { value: 'user', text: 'Utilisateur' }), h('option', { value: 'admin', text: 'Administrateur' }));
     return h('section', { class: 'group' },
       h('h2', { text: 'Comptes' }),
       h('p', { text: 'Chaque compte a sa propre bibliothèque d’écoute : réglages, statistiques, playlists, films et séries vus.' }),
-      ...users.map((u) => h('div', { class: 'row' },
-        h('span', { class: 'grow' }, u.username, ' ', h('small', { text: `dernière connexion : ${fmtDate(u.lastLogin)}` })),
-        h('span', { class: `tag ${u.role === 'admin' ? 'admin' : ''}`, text: u.role === 'admin' ? 'Admin' : 'Utilisateur' }),
-        u.disabled ? h('span', { class: 'tag off', text: 'Désactivé' }) : null,
-        u.id === me ? null : [
-          h('button', { class: 'btn btn-secondary btn-small', text: u.disabled ? 'Réactiver' : 'Désactiver', onclick: guard(async () => { await rpc('srv:users:update', u.id, { disabled: !u.disabled }); reload(); }) }),
-          h('button', { class: 'btn btn-secondary btn-small', text: u.role === 'admin' ? 'Rétrograder' : 'Promouvoir', onclick: guard(async () => { await rpc('srv:users:update', u.id, { role: u.role === 'admin' ? 'user' : 'admin' }); reload(); }) }),
-          h('button', { class: 'btn btn-secondary btn-small', text: 'Mot de passe', onclick: guard(async () => {
-            const next = prompt(`Nouveau mot de passe pour ${u.username} (8 caractères minimum) :`);
-            if (next) { await rpc('srv:users:password', u.id, next); flash('Mot de passe modifié, session fermée.', false); }
-          }) }),
-          h('button', { class: 'btn btn-secondary btn-small', text: 'Supprimer', onclick: guard(async () => {
-            if (confirm(`Supprimer le compte ${u.username} et toutes ses données d’écoute ?`)) { await rpc('srv:users:delete', u.id); reload(); }
-          }) }),
-        ])),
+      ...users.map((u) => {
+        const holder = h('div', { class: 'details-holder' });
+        const toggle = h('button', { class: 'btn btn-secondary btn-small', text: 'Détails', onclick: () => {
+          if (holder.firstChild) { holder.replaceChildren(); toggle.textContent = 'Détails'; return; }
+          holder.append(userDetails(u, users, settings));
+          toggle.textContent = 'Fermer';
+        } });
+        return h('div', { class: 'user' },
+          h('div', { class: 'row' },
+            h('span', { class: 'grow' }, h('b', { text: u.username }), u.displayName ? ` (${u.displayName})` : '', ' ', h('small', { text: `dernière connexion : ${fmtDate(u.lastLogin)}` })),
+            h('span', { class: `tag ${u.role === 'admin' ? 'admin' : ''}`, text: u.role === 'admin' ? 'Admin' : 'Utilisateur' }),
+            u.disabled ? h('span', { class: 'tag off', text: 'Désactivé' }) : null,
+            toggle,
+            u.id === me ? null : [
+              h('button', { class: 'btn btn-secondary btn-small', text: u.disabled ? 'Réactiver' : 'Désactiver', onclick: guard(async () => { await rpc('srv:users:update', u.id, { disabled: !u.disabled }); reload(); }) }),
+              h('button', { class: 'btn btn-secondary btn-small', text: u.role === 'admin' ? 'Rétrograder' : 'Promouvoir', onclick: guard(async () => { await rpc('srv:users:update', u.id, { role: u.role === 'admin' ? 'user' : 'admin' }); reload(); }) }),
+              h('button', { class: 'btn btn-secondary btn-small', text: 'Mot de passe', onclick: guard(async () => {
+                const next = prompt(`Nouveau mot de passe pour ${u.username} (8 caractères minimum) :`);
+                if (next) { await rpc('srv:users:password', u.id, next); flash('Mot de passe modifié, session fermée.', false); }
+              }) }),
+              h('button', { class: 'btn btn-secondary btn-small', text: 'Supprimer', onclick: guard(async () => {
+                if (confirm(`Supprimer le compte ${u.username} et toutes ses données d’écoute ?`)) { await rpc('srv:users:delete', u.id); reload(); }
+              }) }),
+            ]),
+          holder);
+      }),
       h('div', { class: 'inline-form' }, username, password, role,
         h('button', { class: 'btn btn-primary', text: 'Créer le compte', onclick: guard(async () => { await rpc('srv:users:create', { username: username.value.trim(), password: password.value, role: role.value }); reload(); }) })));
   }
@@ -153,7 +224,7 @@
       notice,
       settingsGroup(s, reload),
       foldersGroup(s, reload),
-      usersGroup(users, me.user.id, reload),
+      usersGroup(users, me.user.id, reload, s),
       tools ? toolsGroup(tools, reload) : null);
   }
 

@@ -1,23 +1,21 @@
 'use strict';
 
 // Le cœur du serveur : comptes, réglages généraux, et un noyau (réglages, base, stats, playlists…) par compte,
-// chargé à la demande et déchargé quand il n'est plus utilisé. Les dossiers de musique, eux, sont communs.
+// chargé à la demande et déchargé quand il n'est plus utilisé. Chaque compte a sa propre bibliothèque : ses dossiers
+// de musique (attribués par l'administrateur), plus les éventuels dossiers communs à tous.
 
 const fs = require('node:fs');
 const path = require('node:path');
-const { DatabaseSync } = require('node:sqlite');
 const platform = require('../src/main/platform');
 const { Core } = require('../src/main/core');
 const { Tools } = require('../src/main/tools');
 const { openServerDb } = require('./serverdb');
 const { Accounts, Throttle, httpError } = require('./auth');
+const { Social } = require('./social');
 const { createRegistry } = require('./rpc');
 
 const IDLE_MS = 30 * 60 * 1000;
 const HEARTBEAT_MS = 20 * 1000;
-
-// Les données propres à un compte : on les vide quand on crée sa base à partir de celle d'un autre.
-const USER_TABLES = ['plays', 'playlist_tracks', 'playlists', 'watch_progress', 'watchlist', 'watch_time', 'media_cache'];
 
 class Hub {
   constructor(config) {
@@ -29,7 +27,9 @@ class Hub {
     this.loginThrottle = new Throttle({ max: 8, windowMs: 10 * 60 * 1000 });
     this.ipThrottle = new Throttle({ max: 40, windowMs: 10 * 60 * 1000 });
     this.coversDir = path.join(config.dataDir, 'covers');
+    this.avatarsDir = path.join(config.dataDir, 'avatars');
     this.usersDir = path.join(config.dataDir, 'users');
+    this.social = new Social(this.db, this.accounts, { avatarsDir: this.avatarsDir });
     this.entries = new Map();
     this.watchers = [];
     this.timers = [];
@@ -43,8 +43,10 @@ class Hub {
       serverName: 'control',
       registrationEnabled: false,
       allowUserDownloads: false,
-      libraryFolders: this.config.libraryFolders,
-      downloadDir: path.join(this.config.dataDir, 'downloads'),
+      libraryFolders: [], // dossiers communs : tous les comptes les voient (les dossiers propres à un compte sont dans la table users)
+      usersRoot: '', // si défini, chaque nouveau compte reçoit un dossier de musique à son nom dedans
+      downloadDir: path.join(this.config.dataDir, 'downloads'), // un sous-dossier par compte
+
       tmdbKey: this.config.tmdbKey,
     };
     let saved = {};
@@ -53,12 +55,12 @@ class Hub {
       if (row) saved = JSON.parse(row.value);
     } catch { /* réglages illisibles : valeurs par défaut */ }
     const merged = { ...defaults, ...saved };
-    if (!Array.isArray(merged.libraryFolders) || (!merged.libraryFolders.length && this.config.libraryFolders.length)) merged.libraryFolders = defaults.libraryFolders;
+    if (!Array.isArray(merged.libraryFolders)) merged.libraryFolders = [];
     return merged;
   }
 
   patchSettings(patch) {
-    const allowed = ['serverName', 'registrationEnabled', 'allowUserDownloads', 'libraryFolders', 'downloadDir', 'tmdbKey'];
+    const allowed = ['serverName', 'registrationEnabled', 'allowUserDownloads', 'libraryFolders', 'downloadDir', 'tmdbKey', 'usersRoot'];
     for (const key of allowed) {
       if (!(key in patch)) continue;
       const v = patch[key];
@@ -71,34 +73,89 @@ class Hub {
     if ('libraryFolders' in patch || 'downloadDir' in patch) this.#syncFolders();
   }
 
-  /** Dossiers analysés : les dossiers de musique, plus celui des téléchargements s'il existe. */
-  roots() {
-    const roots = [...this.settings.libraryFolders];
-    const dl = this.settings.downloadDir;
-    if (dl && fs.existsSync(dl) && !roots.some((r) => path.resolve(dl).startsWith(path.resolve(r)))) roots.push(dl);
+  // ─── Dossiers de musique ───────────────────────────────────────────────────
+  /** Dossiers communs : tous les comptes les voient dans leur bibliothèque. */
+  commonFolders() {
+    return [...this.settings.libraryFolders];
+  }
+
+  /** Dossiers propres à un compte (attribués par l'administrateur). */
+  ownFolders(userId) {
+    try {
+      const list = JSON.parse(this.accounts.byId(userId)?.folders || '[]');
+      return Array.isArray(list) ? list.filter((f) => typeof f === 'string' && f) : [];
+    } catch {
+      return [];
+    }
+  }
+
+  /** Dossier des téléchargements d'un compte : un sous-dossier à son nom. */
+  downloadDirFor(user) {
+    const row = typeof user === 'string' ? this.accounts.byId(user) : user;
+    return path.join(this.settings.downloadDir, row?.username || String(user));
+  }
+
+  /** Dossiers analysés pour la bibliothèque d'un compte : les siens, ses téléchargements, et les dossiers communs. */
+  rootsFor(user) {
+    const row = typeof user === 'string' ? this.accounts.byId(user) : user;
+    if (!row) return [];
+    const roots = [...this.commonFolders(), ...this.ownFolders(row.id)];
+    const dl = this.downloadDirFor(row);
+    if (fs.existsSync(dl) && !roots.some((r) => path.resolve(dl).startsWith(path.resolve(r)))) roots.push(dl);
     return roots;
   }
 
-  /** Le chemin est-il dans un des dossiers de la bibliothèque ? (Garde-fou avant de servir un fichier.) */
-  isInsideRoots(file) {
-    const resolved = path.resolve(file);
-    return this.roots().some((r) => {
-      const root = path.resolve(r);
+  /** Dossiers qui n'appartiennent qu'à ce compte : ce que les autres voient de sa bibliothèque (sans les dossiers communs). */
+  ownerRoots(user) {
+    const row = typeof user === 'string' ? this.accounts.byId(user) : user;
+    if (!row) return [];
+    const roots = [...this.ownFolders(row.id)];
+    const dl = this.downloadDirFor(row);
+    if (fs.existsSync(dl)) roots.push(dl);
+    return roots;
+  }
+
+  /** Le fichier est-il dans un des dossiers de cette liste ? (Garde-fou avant de servir un fichier.) */
+  static inside(roots, file) {
+    const key = (p) => (process.platform === 'win32' ? p.toLowerCase() : p);
+    const resolved = key(path.resolve(file));
+    return roots.some((r) => {
+      const root = key(path.resolve(r));
       return resolved === root || resolved.startsWith(root + path.sep);
     });
   }
 
+  isInsideRoots(user, file) {
+    return Hub.inside(this.rootsFor(user), file);
+  }
+
+  /** Chemin relatif au dossier qui le contient (précédé du nom de ce dossier) : ce que voient les autres comptes. */
+  static relative(roots, file) {
+    const resolved = path.resolve(file);
+    for (const r of roots) {
+      const root = path.resolve(r);
+      if (resolved === root || resolved.startsWith(root + path.sep)) return path.join(path.basename(root), path.relative(root, resolved));
+    }
+    return path.basename(file);
+  }
+
+  /** Reporte les dossiers dans les réglages de chaque compte chargé (pour l'affichage) ; la source reste le serveur. */
+  mirror(entry) {
+    const patch = { libraryFolders: this.ownFolders(entry.id), commonFolders: this.commonFolders(), downloadDir: this.downloadDirFor(entry.id) };
+    entry.core.store.patch(patch);
+    entry.emit('settings:changed', patch);
+  }
+
   #syncFolders() {
-    const patch = { libraryFolders: this.settings.libraryFolders, downloadDir: this.settings.downloadDir };
     for (const entry of this.entries.values()) {
-      entry.core.store.patch(patch);
-      entry.emit('settings:changed', patch);
+      entry.core.downloads.defaultDir = this.downloadDirFor(entry.id);
+      this.mirror(entry);
     }
     this.#watch();
     this.rescanAll();
   }
 
-  async addFolder(dir) {
+  static async checkFolder(dir) {
     const resolved = path.resolve(String(dir || ''));
     let stat;
     try {
@@ -108,6 +165,11 @@ class Hub {
     }
     if (!stat.isDirectory()) throw httpError(400, 'not_a_folder', 'Ce n’est pas un dossier.');
     if (path.parse(resolved).root === resolved) throw httpError(400, 'too_broad', 'Choisissez un dossier plutôt que la racine du disque.');
+    return resolved;
+  }
+
+  async addFolder(dir) {
+    const resolved = await Hub.checkFolder(dir);
     if (this.settings.libraryFolders.includes(resolved)) return this.settings.libraryFolders;
     this.patchSettings({ libraryFolders: [...this.settings.libraryFolders, resolved] });
     return this.settings.libraryFolders;
@@ -116,6 +178,41 @@ class Hub {
   removeFolder(dir) {
     this.patchSettings({ libraryFolders: this.settings.libraryFolders.filter((f) => f !== dir) });
     return this.settings.libraryFolders;
+  }
+
+  #saveOwnFolders(userId, list) {
+    this.db.prepare('UPDATE users SET folders = ? WHERE id = ?').run(JSON.stringify(list), userId);
+    const entry = this.entries.get(userId);
+    if (entry) {
+      this.mirror(entry);
+      this.#refresh(entry, this.rootsFor(userId));
+    }
+    this.#watch();
+    return list;
+  }
+
+  async addOwnFolder(userId, dir) {
+    if (!this.accounts.byId(userId)) throw httpError(404, 'not_found', 'Compte introuvable.');
+    const resolved = await Hub.checkFolder(dir);
+    const list = this.ownFolders(userId);
+    return list.includes(resolved) ? list : this.#saveOwnFolders(userId, [...list, resolved]);
+  }
+
+  removeOwnFolder(userId, dir) {
+    return this.#saveOwnFolders(userId, this.ownFolders(userId).filter((f) => f !== dir));
+  }
+
+  /** Crée le dossier de musique d'un compte dans le dossier des comptes (si l'administrateur en a défini un). */
+  async ensurePersonalFolder(user) {
+    const root = this.settings.usersRoot;
+    if (!root) throw httpError(400, 'no_users_root', 'Aucun dossier des comptes n’est défini dans les réglages du serveur.');
+    const dir = path.join(path.resolve(root), user.username);
+    try {
+      await fs.promises.mkdir(dir, { recursive: true });
+    } catch (err) {
+      throw httpError(400, 'mkdir_failed', `Impossible de créer ${dir} : ${err.code || err.message}`);
+    }
+    return this.addOwnFolder(user.id, dir);
   }
 
   /** Sous-dossiers d'un dossier du serveur, pour le sélecteur de l'administrateur. */
@@ -133,40 +230,6 @@ class Hub {
   }
 
   // ─── Noyaux par compte ─────────────────────────────────────────────────────
-  /** Crée la base d'un nouveau compte à partir de celle d'un autre (la musique est déjà analysée), sans ses écoutes. */
-  #provision(dir) {
-    const dest = path.join(dir, 'library.db');
-    if (fs.existsSync(dest)) return;
-    fs.mkdirSync(dir, { recursive: true });
-    const loaded = [...this.entries.values()][0]?.core.db;
-    let source = loaded;
-    let opened = null;
-    if (!source) {
-      const files = fs.existsSync(this.usersDir)
-        ? fs.readdirSync(this.usersDir).map((u) => path.join(this.usersDir, u, 'library.db')).filter((f) => fs.existsSync(f))
-          .sort((a, b) => fs.statSync(b).mtimeMs - fs.statSync(a).mtimeMs)
-        : [];
-      if (!files.length) return;
-      opened = new DatabaseSync(files[0]);
-      source = opened;
-    }
-    try {
-      source.prepare('VACUUM INTO ?').run(dest);
-      const copy = new DatabaseSync(dest);
-      try {
-        copy.exec(USER_TABLES.map((t) => `DELETE FROM ${t};`).join('\n'));
-        copy.exec('UPDATE tracks SET play_count = 0, last_played = NULL;');
-      } finally {
-        copy.close();
-      }
-    } catch (err) {
-      console.error('Copie de la bibliothèque impossible, nouvelle analyse :', err.message);
-      try { fs.rmSync(dest, { force: true }); } catch { /* rien */ }
-    } finally {
-      opened?.close();
-    }
-  }
-
   /** Le noyau d'un compte (créé au besoin). */
   entry(user) {
     let entry = this.entries.get(user.id);
@@ -175,7 +238,6 @@ class Hub {
       return entry;
     }
     const dir = path.join(this.usersDir, user.id);
-    this.#provision(dir);
     entry = { id: user.id, clients: new Map(), lastUsed: Date.now(), registry: null, core: null };
     entry.emit = (channel, payload, exceptClient) => {
       const frame = `event: ${channel}\ndata: ${JSON.stringify(payload ?? null)}\n\n`;
@@ -188,7 +250,7 @@ class Hub {
       coversDir: this.coversDir,
       tools: this.tools,
       emit: entry.emit,
-      defaultDownloadDir: this.settings.downloadDir,
+      defaultDownloadDir: this.downloadDirFor(user),
       // Le service films/séries reçoit la clé TMDB du serveur sans que le compte la voie dans ses réglages.
       mediaStore: {
         get: (key, fallback) => {
@@ -201,8 +263,8 @@ class Hub {
     });
     entry.registry = createRegistry(this, entry);
     this.entries.set(user.id, entry);
-    entry.core.store.patch({ libraryFolders: this.settings.libraryFolders, downloadDir: this.settings.downloadDir });
-    this.#refresh(entry, this.roots());
+    this.mirror(entry);
+    this.#refresh(entry, this.rootsFor(user));
     return entry;
   }
 
@@ -248,6 +310,7 @@ class Hub {
   forgetUser(id) {
     this.dropUser(id);
     fs.rmSync(path.join(this.usersDir, id), { recursive: true, force: true });
+    this.social.forget(id);
   }
 
   // ─── Analyse des dossiers ──────────────────────────────────────────────────
@@ -270,8 +333,20 @@ class Hub {
   }
 
   rescanAll() {
-    const roots = this.roots();
-    for (const entry of this.entries.values()) this.#refresh(entry, roots);
+    for (const entry of this.entries.values()) this.#refresh(entry, this.rootsFor(entry.id));
+  }
+
+  /** Tous les dossiers surveillés : communs, propres à un compte, téléchargements. */
+  #allRoots() {
+    const roots = new Set(this.commonFolders());
+    for (const row of this.db.prepare("SELECT id, username, folders FROM users WHERE disabled = 0").all()) {
+      try {
+        for (const f of JSON.parse(row.folders || '[]')) roots.add(f);
+      } catch { /* liste illisible */ }
+      const dl = this.downloadDirFor(row);
+      if (fs.existsSync(dl)) roots.add(dl);
+    }
+    return [...roots];
   }
 
   #watch() {
@@ -281,7 +356,7 @@ class Hub {
       clearTimeout(this.watchTimer);
       this.watchTimer = setTimeout(() => this.rescanAll(), 5000);
     };
-    for (const root of this.roots()) {
+    for (const root of this.#allRoots()) {
       try {
         const watcher = fs.watch(root, { recursive: true }, (event, name) => {
           if (name && /\.(part|ytdl|tmp|temp)$/i.test(String(name))) return;

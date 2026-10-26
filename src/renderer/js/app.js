@@ -16,6 +16,11 @@ import { createPlayerBar } from './ui/playerbar.js';
 import { createNowPlaying } from './ui/nowplaying.js';
 import { openSettings } from './ui/settings-sheet.js';
 import { initSources } from './ui/sources.js';
+import { peopleView } from './views/people.js';
+import { profileView } from './views/profile.js';
+import { compareView } from './views/compare.js';
+import { viewing } from './web.js';
+import { mountReadOnlyBanner } from './ui/library-switch.js';
 import { isSheetOpen } from './ui/sheet.js';
 import { isMenuOpen } from './ui/menu.js';
 import { toast, installTooltips } from './ui/feedback.js';
@@ -112,7 +117,11 @@ function buildShell() {
   registerView('shelf', shelfView);
   registerView('mylist', mylistView);
   registerView('stats', statsView);
+  registerView('people', peopleView);
+  registerView('profile', profileView);
+  registerView('compare', compareView);
 
+  mountReadOnlyBanner($('#topbar'));
   nowPlaying = createNowPlaying($('#nowPlaying'));
   sidebar = createSidebar($('#sidebar'), { openSettings: (tab) => openSettings(tab) });
   playerBar = createPlayerBar($('#playerbar'), {
@@ -124,7 +133,8 @@ function buildShell() {
   onRoute((route) => {
     paintNav();
     app.dataset.view = route.name;
-    if (!['search', 'downloads', 'title', 'watching', 'shelf'].includes(route.name)) update({ lastView: { name: route.name, param: route.param } }, { persist: true });
+    // Dans la bibliothèque d'un autre compte, on ne retient pas la page : ses identifiants ne valent pas pour la sienne.
+    if (!viewing && !['search', 'downloads', 'title', 'watching', 'shelf', 'profile', 'compare'].includes(route.name)) update({ lastView: { name: route.name, param: route.param } }, { persist: true });
     if (route.name !== 'search') sidebar.setSearch('');
   });
 }
@@ -307,12 +317,14 @@ async function init() {
     }
   });
 
-  player.restoreSession();
+  if (!viewing) player.restoreSession();
   setAmbient(player.track?.cover || null);
 
-  const last = settings.lastView;
-  const valid = new Set(['songs', 'albums', 'artists', 'videos', 'album', 'artist', 'playlist', 'watch', 'anime', 'mylist', 'stats']);
-  if (last && valid.has(last.name)) navigate(last.name, last.param);
+  const last = viewing ? null : settings.lastView;
+  const valid = new Set(['songs', 'albums', 'artists', 'videos', 'album', 'artist', 'playlist', 'watch', 'anime', 'mylist', 'stats', 'people']);
+  const go = /^#playlist\/(\d+)$/.exec(location.hash); // lien vers une playlist d'une bibliothèque partagée
+  if (go) navigate('playlist', Number(go[1]));
+  else if (last && valid.has(last.name)) navigate(last.name, last.param);
   else navigate('songs');
 
   subscribe((patch, source) => {
@@ -321,7 +333,7 @@ async function init() {
     if ('language' in patch && source !== 'remote' && resolveLanguage(settings.language) !== currentLanguage()) setTimeout(() => location.reload(), 120);
   });
   requestAnimationFrame(() => root.classList.add('ready'));
-  setTimeout(() => offerRecaps().catch(() => {}), 6000);
+  if (!viewing) setTimeout(() => offerRecaps().catch(() => {}), 6000);
   startPresence();
   onUpdate((s) => sidebar.setUpdate(['available', 'ready'].includes(s.phase)));
   startUpdates({

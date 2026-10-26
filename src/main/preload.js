@@ -89,6 +89,9 @@ contextBridge.exposeInMainWorld('control', {
   playlists: {
     create: invoke('pl:create'),
     rename: invoke('pl:rename'),
+    update: invoke('pl:update'),
+    setCover: invoke('pl:set-cover'),
+    pickCover: invoke('pl:pick-cover'),
     rules: invoke('pl:rules'),
     delete: invoke('pl:delete'),
     add: invoke('pl:add'),

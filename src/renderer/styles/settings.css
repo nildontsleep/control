@@ -311,6 +311,13 @@
   gap: 10px;
 }
 
+.row.row-block.stats {
+  display: flex;
+  flex-direction: row;
+  gap: 10px;
+  padding-bottom: 12px;
+}
+
 .stat {
   flex: 1;
   display: flex;

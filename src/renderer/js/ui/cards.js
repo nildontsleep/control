@@ -80,6 +80,12 @@ export function mosaic(tracks, { size = 'l' } = {}) {
   return h('div.mosaic', {}, ...covers.map((c) => coverEl(c, { small: true })));
 }
 
+/** Pochette d'une playlist : l'image choisie, sinon la mosaïque de ses morceaux. */
+export function playlistCover(playlist, tracks, { size = 'l' } = {}) {
+  if (playlist.cover) return coverEl({ cover: playlist.cover, title: playlist.name, isPlaylist: true }, { small: size === 's' });
+  return mosaic(tracks, { size });
+}
+
 export function statLine(tracks) {
   const duration = tracks.reduce((s, x) => s + x.duration, 0);
   return `${t('count.tracks', { n: tracks.length })} · ${fmtLong(duration)}`;

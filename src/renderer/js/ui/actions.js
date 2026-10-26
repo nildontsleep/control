@@ -9,7 +9,7 @@ import { toast } from './feedback.js';
 import { openMenu } from './menu.js';
 import { promptSheet, confirmSheet } from './sheet.js';
 import { openTagEditor } from './tag-editor.js';
-import { isWeb, can } from '../web.js';
+import { isWeb, can, readOnly } from '../web.js';
 
 const library = window.control.library;
 const playlists = window.control.playlists;
@@ -78,10 +78,13 @@ export function trackMenuItems(tracks, ctx = {}) {
     { label: t('menu.playNext'), icon: 'list-start', action: () => { player.playNext(tracks); toast(t('toast.playNext'), 'list-start'); } },
     { label: t('menu.addQueue'), icon: 'list-end', action: () => { player.enqueue(tracks); toast(t('toast.queued'), 'list-end'); } },
     { separator: true },
-    { header: t('menu.addToPlaylist') },
-    ...manual.slice(0, 12).map((p) => ({ label: p.name, icon: 'list-music', action: () => addToPlaylist(p, tracks) })),
-    { label: t('menu.newPlaylist'), icon: 'plus', action: () => createPlaylistWith(tracks).then((id) => id && navigate('playlist', id)) },
-    { separator: true },
+    // Bibliothèque d'un autre compte : ses morceaux ne se rangent pas dans mes playlists.
+    ...(readOnly ? [] : [
+      { header: t('menu.addToPlaylist') },
+      ...manual.slice(0, 12).map((p) => ({ label: p.name, icon: 'list-music', action: () => addToPlaylist(p, tracks) })),
+      { label: t('menu.newPlaylist'), icon: 'plus', action: () => createPlaylistWith(tracks).then((id) => id && navigate('playlist', id)) },
+      { separator: true },
+    ]),
   ];
   if (ctx.removeFromPlaylist) items.push({ label: ctx.removeLabel || t('menu.removeFromPlaylist'), icon: 'x', action: ctx.removeFromPlaylist });
   if (n === 1) {
@@ -92,8 +95,10 @@ export function trackMenuItems(tracks, ctx = {}) {
   }
   if (!isWeb) items.push({ label: t('menu.reveal'), icon: 'folder-open', action: () => library.reveal(first.id) });
   if (can('editFiles')) items.push({ label: t('tag.menu'), icon: 'tags', shortcut: 'Ctrl+I', action: () => openTagEditor(tracks) });
-  items.push({ separator: true });
-  items.push({ label: t('menu.removeLibrary'), icon: 'trash-2', action: () => removeFromLibrary(tracks) });
+  if (!readOnly) {
+    items.push({ separator: true });
+    items.push({ label: t('menu.removeLibrary'), icon: 'trash-2', action: () => removeFromLibrary(tracks) });
+  }
   return items;
 }
 

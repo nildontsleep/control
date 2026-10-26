@@ -64,8 +64,9 @@ class Library {
 
   playlists() {
     const playlists = plain(this.db.prepare(
-      'SELECT id, name, kind, rules, created_at AS createdAt, updated_at AS updatedAt FROM playlists ORDER BY name COLLATE NOCASE',
-    ).all());
+      `SELECT id, name, kind, rules, description, cover, shared, created_at AS createdAt, updated_at AS updatedAt
+       FROM playlists ORDER BY name COLLATE NOCASE`,
+    ).all()).map((p) => ({ ...p, shared: !!p.shared }));
     const items = plain(this.db.prepare(
       'SELECT id, playlist_id AS playlistId, track_id AS trackId, position FROM playlist_tracks ORDER BY playlist_id, position',
     ).all());
@@ -74,6 +75,10 @@ class Library {
 
   trackPath(id) {
     return this.db.prepare('SELECT path FROM tracks WHERE id = ?').get(id)?.path || null;
+  }
+
+  trackCover(id) {
+    return this.db.prepare('SELECT cover FROM tracks WHERE id = ?').get(id)?.cover || null;
   }
 
   trackInfo(id) {
@@ -368,6 +373,11 @@ class Library {
   }
 
   // ─── Pochettes ─────────────────────────────────────────────────────────────
+  /** Enregistre une image (JPEG, PNG, WebP…) comme pochette ; renvoie son empreinte. */
+  saveCoverImage(data) {
+    return this.#saveCover(data);
+  }
+
   #saveCover(data) {
     const buffer = Buffer.from(data);
     const hash = crypto.createHash('sha1').update(buffer).digest('hex').slice(0, 20);
@@ -437,6 +447,25 @@ class Library {
 
   renamePlaylist(id, name) {
     this.db.prepare('UPDATE playlists SET name = ?, updated_at = ? WHERE id = ?').run(name.trim() || 'Sans titre', Date.now(), id);
+    this.changed('playlists', true);
+  }
+
+  /** Nom, description et visibilité d'une playlist (seuls les champs fournis changent). */
+  updatePlaylist(id, { name, description, shared } = {}) {
+    const row = this.db.prepare('SELECT name, description, shared FROM playlists WHERE id = ?').get(id);
+    if (!row) return false;
+    this.db.prepare('UPDATE playlists SET name = ?, description = ?, shared = ?, updated_at = ? WHERE id = ?').run(
+      name === undefined ? row.name : String(name).trim().slice(0, 120) || 'Sans titre',
+      description === undefined ? row.description : String(description).trim().slice(0, 500),
+      shared === undefined ? row.shared : shared ? 1 : 0,
+      Date.now(), id);
+    this.changed('playlists', true);
+    return true;
+  }
+
+  /** Pochette d'une playlist : l'empreinte d'une image, ou null pour revenir à la mosaïque des morceaux. */
+  setPlaylistCover(id, hash) {
+    this.db.prepare('UPDATE playlists SET cover = ?, updated_at = ? WHERE id = ?').run(hash || null, Date.now(), id);
     this.changed('playlists', true);
   }
 

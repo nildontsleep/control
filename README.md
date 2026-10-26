@@ -133,7 +133,7 @@ L’exécutable Windows n’est pas signé : au premier lancement, SmartScreen p
 
 Le même control, hébergé sur un serveur (ton PC, un NAS, un Raspberry Pi, un VPS) et utilisable depuis **n’importe quel navigateur, téléphone compris** : la musique reste chez toi, l’interface (lecteur, AutoMix, paroles, mode immersif, statistiques, récaps, playlists, films et séries) est la même. Sur un téléphone, la barre latérale devient un tiroir, la barre de lecture se compacte, et l’application peut être **installée sur l’écran d’accueil** (PWA) ; les touches multimédia et l’écran verrouillé fonctionnent comme sur le bureau.
 
-**Comptes, à la manière de [vie](https://github.com/nildontsleep/vie)** : au premier lancement, un assistant crée le compte *administrateur* (nom du serveur, dossier de musique, mot de passe). Ensuite on se connecte (cookie de session `HttpOnly`, mots de passe hachés avec scrypt, essais limités). L’administrateur crée des comptes ou ouvre les inscriptions depuis `/admin` ; chaque compte a **sa propre bibliothèque d’écoute** : réglages, statistiques, récaps, playlists, films et séries vus. Les dossiers de musique, eux, sont communs.
+**Comptes, à la manière de [vie](https://github.com/nildontsleep/vie)** : au premier lancement, un assistant crée le compte *administrateur* (nom du serveur, dossier de musique, mot de passe). Ensuite on se connecte (cookie de session `HttpOnly`, mots de passe hachés avec scrypt, essais limités). L’administrateur crée des comptes ou ouvre les inscriptions depuis `/admin` ; chaque compte a **sa propre bibliothèque** : ses dossiers de musique, ses téléchargements, ses réglages, ses statistiques, ses récaps, ses playlists, ses films et séries vus. Chacun peut **personnaliser son profil et ses playlists**, **parcourir la bibliothèque des autres** selon ce qu’ils partagent, et **comparer ses récaps** avec les leurs (voir *Bibliothèques, partage et profils*).
 
 ### Lancer
 
@@ -158,7 +158,7 @@ docker run -d --name control -p 5180:5180 \
 | --- | --- |
 | `PORT` (ou `CONTROL_PORT`) / `CONTROL_HOST` | Port (5180) et adresse d’écoute (0.0.0.0). |
 | `CONTROL_DATA` | Dossier des données du serveur : comptes, réglages, bibliothèques, pochettes, outils (`./data`, `/data` dans Docker). |
-| `CONTROL_LIBRARY` | Dossiers de musique proposés au premier lancement (séparés par `:`, ou `;` sous Windows). L’administrateur peut ensuite en ajouter ou en retirer dans les réglages, qui offrent un sélecteur de dossiers du serveur. |
+| `CONTROL_LIBRARY` | Dossiers de musique proposés dans l’assistant du premier lancement (séparés par `:`, ou `;` sous Windows) : ils deviennent **ceux de l’administrateur**. Les autres comptes reçoivent les leurs depuis `/admin` (voir plus bas). |
 | `CONTROL_SETUP_TOKEN` | Si défini, le premier compte ne peut être créé qu’avec ce code : **à définir dès que le serveur est joignable depuis Internet**. |
 | `CONTROL_TRUST_PROXY` | `1` derrière un reverse proxy (nginx, Caddy, Traefik) : adresse réelle du client et cookie `Secure` en HTTPS. |
 | `CONTROL_TMDB_KEY` | Clé TMDB offerte à tous les comptes (films et séries) ; chacun peut aussi mettre la sienne. |
@@ -174,10 +174,29 @@ L’application de bureau peut afficher un ou plusieurs serveurs **à côté de 
 - Le serveur n’a aucun accès à ton ordinateur : sa page tourne isolée, sans pont vers le système, et ses liens externes s’ouvrent dans ton navigateur.
 - Limites : la Rich Presence Discord ne suit que la lecture locale ; un film ou un épisode lancé depuis le serveur met la musique locale en pause, mais l’inverse ne l’arrête pas. Un certificat HTTPS auto-signé est refusé (utilise un vrai certificat, ou passe par Tailscale / un tunnel).
 
+### Bibliothèques, partage et profils
+
+**Une bibliothèque par compte.** Ce que voit un compte, ce sont, au choix de l’administrateur (`/admin`, bouton *Détails* sur chaque compte) :
+
+- **ses dossiers** : attribués un par un (sélecteur de dossiers du serveur) ou créés d’un clic. Si l’administrateur renseigne un *Dossier des comptes* (par exemple `/music/comptes`), chaque nouveau compte reçoit automatiquement `/music/comptes/<nom>` ;
+- **les dossiers communs** (*Dossiers communs* dans `/admin`) : visibles par tous les comptes. Un serveur mis à jour depuis une version antérieure garde ses dossiers existants en dossiers communs, rien ne change tant que l’administrateur n’en attribue pas d’autres ;
+- **son dossier de téléchargements** : `<dossier de téléchargements>/<nom du compte>`, ajouté automatiquement à sa bibliothèque.
+
+Un utilisateur ne choisit pas de dossier sur le serveur : il voit ses dossiers et les dossiers communs dans *Réglages* → *Bibliothèque*. Retirer un dossier ne touche jamais aux fichiers.
+
+**Voir la musique des autres.** Chaque compte décide, depuis son profil (*Partage*), qui peut **parcourir sa bibliothèque** et qui peut **comparer ses récaps avec lui** : un compte précis, ou tout le monde. Le sélecteur en haut de la barre latérale passe de *Ma bibliothèque* à celle d’un compte qui la partage. Cette vue est en **lecture seule** : on écoute, on cherche, on ouvre les albums et les playlists partagées, mais rien n’est modifié chez l’autre, ses écoutes ne sont pas changées et les tiennes ne sont pas comptées.
+
+**Profil.** *Mon profil* (menu du compte, en bas de la barre latérale) : nom affiché, photo (recadrée en carré et réduite par le navigateur), présentation, couleur. La page *Personnes* liste les comptes du serveur, avec ce qu’ils partagent avec toi ; leur profil montre leur année d’écoute (si le partage « récaps » est ouvert), leur bibliothèque et leurs playlists partagées.
+
+**Playlists personnalisées.** Menu *…* d’une playlist → *Personnaliser* : nom, description, pochette (image envoyée, pochette d’un des morceaux, ou mosaïque automatique) et, sur le web, visibilité (*Visible par les autres comptes*). Les autres ne voient que les playlists que tu rends visibles. Sur l’application de bureau, la pochette et la description existent aussi.
+
+**Comparer ses récaps.** *Personnes* → un compte qui partage ses récaps → *Comparer nos récaps*, ou depuis *Statistiques*. Sur la même période (7 jours, 30 jours, cette année, tout) : chiffres côte à côte, un **indice de goûts communs** (artistes, genres et morceaux), les artistes, morceaux et genres que vous aimez tous les deux, les tops de chacun et les rythmes d’écoute (jours, heures). Seuls des totaux et des classements sont échangés, jamais l’historique des écoutes.
+
 ### Droits et limites
 
-- **Administrateur** : dossiers du serveur, comptes, outils de téléchargement, édition des tags et suppression de fichiers. **Utilisateur** : écouter, playlists, paroles, statistiques, films et séries ; les téléchargements peuvent lui être ouverts (`/admin`).
-- Ce que le serveur lit : seulement les dossiers de musique configurés (un fichier hors de ces dossiers n’est jamais servi). Monte la musique en lecture seule (`:ro`) si tu ne veux pas que l’éditeur de tags la modifie.
+- **Administrateur** : dossiers communs et de chaque compte, comptes, outils de téléchargement, édition des tags et suppression de fichiers. **Utilisateur** : écouter, playlists, paroles, statistiques, films et séries, profil, partage ; les téléchargements peuvent lui être ouverts (`/admin`).
+- L’administrateur parcourt **toutes** les bibliothèques (c’est lui qui gère les fichiers), mais **jamais les récaps** d’un compte qui ne les lui a pas ouverts.
+- Ce que le serveur lit : seulement les dossiers de musique des comptes (les siens, ceux d’un compte qui les partage avec toi, et les dossiers communs) ; un fichier hors de ces dossiers n’est jamais servi. Monte la musique en lecture seule (`:ro`) si tu ne veux pas que l’éditeur de tags la modifie.
 - Mets un **HTTPS** devant dès que le serveur sort de ton réseau local (Caddy, nginx, Cloudflare Tunnel, Tailscale…).
 - Les navigateurs lisent MP3, AAC/M4A, FLAC, Ogg, Opus, WAV et les vidéos MP4 (H.264) ou WebM ; les autres formats (MKV surtout) ne sont pas convertis à la volée.
 - Pas de Discord Rich Presence ni de mise à jour automatique sur le web (c’est le serveur qu’on met à jour) ; la lecture de fichiers déposés dans la fenêtre n’existe pas non plus : la musique se range dans les dossiers du serveur.
@@ -239,6 +258,8 @@ src/main/           processus principal : fenêtre, protocole app://, SQLite, sc
   platform.js       ce qui dépend d’Electron (réseau, images, corbeille) ; image-lite.js remplace nativeImage sur le serveur
   sources.js        serveurs control affichés dans la fenêtre (vue web isolée par serveur, bascule, pause de l’autre source)
 server/             version web : HTTP, comptes et sessions, un noyau par compte, RPC, événements en direct, médias (Range)
+  hub.js            comptes chargés à la demande, dossiers (communs / propres à chaque compte), analyses
+  social.js         profils, partages (qui voit quoi) ; compare.js : comparaison de deux récaps
 src/web/            côté navigateur : pont window.control, pages de connexion / installation / administration, PWA, mise en page mobile
 src/renderer/       interface (modules ES, sans framework ni bundler)
   js/player.js      moteur de lecture : file, égaliseur, MediaSession, comptage d’écoutes
@@ -250,7 +271,8 @@ src/renderer/       interface (modules ES, sans framework ni bundler)
   js/discord/       description de la lecture en cours pour la Rich Presence
   js/update/        état de la mise à jour partagé entre notification, barre latérale et réglages
   js/views/         Morceaux, Albums, Artistes, Vidéos, Playlist, Recherche, Téléchargements,
-                    Films & séries, Animés, fiche, lecture, Ma liste, Statistiques
+                    Films & séries, Animés, fiche, lecture, Ma liste, Statistiques,
+                    Personnes, Profil, Comparer (web)
   js/media/         accès aux catalogues, cartes et rangées, adresse du lecteur vidrift
 build/              icônes de l’application
 ```

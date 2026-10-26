@@ -7,13 +7,14 @@ import { fmtLong } from '../format.js';
 import { playlistById, playlistRows } from '../data.js';
 import { navigate } from '../router.js';
 import { createTrackList } from '../ui/tracklist.js';
-import { mosaic } from '../ui/cards.js';
+import { playlistCover } from '../ui/cards.js';
 import { openMenu } from '../ui/menu.js';
 import { promptSheet, confirmSheet } from '../ui/sheet.js';
 import { toast } from '../ui/feedback.js';
 import { openSmartEditor } from '../ui/smart.js';
+import { openPlaylistEditor } from '../ui/playlist-edit.js';
 import { playButtons, emptyState } from './shared.js';
-import { isWeb } from '../web.js';
+import { isWeb, readOnly } from '../web.js';
 
 const api = window.control.playlists;
 
@@ -56,13 +57,13 @@ export function playlistView(root, id, { scroller }) {
     items: order,
     layout: 'playlist',
     scroller,
-    context: smart ? {} : {
+    context: smart || readOnly ? {} : {
       playlistId: playlist.id,
       removeFromPlaylist: async (selected) => {
         await api.remove(selected.map((r) => r.entryId));
       },
     },
-    onMove: smart ? null : async (from, to) => {
+    onMove: smart || readOnly ? null : async (from, to) => {
       const moving = from.map((i) => order[i]);
       const rest = order.filter((_, i) => !from.includes(i));
       const insertAt = to - from.filter((i) => i < to).length;
@@ -73,9 +74,10 @@ export function playlistView(root, id, { scroller }) {
     },
   });
 
-  const more = h('button.btn.btn-secondary.btn-icon-only', { type: 'button', 'data-tip': t('common.more'), html: icon('ellipsis', 18, 2) });
-  more.addEventListener('click', () => {
+  const more = readOnly ? null : h('button.btn.btn-secondary.btn-icon-only', { type: 'button', 'data-tip': t('common.more'), html: icon('ellipsis', 18, 2) });
+  more?.addEventListener('click', () => {
     openMenu(more, [
+      { label: t('pl.customize'), icon: 'palette', action: () => openPlaylistEditor(playlist) },
       { label: t('pl.rename'), icon: 'square-pen', action: () => renamePlaylist(playlist) },
       smart ? { label: t('pl.editRules'), icon: 'sliders-horizontal', action: () => openSmartEditor(playlist) } : null,
       isWeb ? null : { label: t('pl.export'), icon: 'upload', action: () => exportPlaylist(playlist) },
@@ -87,10 +89,15 @@ export function playlistView(root, id, { scroller }) {
   const duration = tracks.reduce((s, x) => s + x.duration, 0);
   root.append(
     h('header.hero', {},
-      h('div.hero-art', {}, h('div.hero-cover.mosaic-wrap', {}, mosaic(tracks))),
+      h('div.hero-art', {}, h('div.hero-cover.mosaic-wrap', {}, playlistCover(playlist, tracks))),
       h('div.hero-text', {},
-        h('div.hero-kind', {}, smart ? h('span.badge-smart', { html: `${icon('sparkles', 12, 2)}<span>${t('pl.smart')}</span>` }) : t('pl.kind')),
-        h('h1.editable', { text: playlist.name, title: t('pl.rename'), onclick: () => renamePlaylist(playlist) }),
+        h('div.hero-kind', {},
+          smart ? h('span.badge-smart', { html: `${icon('sparkles', 12, 2)}<span>${t('pl.smart')}</span>` }) : t('pl.kind'),
+          isWeb && playlist.shared && !readOnly ? h('span.badge-shared', { html: `${icon('users', 12, 2)}<span>${t('pl.sharedBadge')}</span>` }) : null),
+        readOnly
+          ? h('h1', { text: playlist.name })
+          : h('h1.editable', { text: playlist.name, title: t('pl.rename'), onclick: () => renamePlaylist(playlist) }),
+        playlist.description ? h('p.hero-desc', { text: playlist.description }) : null,
         h('p.hero-meta', { text: tracks.length ? `${t('count.tracks', { n: tracks.length })} · ${fmtLong(duration)}` : t('pl.empty') }),
         h('div.hero-actions', {}, ...playButtons(() => tracks), more))),
     tracks.length

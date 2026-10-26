@@ -16,6 +16,7 @@ const { Tags } = require('./tags');
 const { Stats } = require('./stats');
 const { Lyrics } = require('./lyrics');
 const { MediaService } = require('./media');
+const images = require('./images');
 
 class Core {
   /**
@@ -139,6 +140,33 @@ class Core {
       return id;
     });
     handle('pl:rename', (e, id, name) => library.renamePlaylist(id, name));
+    handle('pl:update', (e, id, patch) => {
+      if (!Number.isInteger(id) || !isObj(patch)) return false;
+      return library.updatePlaylist(id, { name: patch.name, description: patch.description, shared: patch.shared });
+    });
+    // Pochette d'une playlist : une image envoyée ({ data }), celle d'un morceau ({ trackId }), ou null (mosaïque).
+    handle('pl:set-cover', (e, id, src) => {
+      if (!Number.isInteger(id)) return { ok: false, message: 'Playlist invalide.' };
+      try {
+        if (!src) {
+          library.setPlaylistCover(id, null);
+          return { ok: true, cover: null };
+        }
+        if (Number.isInteger(src.trackId)) {
+          const cover = library.trackCover(src.trackId);
+          if (!cover) return { ok: false, message: 'Ce morceau n’a pas de pochette.' };
+          library.setPlaylistCover(id, cover);
+          return { ok: true, cover };
+        }
+        const buffer = images.toBuffer(src.data);
+        if (!buffer || !images.isImage(buffer)) return { ok: false, message: 'Image refusée (JPEG, PNG ou WebP, 12 Mo au plus).' };
+        const cover = library.saveCoverImage(buffer);
+        library.setPlaylistCover(id, cover);
+        return { ok: true, cover };
+      } catch (err) {
+        return { ok: false, message: String(err?.message || err) };
+      }
+    });
     handle('pl:rules', (e, id, rules) => library.setPlaylistRules(id, rules));
     handle('pl:delete', (e, id) => library.deletePlaylist(id));
     handle('pl:add', (e, id, trackIds) => library.addToPlaylist(id, trackIds));

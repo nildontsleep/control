@@ -80,6 +80,20 @@ class LiteImage {
     return new LiteImage(w, h, out);
   }
 
+  /** Sous-image rectangulaire (comme nativeImage.crop). */
+  crop({ x, y, width, height }) {
+    const cx = Math.max(0, Math.min(this.width - 1, Math.round(x)));
+    const cy = Math.max(0, Math.min(this.height - 1, Math.round(y)));
+    const w = Math.max(1, Math.min(this.width - cx, Math.round(width)));
+    const h = Math.max(1, Math.min(this.height - cy, Math.round(height)));
+    const out = Buffer.alloc(w * h * 4);
+    for (let row = 0; row < h; row++) {
+      const from = ((cy + row) * this.width + cx) * 4;
+      Buffer.from(this.data.buffer, this.data.byteOffset + from, w * 4).copy(out, row * w * 4);
+    }
+    return new LiteImage(w, h, out);
+  }
+
   /** JPEG (les pixels transparents sont posés sur du blanc, comme le fait le navigateur pour une pochette). */
   toJPEG(quality = 90) {
     const flat = Buffer.from(this.data);

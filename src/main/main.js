@@ -459,6 +459,26 @@ function setupIpc() {
     }
   });
 
+  // Pochette d'une playlist choisie dans un fichier image.
+  handle('pl:pick-cover', async (e, id) => {
+    try {
+      const res = await dialog.showOpenDialog(winOf(e), {
+        title: 'Choisir une pochette',
+        defaultPath: app.getPath('pictures'),
+        filters: [{ name: 'Images', extensions: ['jpg', 'jpeg', 'png', 'webp', 'bmp', 'gif'] }],
+        properties: ['openFile'],
+      });
+      if (res.canceled || !res.filePaths[0]) return null;
+      const buffer = await fs.promises.readFile(res.filePaths[0]);
+      if (buffer.length > 25 * 1024 * 1024) return { ok: false, message: 'Image trop volumineuse.' };
+      const cover = library.saveCoverImage(buffer);
+      library.setPlaylistCover(id, cover);
+      return { ok: true, cover };
+    } catch (err) {
+      return { ok: false, message: String(err?.message || err) };
+    }
+  });
+
   handle('pl:import', async (e) => {
     const res = await dialog.showOpenDialog(winOf(e), {
       title: 'Importer une playlist',

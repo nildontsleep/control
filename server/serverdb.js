@@ -32,6 +32,23 @@ const MIGRATIONS = [
     value TEXT NOT NULL
   );
   `,
+  `
+  -- Profil, dossiers de musique propres à chaque compte, et qui peut voir quoi.
+  ALTER TABLE users ADD COLUMN display_name TEXT NOT NULL DEFAULT '';
+  ALTER TABLE users ADD COLUMN bio TEXT NOT NULL DEFAULT '';
+  ALTER TABLE users ADD COLUMN avatar TEXT;
+  ALTER TABLE users ADD COLUMN color TEXT;
+  ALTER TABLE users ADD COLUMN folders TEXT NOT NULL DEFAULT '[]';
+
+  -- owner_id partage sa bibliothèque (browse) et ses statistiques (compare) avec viewer_id ; '*' = tout le monde.
+  CREATE TABLE shares (
+    owner_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    viewer_id TEXT NOT NULL,
+    browse INTEGER NOT NULL DEFAULT 1,
+    compare INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (owner_id, viewer_id)
+  );
+  `,
 ];
 
 function openServerDb(file) {

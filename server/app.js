@@ -10,6 +10,7 @@ const pkg = require('../package.json');
 const { frameOrigins, imageOrigins } = require('../src/main/media');
 const { invoke, send: sendCommand } = require('./rpc');
 const { httpError } = require('./auth');
+const { Hub } = require('./hub');
 const {
   parseCookies, cookieHeader, readJson, send, sendJson, sendBuffer, sendFile, safeJoin, MIME,
 } = require('./http');
@@ -32,6 +33,16 @@ function createApp(hub, config) {
 
   const sessionCookie = (req, token, maxAge) => cookieHeader(COOKIE, token, { maxAge, secure: secureCookie(req) });
   const userOf = (req) => hub.accounts.lookup(parseCookies(req.headers.cookie)[COOKIE]);
+
+  /** La bibliothèque d'un autre compte demandée par la requête (en-tête x-library ou ?lib=), ou null pour la sienne. */
+  function viewOf(req, user, url = null) {
+    const id = String(req.headers['x-library'] || url?.searchParams.get('lib') || '').slice(0, 32);
+    if (!id || id === user.id) return null;
+    const owner = hub.accounts.byId(id);
+    if (!owner || owner.disabled) throw httpError(404, 'not_found', 'Bibliothèque introuvable.');
+    if (!hub.social.access(user, owner).browse) throw httpError(403, 'forbidden', 'Cette bibliothèque ne vous est pas partagée.');
+    return { owner, entry: hub.entry(owner) };
+  }
 
   // ─── Pages ─────────────────────────────────────────────────────────────────
   const pageCsp = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'";
@@ -70,20 +81,26 @@ function createApp(hub, config) {
   const forJson = (obj) => JSON.stringify(obj).replace(/</g, '\\u003c').replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029');
 
   /** La page de l'application, avec l'état de démarrage de ce compte (ce que le bureau obtient par IPC synchrone). */
-  async function indexPage(user, entry) {
+  async function indexPage(user, entry, view = null) {
     const caps = {
-      editFiles: user.role === 'admin',
+      editFiles: user.role === 'admin' && !view,
       download: user.role === 'admin' || hub.settings.allowUserDownloads,
       manageServer: user.role === 'admin',
       installTools: user.role === 'admin',
+      readOnly: !!view, // bibliothèque d'un autre compte : on écoute, on ne modifie rien
     };
+    const me = hub.social.profile(hub.accounts.byId(user.id));
+    const person = (p) => ({ id: p.id, username: p.username, name: p.name, avatar: p.avatar, color: p.color });
+    const libraries = hub.social.others(user).filter((o) => o.access.browse).map(person);
     const boot = {
       settings: entry.core.store.settings,
       env: { streamOverride: process.env.CONTROL_STREAM_BASE ? process.env.CONTROL_STREAM_BASE.replace(/\/$/, '') : null },
-      user: { id: user.id, username: user.username, role: user.role },
+      user: { ...person(me), role: user.role },
+      viewing: view ? person(hub.social.profile(view.owner)) : null,
+      libraries,
       caps,
       server: { name: hub.settings.serverName },
-      info: { version: pkg.version, platform: 'web', electron: null, chrome: null, portable: false, appimage: false, dataDir: '', musicDir: hub.settings.libraryFolders[0] || '', downloadDir: hub.settings.downloadDir },
+      info: { version: pkg.version, platform: 'web', electron: null, chrome: null, portable: false, appimage: false, dataDir: '', musicDir: hub.ownFolders(user.id)[0] || hub.commonFolders()[0] || '', downloadDir: hub.downloadDirFor(user) },
       clientId: crypto.randomBytes(8).toString('hex'),
     };
     const head = [
@@ -150,6 +167,7 @@ function createApp(hub, config) {
     if (wait > 0) throw httpError(429, 'too_many', 'Trop d’essais, réessayez plus tard.');
     hub.ipThrottle.fail(`reg:${ip}`);
     const user = await hub.accounts.create({ username: String(body.username || ''), password: String(body.password || ''), role: 'user' });
+    if (hub.settings.usersRoot) await hub.ensurePersonalFolder(user).catch((err) => console.error('Dossier du compte :', err.message));
     const session = hub.accounts.open(user.id, { userAgent: req.headers['user-agent'], ip });
     return json(req, res, 200, { ok: true, user: { id: user.id, username: user.username, role: user.role } }, { 'set-cookie': sessionCookie(req, session.token, session.maxAge) });
   }
@@ -166,18 +184,12 @@ function createApp(hub, config) {
       if (config.setupToken && body.token !== config.setupToken) throw httpError(403, 'bad_token', 'Code d’installation incorrect.');
       user = await hub.accounts.create({ username: String(body.username || ''), password: String(body.password || ''), role: 'admin' });
       const patch = { serverName: body.serverName || 'control' };
-      if (Array.isArray(body.libraryFolders) && body.libraryFolders.length) {
-        const folders = [];
-        for (const dir of body.libraryFolders.slice(0, 20)) {
-          try {
-            const resolved = path.resolve(String(dir));
-            if ((await fs.promises.stat(resolved)).isDirectory()) folders.push(resolved);
-          } catch { /* dossier absent : ignoré, l'administrateur pourra le corriger */ }
-        }
-        patch.libraryFolders = folders;
-      }
       if (body.tmdbKey) patch.tmdbKey = String(body.tmdbKey);
       hub.patchSettings(patch);
+      // Les dossiers de l'assistant sont ceux de l'administrateur ; les autres comptes recevront les leurs plus tard.
+      if (Array.isArray(body.libraryFolders)) {
+        for (const dir of body.libraryFolders.slice(0, 20)) await hub.addOwnFolder(user.id, dir).catch(() => { /* dossier absent : ignoré, l'administrateur pourra le corriger */ });
+      }
     } finally {
       initializing = false;
     }
@@ -205,22 +217,32 @@ function createApp(hub, config) {
   }
 
   // ─── Médias ────────────────────────────────────────────────────────────────
-  async function media(req, res, user, pathname) {
-    const entry = hub.entry(user);
-    if (pathname.startsWith('/media/')) {
-      const id = Number(pathname.slice(7));
-      const file = Number.isInteger(id) ? entry.core.library.trackPath(id) : null;
-      if (!file || !hub.isInsideRoots(file)) return send(res, 404, 'Not found', { 'content-type': 'text/plain' });
-      return sendFile(req, res, file, { cache: MEDIA_CACHE });
-    }
+  async function media(req, res, user, pathname, url) {
+    const notFound = () => send(res, 404, 'Not found', { 'content-type': 'text/plain' });
+    // Pochettes et avatars : des images nommées par leur empreinte, communes à tous les comptes connectés.
     if (pathname.startsWith('/cover/')) {
       const name = pathname.slice(7);
-      if (!/^[0-9a-f]{20}(-s)?\.jpg$/.test(name)) return send(res, 404, 'Not found', { 'content-type': 'text/plain' });
+      if (!/^[0-9a-f]{20}(-s)?\.jpg$/.test(name)) return notFound();
       return sendFile(req, res, path.join(hub.coversDir, name), { type: 'image/jpeg', cache: 'private, max-age=31536000, immutable' });
+    }
+    if (pathname.startsWith('/avatar/')) {
+      const name = pathname.slice(8);
+      if (!/^[0-9a-f]{20}\.jpg$/.test(name)) return notFound();
+      return sendFile(req, res, path.join(hub.avatarsDir, name), { type: 'image/jpeg', cache: 'private, max-age=31536000, immutable' });
+    }
+    // Fichiers d'un compte : le sien, ou celui d'un autre compte qui le partage (?lib=).
+    const view = viewOf(req, user, url);
+    const entry = view ? view.entry : hub.entry(user);
+    if (pathname.startsWith('/media/')) {
+      const id = Number(pathname.slice(7));
+      const roots = view ? hub.ownerRoots(view.owner) : hub.rootsFor(user);
+      const file = Number.isInteger(id) ? entry.core.library.trackPath(id) : null;
+      if (!file || !Hub.inside(roots, file)) return notFound();
+      return sendFile(req, res, file, { cache: MEDIA_CACHE });
     }
     const id = Number(pathname.slice(8));
     const file = Number.isInteger(id) ? await entry.core.library.videoThumb(id, hub.tools.path('ffmpeg')) : null;
-    if (!file) return send(res, 404, 'Not found', { 'content-type': 'text/plain' });
+    if (!file) return notFound();
     return sendFile(req, res, file, { type: 'image/jpeg', cache: 'private, max-age=3600' });
   }
 
@@ -254,7 +276,7 @@ function createApp(hub, config) {
     // Premier lancement : tant qu'aucun compte n'existe, tout mène à l'assistant.
     const initialized = hub.accounts.count() > 0;
     if (pathname === '/api/setup/status') {
-      return json(req, res, 200, { initialized, serverName: hub.settings.serverName, tokenRequired: !!config.setupToken, folders: hub.settings.libraryFolders, registrationEnabled: hub.settings.registrationEnabled });
+      return json(req, res, 200, { initialized, serverName: hub.settings.serverName, tokenRequired: !!config.setupToken, folders: config.libraryFolders, registrationEnabled: hub.settings.registrationEnabled });
     }
     if (pathname === '/api/setup/init' && method === 'POST') return setupInit(req, res);
     if (pathname === '/setup') return initialized ? redirect(res, '/') : staticPage(req, res, 'setup.html');
@@ -288,10 +310,16 @@ function createApp(hub, config) {
       return json(req, res, 401, { ok: false, error: { code: 'unauthorized', message: 'Connexion requise.' } });
     }
 
-    if (pathname === '/api/auth/me') return json(req, res, 200, { ok: true, user: { id: user.id, username: user.username, role: user.role } });
+    if (pathname === '/api/auth/me') return json(req, res, 200, { ok: true, user: { id: user.id, username: user.username, role: user.role, name: user.display_name || user.username } });
     if (pathname === '/' || pathname === '/index.html') {
       const entry = hub.entry(user);
-      const html = await indexPage(user, entry);
+      let view = null;
+      try {
+        view = viewOf(req, user, url);
+      } catch {
+        return redirect(res, '/'); // bibliothèque introuvable ou plus partagée : retour à la sienne
+      }
+      const html = await indexPage(user, entry, view);
       return sendBuffer(req, res, 200, Buffer.from(html), 'text/html; charset=utf-8', { 'content-security-policy': appCsp(), 'cache-control': 'no-store' });
     }
     if (pathname === '/admin') return user.role === 'admin' ? staticPage(req, res, 'admin.html') : redirect(res, '/');
@@ -305,14 +333,15 @@ function createApp(hub, config) {
       const args = Array.isArray(body.args) ? body.args : [];
       const clientId = String(req.headers['x-client'] || '').slice(0, 32);
       const entry = hub.entry(user);
+      const view = viewOf(req, user);
       if (send_) {
-        sendCommand(hub, entry, user, channel, args, clientId);
+        sendCommand(hub, entry, user, channel, args, clientId, view);
         return send(res, 204, null);
       }
-      const result = await invoke(hub, entry, user, channel, args, clientId);
+      const result = await invoke(hub, entry, user, channel, args, clientId, view);
       return json(req, res, 200, { ok: true, result: result === undefined ? null : result });
     }
-    if (/^\/(media|cover|vthumb)\//.test(pathname) && (method === 'GET' || method === 'HEAD')) return media(req, res, user, pathname);
+    if (/^\/(media|cover|vthumb|avatar)\//.test(pathname) && (method === 'GET' || method === 'HEAD')) return media(req, res, user, pathname, url);
 
     return json(req, res, 404, { ok: false, error: { code: 'not_found', message: 'Introuvable.' } });
   }

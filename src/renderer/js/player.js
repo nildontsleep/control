@@ -788,6 +788,7 @@ player.refreshReferences = () => {
 
 // ─── Session ─────────────────────────────────────────────────────────────────
 function saveSession() {
+  if (window.control?.web?.viewing) return; // les identifiants de morceaux ne valent que dans sa propre bibliothèque
   if (!state.queue.length) return;
   update({ session: { queue: state.queue.map((t) => t.id), index: state.index, position: Math.floor(media.currentTime || 0) } });
 }

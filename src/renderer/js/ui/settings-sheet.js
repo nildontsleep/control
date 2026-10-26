@@ -291,13 +291,22 @@ export function openSettings(initial = 'general') {
           h('div.stat', {}, h('strong', { text: String(lib.artists.length) }), h('span', { text: t('nav.artists') })),
           h('div.stat', {}, h('strong', { text: String(lib.videos.length) }), h('span', { text: t('nav.videos') })));
       });
+      // Web : les dossiers communs à tous les comptes, que l'administrateur gère depuis sa page.
+      const common = h('div.folder-list');
+      live(() => {
+        const list = settings.commonFolders || [];
+        common.replaceChildren(...(list.length
+          ? list.map((f) => h('div.folder-row', {}, h('span.folder-icon', { html: icon('folder', 17, 1.8) }), h('span.folder-path', { text: f, title: f })))
+          : [h('div.folder-empty', { text: t('set.noCommon') })]));
+      });
       return [
         group(t('set.folders'), [
           h('div.row.row-block', {}, folders),
           h('div.row.row-block', {}, h('div.row-buttons', {},
             can('manageServer') ? button(t('set.addFolder'), { icon: 'folder-plus', kind: 'primary', small: true, onClick: () => library.addFolder() }) : null,
             button(t('set.scanNow'), { icon: 'refresh-cw', small: true, onClick: async () => { toast(t('set.scanning'), 'refresh-cw'); await library.scan(); } }))),
-        ], { footer: t('set.foldersHint') }),
+        ], { footer: isWeb ? t(can('manageServer') ? 'set.foldersHintAdmin' : 'set.foldersHintUser') : t('set.foldersHint') }),
+        isWeb ? group(t('set.commonFolders'), [h('div.row.row-block', {}, common)], { footer: t('set.commonFoldersHint') }) : null,
         group(t('set.inLibrary'), [stats]),
       ];
     },

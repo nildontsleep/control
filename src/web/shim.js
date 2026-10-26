@@ -6,6 +6,8 @@
 
   const boot = JSON.parse(document.getElementById('boot').textContent);
   const clientId = boot.clientId;
+  // Bibliothèque d'un autre compte (?lib=…) : la page entière la parcourt en lecture seule.
+  const viewing = boot.viewing || null;
 
   // ─── Appels au serveur ─────────────────────────────────────────────────────
   let leaving = false;
@@ -20,7 +22,7 @@
     try {
       res = await fetch(`/api/${kind}/${encodeURIComponent(channel)}`, {
         method: 'POST',
-        headers: { 'content-type': 'application/json', 'x-control': '1', 'x-client': clientId },
+        headers: { 'content-type': 'application/json', 'x-control': '1', 'x-client': clientId, ...(viewing ? { 'x-library': viewing.id } : {}) },
         body: JSON.stringify({ args }),
         credentials: 'same-origin',
         keepalive: kind === 'send',
@@ -126,13 +128,64 @@
     reader.readAsDataURL(file);
   });
 
+  /**
+   * Choisit une image et la renvoie en JPEG (data URL), réduite et recadrée au besoin dans le navigateur :
+   * le serveur n'a ainsi à décoder que du JPEG, quel que soit le format d'origine (WebP, GIF, HEIC…).
+   */
+  async function pickImage({ square = false, max = 1000 } = {}) {
+    const file = await pickFile('image/*');
+    if (!file) return null;
+    if (file.size > 25 * 1024 * 1024) return { error: 'Image trop volumineuse.' };
+    let bitmap;
+    try {
+      bitmap = await createImageBitmap(file);
+    } catch {
+      return { error: 'Ce format d’image n’est pas pris en charge.' };
+    }
+    let sx = 0;
+    let sy = 0;
+    let sw = bitmap.width;
+    let sh = bitmap.height;
+    if (square) {
+      const side = Math.min(sw, sh);
+      sx = (sw - side) / 2;
+      sy = (sh - side) / 2;
+      sw = side;
+      sh = side;
+    }
+    const k = Math.min(1, max / Math.max(sw, sh));
+    const canvas = Object.assign(document.createElement('canvas'), { width: Math.max(1, Math.round(sw * k)), height: Math.max(1, Math.round(sh * k)) });
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#fff'; // la transparence tombe sur du blanc, comme dans un JPEG
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(bitmap, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+    bitmap.close?.();
+    return { data: canvas.toDataURL('image/jpeg', 0.9) };
+  }
+
   // ─── window.control ────────────────────────────────────────────────────────
   const web = {
     user: boot.user,
     caps: boot.caps,
     server: boot.server,
+    viewing,
+    libraries: boot.libraries || [],
     clientId,
     rpc: (channel, ...args) => call('rpc', channel, args),
+    /** Parcourt la bibliothèque d'un autre compte (id), ou revient à la sienne (null). */
+    switchLibrary(id) {
+      leaving = true;
+      location.assign(id ? `/?lib=${encodeURIComponent(id)}` : '/');
+    },
+    pickImage,
+    social: {
+      me: invoke('social:me'),
+      others: invoke('social:others'),
+      profile: invoke('social:profile'),
+      setProfile: invoke('social:set-profile'),
+      setGrants: invoke('social:set-grants'),
+      compare: invoke('social:compare'),
+    },
     async logout() {
       leaving = true;
       await fetch('/api/auth/logout', { method: 'POST', headers: { 'x-control': '1' }, credentials: 'same-origin' }).catch(() => {});
@@ -172,7 +225,7 @@
       addPaths: async () => [],
       addFolder: async () => {
         const dir = await window.control.web.pickFolder?.();
-        return dir ? invoke('srv:add-folder')(dir) : boot.settings.libraryFolders || [];
+        return dir ? invoke('srv:me:add-folder')(dir) : boot.settings.libraryFolders || [];
       },
       addMusicFolder: async () => boot.settings.libraryFolders || [],
       removeFolder: invoke('lib:remove-folder'),
@@ -234,6 +287,14 @@
     playlists: {
       create: invoke('pl:create'),
       rename: invoke('pl:rename'),
+      update: invoke('pl:update'),
+      setCover: invoke('pl:set-cover'),
+      async pickCover(id) {
+        const image = await pickImage({ max: 1000 });
+        if (!image) return null;
+        if (image.error) return { ok: false, message: image.error };
+        return call('rpc', 'pl:set-cover', [id, { data: image.data }]);
+      },
       rules: invoke('pl:rules'),
       delete: invoke('pl:delete'),
       add: invoke('pl:add'),

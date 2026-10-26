@@ -126,6 +126,12 @@ const MIGRATIONS = [
     fetched_at INTEGER NOT NULL
   );
   `,
+  `
+  -- Playlists personnalisables : description, pochette choisie (empreinte, sinon mosaïque) et visibilité pour les autres comptes (web).
+  ALTER TABLE playlists ADD COLUMN description TEXT NOT NULL DEFAULT '';
+  ALTER TABLE playlists ADD COLUMN cover TEXT;
+  ALTER TABLE playlists ADD COLUMN shared INTEGER NOT NULL DEFAULT 0;
+  `,
 ];
 
 function open(file) {

@@ -56,8 +56,9 @@ class Stats {
     this.db = db;
   }
 
-  get({ from, to } = {}) {
+  get({ from, to, limit = 10 } = {}) {
     const { start, end, fromDay, toDay } = boundsOf(from, to);
+    const top = Math.max(1, Math.min(200, Number(limit) || 10));
     const q = (sql, ...params) => this.db.prepare(sql).all(...params);
     const one = (sql, ...params) => this.db.prepare(sql).get(...params);
     const audio = "t.kind = 'audio' AND p.played_at >= ? AND p.played_at < ?";
@@ -72,20 +73,20 @@ class Stats {
     const topTracks = plain(q(`
       SELECT t.id, t.title, t.artist, t.album, t.cover, COUNT(*) AS plays, SUM(${LISTENED}) AS seconds
       FROM plays p JOIN tracks t ON t.id = p.track_id WHERE ${audio}
-      GROUP BY t.id ORDER BY plays DESC, seconds DESC, t.title LIMIT 10`, start, end));
+      GROUP BY t.id ORDER BY plays DESC, seconds DESC, t.title LIMIT ${top}`, start, end));
 
     const topArtists = plain(q(`
       SELECT ${artistExpr} AS name, COUNT(*) AS plays, SUM(${LISTENED}) AS seconds, COUNT(DISTINCT t.id) AS tracks,
              (SELECT x.cover FROM tracks x WHERE COALESCE(NULLIF(x.album_artist, ''), NULLIF(x.artist, '')) = ${artistExpr}
                 AND x.cover IS NOT NULL ORDER BY x.play_count DESC LIMIT 1) AS cover
       FROM plays p JOIN tracks t ON t.id = p.track_id WHERE ${audio} AND ${artistExpr} IS NOT NULL
-      GROUP BY name ORDER BY plays DESC, seconds DESC, name LIMIT 10`, start, end));
+      GROUP BY name ORDER BY plays DESC, seconds DESC, name LIMIT ${top}`, start, end));
 
     const topAlbums = plain(q(`
       SELECT t.album AS album, ${artistExpr} AS artist, COUNT(*) AS plays, SUM(${LISTENED}) AS seconds,
              MAX(t.cover) AS cover, MIN(t.id) AS trackId
       FROM plays p JOIN tracks t ON t.id = p.track_id WHERE ${audio} AND t.album <> ''
-      GROUP BY t.album, artist ORDER BY plays DESC, seconds DESC, album LIMIT 10`, start, end));
+      GROUP BY t.album, artist ORDER BY plays DESC, seconds DESC, album LIMIT ${top}`, start, end));
 
     const genreRows = q(`
       SELECT t.genre AS genre, COUNT(*) AS plays, SUM(${LISTENED}) AS seconds

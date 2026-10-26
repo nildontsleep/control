@@ -9,11 +9,15 @@ import { trafficLights } from './traffic.js';
 import { openMenu } from './menu.js';
 import { DRAG_TRACKS, addToPlaylist, createPlaylistWith } from './actions.js';
 import { openSmartEditor } from './smart.js';
+import { openPlaylistEditor } from './playlist-edit.js';
 import { renamePlaylist, deletePlaylist, exportPlaylist } from '../views/playlist.js';
 import { toast } from './feedback.js';
-import { isWeb, can } from '../web.js';
+import { isWeb, can, readOnly } from '../web.js';
+import { coverUrl } from './cover.js';
 import { openAccountMenu } from './account.js';
 import { hasSources, mountSourceSwitcher } from './sources.js';
+import { mountLibrarySwitcher } from './library-switch.js';
+import { avatarEl, onMyProfile } from './avatar.js';
 
 const playlistsApi = window.control.playlists;
 const NAV = [
@@ -31,6 +35,8 @@ function sectionOf(route) {
     case 'playlist': return `playlist:${route.param}`;
     case 'album': return 'albums';
     case 'artist': return 'artists';
+    case 'profile': return 'people';
+    case 'compare': return 'stats';
     case 'title': return param.startsWith('anime:') ? 'anime' : 'watch';
     case 'watching': return param.startsWith('anime|') ? 'anime' : 'watch';
     case 'shelf': return param.startsWith('anime:') ? 'anime' : 'watch';
@@ -80,29 +86,34 @@ export function createSidebar(root, { openSettings }) {
   }
 
   function renderNav() {
-    navBox.replaceChildren(
+    navBox.replaceChildren(...[
       h('div.sb-heading', { text: t('nav.library') }),
-      ...NAV.map((n) => navItem({ id: n.id, icon: n.icon, label: t(`nav.${n.id}`) })),
+      ...NAV.filter((n) => !(readOnly && n.id === 'stats')).map((n) => navItem({ id: n.id, icon: n.icon, label: t(`nav.${n.id}`) })),
       h('div.sb-heading', { text: t('nav.watch') }),
       navItem({ id: 'watch', icon: 'clapperboard', label: t('nav.movies') }),
       navItem({ id: 'anime', icon: 'tv-minimal', label: t('nav.anime') }),
       navItem({ id: 'mylist', icon: 'bookmark', label: t('nav.mylist') }),
       h('div.sb-heading', { text: t('nav.get') }),
       navItem({ id: 'downloads', icon: 'cloud-download', label: t('nav.downloads'), badge: downloadsBadge }),
-    );
+      isWeb ? h('div.sb-heading', { text: t('nav.community') }) : null,
+      isWeb ? navItem({ id: 'people', icon: 'users', label: t('nav.people') }) : null,
+    ].filter(Boolean));
     paintActive();
   }
 
   function playlistItem(p) {
     const smart = p.kind === 'smart';
+    const thumb = p.cover ? coverUrl(p.cover, true) : null;
     const btn = h('button.sb-item.sb-playlist', { type: 'button', dataset: { route: `playlist:${p.id}` } },
-      h('span.sb-icon', { html: icon(smart ? 'sparkles' : 'list-music', 17, 1.9) }),
+      thumb ? h('span.sb-icon.sb-pl-cover', {}, h('img', { src: thumb, alt: '', draggable: 'false' })) : h('span.sb-icon', { html: icon(smart ? 'sparkles' : 'list-music', 17, 1.9) }),
       h('span.sb-label', { text: p.name }));
     btn.addEventListener('click', () => navigate('playlist', p.id));
+    if (readOnly) return btn; // playlists d'un autre compte : on les ouvre, on ne les modifie pas
     btn.addEventListener('contextmenu', (e) => {
       e.preventDefault();
       const pl = playlistById(p.id);
       openMenu({ getBoundingClientRect: () => ({ left: e.clientX, top: e.clientY, right: e.clientX, bottom: e.clientY, width: 0, height: 0 }), classList: { add() {}, remove() {} }, contains: () => false }, [
+        { label: t('pl.customize'), icon: 'palette', action: () => openPlaylistEditor(pl) },
         { label: t('pl.rename'), icon: 'square-pen', action: () => renamePlaylist(pl) },
         smart ? { label: t('pl.editRules'), icon: 'sliders-horizontal', action: () => openSmartEditor(pl) } : null,
         isWeb ? null : { label: t('pl.export'), icon: 'upload', action: () => exportPlaylist(pl) },
@@ -132,7 +143,7 @@ export function createSidebar(root, { openSettings }) {
 
   function renderPlaylists() {
     playlistsBox.replaceChildren(...lib.playlists.map(playlistItem));
-    if (!lib.playlists.length) playlistsBox.append(h('div.sb-hint', { text: t('pl.sidebarHint') }));
+    if (!lib.playlists.length) playlistsBox.append(h('div.sb-hint', { text: t(readOnly ? 'pl.sidebarNoShared' : 'pl.sidebarHint') }));
     paintActive();
   }
 
@@ -164,11 +175,18 @@ export function createSidebar(root, { openSettings }) {
 
   // Sur le web : le nom du serveur à la place des boutons de fenêtre, et le compte au-dessus des réglages.
   const brand = isWeb ? h('div.sb-brand', {}, h('img', { src: '/assets/icon.png', alt: '' }), h('span', { text: window.control.web.server.name })) : null;
-  const accountBtn = isWeb
-    ? h('button.sb-item.sb-account', { type: 'button', onclick: (e) => openAccountMenu(e.currentTarget) },
-      h('span.sb-avatar', { text: window.control.web.user.username.slice(0, 1).toUpperCase() }),
-      h('span.sb-label', { text: window.control.web.user.username }))
-    : null;
+  const accountBtn = isWeb ? h('button.sb-item.sb-account', { type: 'button', onclick: (e) => openAccountMenu(e.currentTarget) }) : null;
+  const paintAccount = () => {
+    const me = window.control.web.user;
+    accountBtn.replaceChildren(avatarEl(me, { size: 22, className: 'sb-avatar' }), h('span.sb-label', { text: me.name || me.username }));
+  };
+  if (accountBtn) {
+    paintAccount();
+    onMyProfile(paintAccount);
+  }
+  // Web : passer à la bibliothèque d'un compte qui la partage.
+  const libBox = h('div.sb-source.sb-lib', { hidden: !isWeb });
+  if (isWeb) mountLibrarySwitcher(libBox);
 
   // Serveurs control (application de bureau) : le sélecteur n'apparaît qu'une fois un serveur ajouté.
   const sourceBox = h('div.sb-source', { hidden: true });
@@ -177,11 +195,12 @@ export function createSidebar(root, { openSettings }) {
   root.replaceChildren(
     h('div.sb-top', {}, trafficLights(), brand),
     sourceBox,
+    libBox,
     h('div.sb-search', {}, h('span.sb-search-icon', { html: icon('search', 14, 2.2) }), search, clearBtn),
     h('nav.sb-scroll', {},
       navBox,
       h('div.sb-section', {},
-        h('div.sb-heading.with-action', {}, h('span', { text: t('nav.playlists') }), addMenu),
+        h('div.sb-heading.with-action', {}, h('span', { text: t('nav.playlists') }), readOnly ? null : addMenu),
         playlistsBox)),
     status,
     h('div.sb-foot', {}, accountBtn, settingsBtn),

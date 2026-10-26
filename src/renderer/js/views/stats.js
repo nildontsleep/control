@@ -14,6 +14,7 @@ import { openWrapped, periodRange, periodMenuLabel, parsePeriod, weeksOf } from 
 import { openMenu } from '../ui/menu.js';
 import { pageHead, emptyState } from './shared.js';
 import { fmtDuration, dayLabel, shortDay } from '../stats/format.js';
+import { isWeb } from '../web.js';
 
 const api = window.control.stats;
 
@@ -175,8 +176,16 @@ export function statsView(root) {
   const wrappedBtn = button(t('stats.wrappedShort'), { icon: 'sparkles', kind: 'primary', onClick: () => openRecapMenu() });
   wrappedBtn.hidden = true;
 
+  // Web : comparer ses statistiques avec un compte qui l'autorise.
+  const compareBtn = isWeb ? button(t('stats.compare'), { icon: 'users', onClick: async () => {
+    const others = (await window.control.web.social.others()).filter((p) => p.access.compare);
+    openMenu(compareBtn, others.length
+      ? others.map((p) => ({ label: p.name, icon: 'user', action: () => navigate('compare', p.id) }))
+      : [{ label: t('cmp.nobody'), disabled: true }], { align: 'end', minWidth: 200 });
+  } }) : null;
+
   root.append(
-    pageHead({ title: t('nav.stats'), subtitle: t('stats.subtitle'), actions: h('div.toolbar-inline', {}, periodSeg, wrappedBtn) }),
+    pageHead({ title: t('nav.stats'), subtitle: t('stats.subtitle'), actions: h('div.toolbar-inline', {}, periodSeg, compareBtn, wrappedBtn) }),
     body);
 
   let years = [];

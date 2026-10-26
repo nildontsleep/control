@@ -5,6 +5,7 @@ import { t } from '../i18n.js';
 import { openMenu } from './menu.js';
 import { openSheet } from './sheet.js';
 import { toast } from './feedback.js';
+import { navigate } from '../router.js';
 
 const web = window.control?.web;
 
@@ -41,7 +42,8 @@ export function openPasswordSheet() {
 
 export function openAccountMenu(anchor) {
   const items = [
-    { header: `${web.user.username} · ${t(web.user.role === 'admin' ? 'web.roleAdmin' : 'web.roleUser')}` },
+    { header: `${web.user.name || web.user.username} · ${t(web.user.role === 'admin' ? 'web.roleAdmin' : 'web.roleUser')}` },
+    { label: t('profile.mine'), icon: 'user', action: () => navigate('profile') },
     web.caps.manageServer ? { label: t('web.admin'), icon: 'settings', action: () => window.open('/admin', '_blank', 'noopener') } : null,
     { label: t('web.password'), icon: 'key-round', action: openPasswordSheet },
     { separator: true },

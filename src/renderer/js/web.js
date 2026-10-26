@@ -5,3 +5,7 @@ const caps = window.control?.env?.caps || {};
 
 /** Sur le bureau tout est permis ; sur le web, selon les droits du compte (editFiles, download, manageServer…). */
 export const can = (key) => !isWeb || !!caps[key];
+
+/** Bibliothèque d'un autre compte, parcourue en lecture seule (web) : { id, username, name, avatar, color }, sinon null. */
+export const viewing = isWeb ? window.control.web.viewing || null : null;
+export const readOnly = !!viewing;

@@ -3,7 +3,8 @@
 import { ANALYSIS_RATE, analyzeSamples } from './analysis.js';
 import { mediaUrl } from '../urls.js';
 
-const KEY = window.control?.web ? `control.automix.${window.control.web.user.id}` : 'control.automix';
+// Les identifiants de morceaux sont propres à chaque bibliothèque : celle d'un autre compte a son propre cache.
+const KEY = window.control?.web ? `control.automix.${window.control.web.user.id}${window.control.web.viewing ? `.${window.control.web.viewing.id}` : ''}` : 'control.automix';
 const VERSION = 2; // à incrémenter quand l'analyse change : les résultats en cache sont alors refaits
 const MAX_DURATION = 20 * 60; // au-delà (mix de DJ, livres audio), pas la peine
 const MAX_BYTES = 160e6;
