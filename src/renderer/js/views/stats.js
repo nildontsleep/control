@@ -10,7 +10,7 @@ import { navigate } from '../router.js';
 import { player } from '../player.js';
 import { segmented, button, createScope, withScope, refreshScope } from '../ui/controls.js';
 import { coverEl } from '../ui/cover.js';
-import { openWrapped, periodRange, periodLabel, parseMonthKey } from '../ui/wrapped.js';
+import { openWrapped, periodRange, periodMenuLabel, parsePeriod, weeksOf } from '../ui/wrapped.js';
 import { openMenu } from '../ui/menu.js';
 import { pageHead, emptyState } from './shared.js';
 import { fmtDuration, dayLabel, shortDay } from '../stats/format.js';
@@ -181,9 +181,13 @@ export function statsView(root) {
 
   let years = [];
   let months = [];
+  let weeks = [];
+  let days = [];
   const refreshWrappedButton = (data) => {
     years = data.years;
     months = data.months || [];
+    days = data.days || [];
+    weeks = weeksOf(days);
     wrappedBtn.hidden = !years.length;
   };
 
@@ -193,6 +197,8 @@ export function statsView(root) {
     openWrapped(period, res.data, {
       years,
       months,
+      weeks,
+      days,
       load: async (range) => {
         const r = await api.get(range);
         if (!r.ok) throw new Error(r.message);
@@ -201,17 +207,21 @@ export function statsView(root) {
     });
   }
 
-  /** Un récap par année et un par mois d'activité. */
+  /** Un récap par année, par mois, par semaine et par jour d'activité (les plus récents ; la fenêtre permet de naviguer). */
   function openRecapMenu() {
     const items = years.slice(0, 3).map((year) => ({ label: t('stats.wrapped', { year }), icon: 'sparkles', action: () => startWrapped({ kind: 'year', year }) }));
-    if (months.length) {
-      items.push({ separator: true }, { header: t('stats.byMonth') });
-      for (const key of months.slice(0, 12)) {
-        const period = parseMonthKey(key);
-        items.push({ label: periodLabel(period), icon: 'calendar', action: () => startWrapped(period) });
+    const section = (header, kind, list, max, ic) => {
+      if (!list.length) return;
+      items.push({ separator: true }, { header });
+      for (const key of list.slice(0, max)) {
+        const period = parsePeriod(kind, key);
+        items.push({ label: periodMenuLabel(period), icon: ic, action: () => startWrapped(period) });
       }
-    }
-    openMenu(wrappedBtn, items, { align: 'end', minWidth: 200 });
+    };
+    section(t('stats.byMonth'), 'month', months, 6, 'calendar');
+    section(t('stats.byWeek'), 'week', weeks, 5, 'calendar-days');
+    section(t('stats.byDay'), 'day', days, 6, 'clock');
+    openMenu(wrappedBtn, items, { align: 'end', minWidth: 220 });
   }
 
   async function load() {

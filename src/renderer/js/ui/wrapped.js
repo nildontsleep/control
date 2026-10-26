@@ -22,20 +22,107 @@ const PALETTES = [
 
 const hoursOf = (s) => Math.round(s / 360) / 10;
 
-// ─── Périodes : { kind: 'year', year } ou { kind: 'month', year, month } (mois de 1 à 12) ───
+// ─── Périodes ───
+// { kind: 'year', year } | { kind: 'month', year, month } (mois de 1 à 12)
+// | { kind: 'week', start: 'AAAA-MM-JJ' (le lundi) } | { kind: 'day', date: 'AAAA-MM-JJ' }
 const cap = (s) => s.charAt(0).toLocaleUpperCase() + s.slice(1);
-export const monthName = (p) => cap(new Date(p.year, p.month - 1, 1).toLocaleDateString(currentLanguage(), { month: 'long' }));
-export const periodLabel = (p) => (p.kind === 'month' ? `${monthName(p)} ${p.year}` : String(p.year));
 const pad2 = (n) => String(n).padStart(2, '0');
+const parseDay = (s) => new Date(Number(s.slice(0, 4)), Number(s.slice(5, 7)) - 1, Number(s.slice(8, 10)));
+const dayStr = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+const shift = (s, n) => { const d = parseDay(s); d.setDate(d.getDate() + n); return dayStr(d); };
+
+export const monthName = (p) => cap(new Date(p.year, p.month - 1, 1).toLocaleDateString(currentLanguage(), { month: 'long' }));
+export const mondayOf = (s) => shift(s, -((parseDay(s).getDay() + 6) % 7));
+/** Lundis des semaines qui ont de l'activité, la plus récente d'abord. */
+export const weeksOf = (days) => [...new Set(days.map(mondayOf))].sort().reverse();
+
+export function isoWeek(date) {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+  const first = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return Math.ceil(((d - first) / 86400000 + 1) / 7);
+}
+
+/** « 20 – 26 octobre » ou « 28 sept. – 4 oct. » (avec l'année si demandé). */
+function weekSpan(start, withYear = false) {
+  const lang = currentLanguage();
+  const a = parseDay(start);
+  const b = parseDay(shift(start, 6));
+  const text = a.getMonth() === b.getMonth()
+    ? `${a.getDate()} – ${b.toLocaleDateString(lang, { day: 'numeric', month: 'long' })}`
+    : `${a.toLocaleDateString(lang, { day: 'numeric', month: 'short' })} – ${b.toLocaleDateString(lang, { day: 'numeric', month: 'short' })}`;
+  return withYear ? `${text} ${b.getFullYear()}` : text;
+}
+
+/** Titre court, en grand sur la première carte. */
+export function periodTitle(p) {
+  if (p.kind === 'month') return monthName(p);
+  if (p.kind === 'week') return t('wrapped.weekN', { n: isoWeek(parseDay(p.start)) });
+  if (p.kind === 'day') return cap(parseDay(p.date).toLocaleDateString(currentLanguage(), { weekday: 'long', day: 'numeric' }));
+  return String(p.year);
+}
+
+/** Précision sous « control » : l'année, la plage de jours, le mois. */
+export function periodSub(p) {
+  if (p.kind === 'month') return String(p.year);
+  if (p.kind === 'week') return weekSpan(p.start, true);
+  if (p.kind === 'day') return cap(parseDay(p.date).toLocaleDateString(currentLanguage(), { month: 'long', year: 'numeric' }));
+  return '';
+}
+
+export function periodLabel(p) {
+  if (p.kind === 'month') return `${monthName(p)} ${p.year}`;
+  if (p.kind === 'week') return `${t('wrapped.weekN', { n: isoWeek(parseDay(p.start)) })} · ${weekSpan(p.start)}`;
+  if (p.kind === 'day') return parseDay(p.date).toLocaleDateString(currentLanguage(), { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  return String(p.year);
+}
+
+/** Libellé de menu : « Aujourd'hui », « Hier », « Cette semaine »… sinon le libellé complet. */
+export function periodMenuLabel(p, now = new Date()) {
+  const today = dayStr(now);
+  if (p.kind === 'day') {
+    if (p.date === today) return t('wrapped.today');
+    if (p.date === shift(today, -1)) return t('wrapped.yesterday');
+    return cap(parseDay(p.date).toLocaleDateString(currentLanguage(), { weekday: 'long', day: 'numeric', month: 'long' }));
+  }
+  if (p.kind === 'week') {
+    if (p.start === mondayOf(today)) return t('wrapped.thisWeek');
+    if (p.start === mondayOf(shift(today, -7))) return t('wrapped.lastWeek');
+  }
+  return periodLabel(p);
+}
 
 export function periodRange(p) {
   if (p.kind === 'year') return { from: `${p.year}-01-01`, to: `${p.year}-12-31` };
+  if (p.kind === 'week') return { from: p.start, to: shift(p.start, 6) };
+  if (p.kind === 'day') return { from: p.date, to: p.date };
   const last = new Date(p.year, p.month, 0).getDate();
   return { from: `${p.year}-${pad2(p.month)}-01`, to: `${p.year}-${pad2(p.month)}-${pad2(last)}` };
 }
 
 export const monthKey = (p) => `${p.year}-${pad2(p.month)}`;
 export const parseMonthKey = (key) => ({ kind: 'month', year: Number(key.slice(0, 4)), month: Number(key.slice(5, 7)) });
+
+/** Clé d'une période (nom de fichier, mémoire des récaps proposés) et son inverse. */
+export function periodKey(p) {
+  if (p.kind === 'month') return monthKey(p);
+  if (p.kind === 'week') return p.start;
+  if (p.kind === 'day') return p.date;
+  return String(p.year);
+}
+
+export function parsePeriod(kind, key) {
+  if (kind === 'month') return parseMonthKey(key);
+  if (kind === 'week') return { kind, start: key };
+  if (kind === 'day') return { kind, date: key };
+  return { kind: 'year', year: Number(key) };
+}
+
+/** Classe du grand titre : l'année en géant, les titres plus longs un peu plus petits. */
+const titleClass = (p) => (p.kind === 'year' ? 'div.w-huge' : periodTitle(p).length > 9 ? 'div.w-huge.month.long' : 'div.w-huge.month');
+
+/** Suffixe des textes propres à la durée de la période (année : aucun). */
+const SUFFIX = { year: '', month: 'Month', week: 'Week', day: 'Day' };
 
 /** Compte jusqu'à la valeur, en ralentissant à l'arrivée. */
 function countUp(el, to, { duration = 1300, format = (n) => count(Math.round(n)) } = {}) {
@@ -58,14 +145,20 @@ function buildSlides(period, data, onSave) {
   const { music, video } = data;
   const slides = [];
   const lang = currentLanguage();
-  const month = period.kind === 'month';
+  const sfx = SUFFIX[period.kind];
+  const sub = periodSub(period);
+  // « Aujourd'hui », « Cette semaine » quand la période est en cours, sinon « Ce jour-là », « Cette semaine-là ».
+  const today = dayStr(new Date());
+  const listened = period.kind === 'day' && period.date === today ? 'wrapped.youListenedToday'
+    : period.kind === 'week' && period.start === mondayOf(today) ? 'wrapped.youListenedThisWeek'
+      : `wrapped.youListened${sfx}`;
 
   slides.push({
     id: 'intro',
     build: () => h('div.w-slide-in', {},
-      h('div.w-eyebrow', { text: month ? `control · ${period.year}` : 'control' }),
-      h(month ? 'div.w-huge.month' : 'div.w-huge', { text: month ? monthName(period) : String(period.year) }),
-      h('div.w-lead', { text: month ? t(music.plays ? 'wrapped.introMusicMonth' : 'wrapped.introVideoMonth') : t(music.plays ? 'wrapped.introMusic' : 'wrapped.introVideo') }),
+      h('div.w-eyebrow', { text: sub ? `control · ${sub}` : 'control' }),
+      h(titleClass(period), { text: periodTitle(period) }),
+      h('div.w-lead', { text: t(music.plays ? `wrapped.introMusic${sfx}` : `wrapped.introVideo${sfx}`) }),
       h('div.w-hint', {}, h('span', { text: t('wrapped.tap') }), h('span', { html: icon('chevron-right', 16, 2.2) }))),
   });
 
@@ -76,10 +169,12 @@ function buildSlides(period, data, onSave) {
         const num = h('div.w-giant', { text: '0' });
         setTimeout(() => countUp(num, Math.round(music.seconds / 60)), 250);
         return h('div.w-slide-in', {},
-          h('div.w-eyebrow', { text: t(month ? 'wrapped.youListenedMonth' : 'wrapped.youListened') }),
+          h('div.w-eyebrow', { text: t(listened) }),
           num,
           h('div.w-title', { text: t('wrapped.minutes') }),
-          h('div.w-lead', { text: t('wrapped.timeDetail', { h: count(hoursOf(music.seconds)), tracks: count(music.tracks), plays: count(music.plays) }) }));
+          h('div.w-lead', { text: music.seconds < 3600
+            ? t('wrapped.timeDetailShort', { tracks: count(music.tracks), plays: count(music.plays) })
+            : t('wrapped.timeDetail', { h: count(hoursOf(music.seconds)), tracks: count(music.tracks), plays: count(music.plays) }) }));
       },
     });
 
@@ -122,7 +217,8 @@ function buildSlides(period, data, onSave) {
       });
     }
 
-    const busiest = [...music.byDay].sort((a, b) => b.seconds - a.seconds)[0];
+    // Pour une seule journée, « la journée la plus musicale » n'a pas de sens : seules les heures comptent.
+    const busiest = period.kind === 'day' ? null : [...music.byDay].sort((a, b) => b.seconds - a.seconds)[0];
     const maxHour = Math.max(...music.byHour, 1);
     const peakHour = music.byHour.indexOf(Math.max(...music.byHour));
     slides.push({
@@ -131,7 +227,7 @@ function buildSlides(period, data, onSave) {
         const date = busiest ? new Date(Number(busiest.day.slice(0, 4)), Number(busiest.day.slice(5, 7)) - 1, Number(busiest.day.slice(8, 10))) : null;
         return h('div.w-slide-in', {},
           h('div.w-eyebrow', { text: t('wrapped.habits') }),
-          date ? h('div.w-big.small', { text: date.toLocaleDateString(lang, { day: 'numeric', month: 'long' }) }) : null,
+          date ? h('div.w-big.small', { text: date.toLocaleDateString(lang, period.kind === 'week' ? { weekday: 'long', day: 'numeric', month: 'long' } : { day: 'numeric', month: 'long' }) }) : null,
           date ? h('div.w-lead', { text: t('wrapped.busiestDay', { time: fmtDuration(busiest.seconds) }) }) : null,
           h('div.w-hours', {}, ...music.byHour.map((v, i) => h(`span.w-hour${i === peakHour ? '.peak' : ''}`, { style: { '--h': `${Math.max(4, (v / maxHour) * 100)}%`, '--d': `${i * 0.02}s` } }))),
           h('div.w-lead', { text: t('wrapped.peakHour', { h: peakHour }) }),
@@ -163,7 +259,7 @@ function buildSlides(period, data, onSave) {
     build: () => h('div.w-slide-in', {},
       h('div.w-eyebrow', { text: t('wrapped.summary') }),
       h('div.w-summary', {},
-        h('div.w-sum-head', {}, h('strong', { text: month ? monthName(period) : String(period.year) }), h('span', { text: month ? `control · ${period.year}` : 'control' })),
+        h('div.w-sum-head', {}, h('strong', { text: periodTitle(period) }), h('span', { text: sub ? `control · ${sub}` : 'control' })),
         music.plays ? h('div.w-sum-stats', {}, h('div', {}, h('b', { text: count(Math.round(music.seconds / 60)) }), h('span', { text: t('wrapped.minutes') })), h('div', {}, h('b', { text: count(music.plays) }), h('span', { text: t('stats.playsLabel') }))) : null,
         music.topArtists[0] ? h('div.w-sum-line', {}, h('span', { text: t('wrapped.topArtist') }), h('strong', { text: music.topArtists[0].name })) : null,
         music.topTracks[0] ? h('div.w-sum-line', {}, h('span', { text: t('wrapped.topTrack') }), h('strong', { text: music.topTracks[0].title })) : null,
@@ -282,11 +378,11 @@ export async function renderCard(period, data) {
 
 // ─── Fenêtre ─────────────────────────────────────────────────────────────────
 /**
- * period : { kind: 'year', year } | { kind: 'month', year, month }
- * data : résultat de stats.get pour cette période ; years / months : périodes qui ont de l'activité.
+ * period : voir « Périodes » plus haut.
+ * data : résultat de stats.get pour cette période ; years, months, weeks (lundis) et days : périodes qui ont de l'activité.
  * load(range) : charge une autre période sans fermer la fenêtre.
  */
-export function openWrapped(initial, initialData, { years = [], months = [], load } = {}) {
+export function openWrapped(initial, initialData, { years = [], months = [], weeks = [], days = [], load } = {}) {
   const layer = document.getElementById('layer');
   const overlay = h('div.wrapped');
   const stage = h('div.w-stage');
@@ -307,18 +403,17 @@ export function openWrapped(initial, initialData, { years = [], months = [], loa
 
   function makeSlides(data) {
     if (isEmpty(data)) {
-      const month = period.kind === 'month';
       return [{
         id: 'empty',
         build: () => h('div.w-slide-in', {},
           h('div.w-eyebrow', { text: 'control' }),
-          h(month ? 'div.w-huge.month' : 'div.w-huge', { text: month ? monthName(period) : String(period.year) }),
-          h('div.w-lead', { text: t(month ? 'wrapped.emptyMonth' : 'wrapped.empty') })),
+          h(titleClass(period), { text: periodTitle(period) }),
+          h('div.w-lead', { text: t(`wrapped.empty${SUFFIX[period.kind]}`) })),
       }];
     }
     return buildSlides(period, data, async () => {
       const dataUrl = await renderCard(period, data);
-      const saved = await api.saveImage(dataUrl, `control-${period.kind === 'month' ? monthKey(period) : period.year}`);
+      const saved = await api.saveImage(dataUrl, `control-${period.kind === 'year' ? '' : `${period.kind}-`}${periodKey(period)}`);
       if (saved) toast(t('wrapped.saved'), 'image');
     });
   }
@@ -368,34 +463,46 @@ export function openWrapped(initial, initialData, { years = [], months = [], loa
   // ─── Sélecteur de période (en haut à gauche) ───────────────────────────────
   const pill = (label, on, onClick, extra = '') => h(`button.w-year${on ? '.on' : ''}${extra}`, { type: 'button', text: label, onclick: onClick });
 
+  const KINDS = [
+    { kind: 'year', label: 'wrapped.modeYear', list: () => years.map(String), before: '', after: '' },
+    { kind: 'month', label: 'wrapped.modeMonth', list: () => months, before: 'wrapped.monthBefore', after: 'wrapped.monthAfter' },
+    { kind: 'week', label: 'wrapped.modeWeek', list: () => weeks, before: 'wrapped.weekBefore', after: 'wrapped.weekAfter' },
+    { kind: 'day', label: 'wrapped.modeDay', list: () => days, before: 'wrapped.dayBefore', after: 'wrapped.dayAfter' },
+  ];
+  const listOf = (kind) => KINDS.find((k) => k.kind === kind).list();
+
+  /** Passer d'une durée à une autre : la période de la nouvelle durée qui recoupe celle qu'on regarde, sinon la plus proche avant. */
+  function switchKind(kind) {
+    const list = listOf(kind);
+    if (kind === period.kind || !list.length) return;
+    const here = periodRange(period);
+    const overlaps = (key) => { const r = periodRange(parsePeriod(kind, key)); return r.from <= here.to && r.to >= here.from; };
+    const key = list.find(overlaps) || list.find((k) => periodRange(parsePeriod(kind, k)).to < here.from) || list[list.length - 1];
+    setPeriod(parsePeriod(kind, key));
+  }
+
   function paintHead() {
     const parts = [];
-    const canYear = years.length > 0;
-    const canMonth = months.length > 0;
-    if (canYear && canMonth) {
-      parts.push(h('div.w-modes', {},
-        pill(t('wrapped.modeYear'), period.kind === 'year', () => {
-          if (period.kind !== 'year') setPeriod({ kind: 'year', year: years.includes(period.year) ? period.year : years[0] });
-        }),
-        pill(t('wrapped.modeMonth'), period.kind === 'month', () => {
-          if (period.kind === 'month') return;
-          const wanted = months.find((m) => m.startsWith(String(period.year))) || months[0];
-          setPeriod(parseMonthKey(wanted));
-        })));
+    const available = KINDS.filter((k) => k.list().length);
+    if (available.length > 1) {
+      parts.push(h('div.w-modes', {}, ...available.map((k) => pill(t(k.label), period.kind === k.kind, () => switchKind(k.kind)))));
     }
-    if (period.kind === 'year' && years.length > 1) {
-      parts.push(h('div.w-years', {}, ...years.slice(0, 6).map((y) => pill(String(y), y === period.year, () => y !== period.year && setPeriod({ kind: 'year', year: y })))));
-    } else if (period.kind === 'month' && months.length) {
-      const at = months.indexOf(monthKey(period));
-      const step = (d) => {
-        const target = months[at + d];
-        if (target) setPeriod(parseMonthKey(target));
-      };
-      const arrow = (ic, d, disabled, label) => h('button.w-mstep', { type: 'button', 'aria-label': label, disabled, html: icon(ic, 15, 2.4), onclick: () => step(d) });
+    if (period.kind === 'year') {
+      if (years.length > 1) {
+        parts.push(h('div.w-years', {}, ...years.slice(0, 6).map((y) => pill(String(y), y === period.year, () => y !== period.year && setPeriod({ kind: 'year', year: y })))));
+      }
+    } else {
+      const spec = KINDS.find((k) => k.kind === period.kind);
+      const list = spec.list();
+      const key = periodKey(period);
+      // Précédent / suivant parmi les périodes qui ont de l'activité (la liste va du plus récent au plus ancien).
+      const older = list.find((k) => k < key);
+      const newer = [...list].reverse().find((k) => k > key);
+      const arrow = (ic, target, label) => h('button.w-mstep', { type: 'button', 'aria-label': t(label), disabled: !target, html: icon(ic, 15, 2.4), onclick: () => target && setPeriod(parsePeriod(period.kind, target)) });
       parts.push(h('div.w-month-nav', {},
-        arrow('chevron-left', 1, at < 0 || at >= months.length - 1, t('wrapped.monthBefore')),
+        arrow('chevron-left', older, spec.before),
         h('span.w-month-label', { text: periodLabel(period) }),
-        arrow('chevron-right', -1, at <= 0, t('wrapped.monthAfter'))));
+        arrow('chevron-right', newer, spec.after)));
     }
     head.replaceChildren(...parts);
   }

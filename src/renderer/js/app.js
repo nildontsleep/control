@@ -31,7 +31,7 @@ import { watchingView } from './views/watching.js';
 import { shelfView } from './views/shelf.js';
 import { mylistView } from './views/mylist.js';
 import { statsView } from './views/stats.js';
-import { offerMonthlyRecap } from './stats/recap-prompt.js';
+import { offerRecaps } from './stats/recap-prompt.js';
 import { startPresence } from './discord/presence.js';
 import { startUpdates, onUpdate } from './update/state.js';
 import { applyAmbience, setSceneActive } from './theme/ambience.js';
@@ -318,7 +318,7 @@ async function init() {
     if ('language' in patch && source !== 'remote' && resolveLanguage(settings.language) !== currentLanguage()) setTimeout(() => location.reload(), 120);
   });
   requestAnimationFrame(() => root.classList.add('ready'));
-  setTimeout(() => offerMonthlyRecap().catch(() => {}), 6000);
+  setTimeout(() => offerRecaps().catch(() => {}), 6000);
   startPresence();
   onUpdate((s) => sidebar.setUpdate(['available', 'ready'].includes(s.phase)));
   startUpdates({

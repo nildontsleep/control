@@ -156,11 +156,13 @@ class Stats {
     ];
     const years = [...new Set(allDays.map((d) => Number(d.slice(0, 4))))].sort((a, b) => b - a);
     const months = [...new Set(allDays.map((d) => d.slice(0, 7)))].sort().reverse();
+    const days = [...new Set(allDays)].sort().reverse();
 
     return {
       range: { from: fromDay, to: toDay },
       years,
       months,
+      days,
       streak: streaks(allDays),
       music: {
         ...totals,

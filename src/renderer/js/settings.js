@@ -41,6 +41,7 @@ export const DEFAULTS = {
   npTab: 'queue',
   immersiveLyrics: true,
   recapSeen: '',
+  recapSeenWeek: '',
 
   // Discord (présence enrichie)
   discord: {

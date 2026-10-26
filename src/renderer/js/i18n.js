@@ -257,6 +257,16 @@ const fr = {
   'wrapped.emptyMonth': 'Rien d’écouté ce mois-ci.', 'wrapped.modeYear': 'Année', 'wrapped.modeMonth': 'Mois',
   'wrapped.monthBefore': 'Mois précédent', 'wrapped.monthAfter': 'Mois suivant', 'stats.byMonth': 'Par mois',
   'wrapped.monthReady': 'Votre récap de {month} est prêt', 'wrapped.see': 'Voir',
+  'wrapped.modeWeek': 'Semaine', 'wrapped.modeDay': 'Jour', 'wrapped.weekN': 'Semaine {n}',
+  'wrapped.weekBefore': 'Semaine précédente', 'wrapped.weekAfter': 'Semaine suivante', 'wrapped.dayBefore': 'Jour précédent', 'wrapped.dayAfter': 'Jour suivant',
+  'wrapped.introMusicWeek': 'Votre semaine en musique', 'wrapped.introVideoWeek': 'Votre semaine en images',
+  'wrapped.youListenedWeek': 'Cette semaine-là, vous avez écouté', 'wrapped.youListenedThisWeek': 'Cette semaine, vous avez écouté',
+  'wrapped.introMusicDay': 'Votre journée en musique', 'wrapped.introVideoDay': 'Votre journée en images',
+  'wrapped.youListenedDay': 'Ce jour-là, vous avez écouté', 'wrapped.youListenedToday': 'Aujourd’hui, vous avez écouté',
+  'wrapped.emptyWeek': 'Rien d’écouté cette semaine-là.', 'wrapped.emptyDay': 'Rien d’écouté ce jour-là.',
+  'wrapped.timeDetailShort': 'Sur {tracks} morceaux différents, pour {plays} lectures.',
+  'wrapped.today': 'Aujourd’hui', 'wrapped.yesterday': 'Hier', 'wrapped.thisWeek': 'Cette semaine', 'wrapped.lastWeek': 'La semaine dernière',
+  'stats.byWeek': 'Par semaine', 'stats.byDay': 'Par jour', 'wrapped.weekReady': 'Votre récap de la semaine est prêt',
 
   'video.back10': 'Reculer de 10 s', 'video.fwd10': 'Avancer de 10 s', 'video.pip': 'Image dans l’image', 'video.exitFullscreen': 'Quitter le plein écran', 'player.rate': 'Vitesse de lecture',
 
@@ -572,6 +582,16 @@ const en = {
   'wrapped.emptyMonth': 'Nothing played this month.', 'wrapped.modeYear': 'Year', 'wrapped.modeMonth': 'Month',
   'wrapped.monthBefore': 'Previous month', 'wrapped.monthAfter': 'Next month', 'stats.byMonth': 'By month',
   'wrapped.monthReady': 'Your {month} replay is ready', 'wrapped.see': 'View',
+  'wrapped.modeWeek': 'Week', 'wrapped.modeDay': 'Day', 'wrapped.weekN': 'Week {n}',
+  'wrapped.weekBefore': 'Previous week', 'wrapped.weekAfter': 'Next week', 'wrapped.dayBefore': 'Previous day', 'wrapped.dayAfter': 'Next day',
+  'wrapped.introMusicWeek': 'Your week in music', 'wrapped.introVideoWeek': 'Your week on screen',
+  'wrapped.youListenedWeek': 'That week, you listened to', 'wrapped.youListenedThisWeek': 'This week, you listened to',
+  'wrapped.introMusicDay': 'Your day in music', 'wrapped.introVideoDay': 'Your day on screen',
+  'wrapped.youListenedDay': 'That day, you listened to', 'wrapped.youListenedToday': 'Today, you listened to',
+  'wrapped.emptyWeek': 'Nothing played that week.', 'wrapped.emptyDay': 'Nothing played that day.',
+  'wrapped.timeDetailShort': 'Across {tracks} different songs, with {plays} plays.',
+  'wrapped.today': 'Today', 'wrapped.yesterday': 'Yesterday', 'wrapped.thisWeek': 'This week', 'wrapped.lastWeek': 'Last week',
+  'stats.byWeek': 'By week', 'stats.byDay': 'By day', 'wrapped.weekReady': 'Your weekly replay is ready',
 
   'video.back10': 'Back 10 seconds', 'video.fwd10': 'Forward 10 seconds', 'video.pip': 'Picture in Picture', 'video.exitFullscreen': 'Exit Full Screen', 'player.rate': 'Playback speed',
 

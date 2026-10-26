@@ -602,7 +602,7 @@
 
 .w-bars {
   position: absolute;
-  top: 18px;
+  top: 58px;
   left: 50%;
   z-index: 3;
   display: flex;
@@ -664,8 +664,10 @@
   position: absolute;
   top: 14px;
   left: 18px;
+  right: 74px;
   z-index: 4;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 10px;
   -webkit-app-region: no-drag;
@@ -706,6 +708,8 @@
 
 .w-month-label {
   min-width: 118px;
+  padding: 0 4px;
+  white-space: nowrap;
   text-align: center;
   font-size: 12.5px;
   font-weight: 650;
@@ -811,6 +815,12 @@
 .w-huge.month {
   font-size: clamp(64px, 15vh, 140px);
   letter-spacing: -0.045em;
+}
+
+/* « Semaine 44 », « Septembre » : un peu plus petit pour tenir sur une ligne. */
+.w-huge.long {
+  font-size: clamp(54px, 11vh, 104px);
+  white-space: nowrap;
 }
 
 .w-huge {

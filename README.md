@@ -72,7 +72,7 @@ L’exécutable Windows n’est pas signé : au premier lancement, SmartScreen p
 - Temps d’écoute, lectures, morceaux et artistes différents, série de jours d’écoute, sur 7 jours, 30 jours, l’année ou tout l’historique.
 - Histogramme des jours, calendrier de l’année, heures et jours de la semaine préférés, tops des morceaux, artistes, albums et genres (un clic lance la lecture ou ouvre la page).
 - Films, séries et animés : temps de visionnage, titres les plus regardés, genres.
-- **Récap** façon « Wrapped » : une suite de cartes plein écran, avec une image à enregistrer pour la partager. Un par année **et un par mois** (menu *Récap* de la page, ou la notification qui apparaît en début de mois).
+- **Récap** façon « Wrapped » : une suite de cartes plein écran, avec une image à enregistrer pour la partager. Un par **année, mois, semaine ou jour** (menu *Récap* de la page ; dans la fenêtre, les boutons *Année / Mois / Semaine / Jour* et les flèches passent d’une période d’activité à l’autre). Une notification propose le récap du mois écoulé en début de mois, et celui de la semaine écoulée en début de semaine.
 
 <p align="center">
   <img src="docs/tags.jpg" width="49%" alt="Éditeur de tags">
