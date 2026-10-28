@@ -13,6 +13,8 @@ const { openServerDb } = require('./serverdb');
 const { Accounts, Throttle, httpError } = require('./auth');
 const { Social } = require('./social');
 const { createRegistry } = require('./rpc');
+const { WebUpdater } = require('./updater');
+const pkg = require('../package.json');
 
 const IDLE_MS = 30 * 60 * 1000;
 const HEARTBEAT_MS = 20 * 1000;
@@ -35,6 +37,18 @@ class Hub {
     this.timers = [];
     this.tools = new Tools({ binDir: path.join(config.dataDir, 'bin'), tmpDir: path.join(config.dataDir, 'tmp'), emit: (ch, payload) => this.broadcast(ch, payload) });
     this.settings = this.#loadSettings();
+    // Mise à jour automatique : ne peut redémarrer le serveur que s'il a été lancé par server/launcher.js.
+    this.updater = new WebUpdater({
+      version: pkg.version,
+      dataDir: config.dataDir,
+      settings: () => this.updateConfig(),
+      supervised: process.env.CONTROL_SUPERVISED === '1' && typeof process.send === 'function',
+      restart: () => process.send({ type: 'restart' }),
+      backup: () => WebUpdater.backupDb(this.db, config.dataDir, pkg.version),
+      idle: () => this.connectedClients() === 0,
+      ...(config.updateOptions || {}),
+    });
+    this.updater.on('state', (state) => this.toAdmins('update:state', state));
   }
 
   // ─── Réglages du serveur ───────────────────────────────────────────────────
@@ -48,6 +62,9 @@ class Hub {
       downloadDir: path.join(this.config.dataDir, 'downloads'), // un sous-dossier par compte
 
       tmdbKey: this.config.tmdbKey,
+      updateMode: 'notify', // mise à jour du serveur : 'off', 'notify' (on prévient) ou 'auto'
+      updateHour: 4, // heure (0-23) à laquelle une mise à jour automatique s'installe même si des comptes sont connectés
+      updateToken: '', // jeton GitHub en lecture (dépôt privé)
     };
     let saved = {};
     try {
@@ -60,17 +77,30 @@ class Hub {
   }
 
   patchSettings(patch) {
-    const allowed = ['serverName', 'registrationEnabled', 'allowUserDownloads', 'libraryFolders', 'downloadDir', 'tmdbKey', 'usersRoot'];
+    const allowed = ['serverName', 'registrationEnabled', 'allowUserDownloads', 'libraryFolders', 'downloadDir', 'tmdbKey', 'usersRoot', 'updateMode', 'updateHour', 'updateToken'];
     for (const key of allowed) {
       if (!(key in patch)) continue;
       const v = patch[key];
       if (key === 'libraryFolders') this.settings.libraryFolders = (Array.isArray(v) ? v : []).filter((x) => typeof x === 'string' && x);
       else if (key === 'registrationEnabled' || key === 'allowUserDownloads') this.settings[key] = !!v;
       else if (key === 'serverName') this.settings.serverName = String(v || 'control').trim().slice(0, 60) || 'control';
+      else if (key === 'updateMode') this.settings.updateMode = ['off', 'notify', 'auto'].includes(v) ? v : 'notify';
+      else if (key === 'updateHour') this.settings.updateHour = Math.min(23, Math.max(0, Math.floor(Number(v)) || 0));
       else this.settings[key] = String(v || '').trim();
     }
     this.db.prepare("INSERT INTO kv (key, value) VALUES ('settings', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run(JSON.stringify(this.settings));
     if ('libraryFolders' in patch || 'downloadDir' in patch) this.#syncFolders();
+    if (['updateMode', 'updateHour', 'updateToken'].some((k) => k in patch)) this.updater.refresh();
+  }
+
+  /** Les réglages tels que la page d'administration les voit (le jeton GitHub ne quitte jamais le serveur). */
+  publicSettings() {
+    const { updateToken, ...rest } = this.settings;
+    return { ...rest, hasUpdateToken: !!(updateToken || this.config.updateToken), updateMode: this.config.update || rest.updateMode, updateLocked: !!this.config.update };
+  }
+
+  updateConfig() {
+    return { mode: this.config.update || this.settings.updateMode, hour: this.settings.updateHour, token: this.config.updateToken || this.settings.updateToken, locked: !!this.config.update };
   }
 
   // ─── Dossiers de musique ───────────────────────────────────────────────────
@@ -273,6 +303,18 @@ class Hub {
     for (const entry of this.entries.values()) entry.emit(channel, payload);
   }
 
+  /** … ou aux seuls administrateurs (mises à jour du serveur). */
+  toAdmins(channel, payload) {
+    for (const entry of this.entries.values()) if (this.accounts.byId(entry.id)?.role === 'admin') entry.emit(channel, payload);
+  }
+
+  /** Nombre de pages ouvertes (flux d'événements) : zéro, c'est le bon moment pour redémarrer. */
+  connectedClients() {
+    let n = 0;
+    for (const entry of this.entries.values()) n += entry.clients.size;
+    return n;
+  }
+
   addClient(entry, clientId, res) {
     entry.clients.set(clientId, res);
     entry.lastUsed = Date.now();
@@ -378,9 +420,11 @@ class Hub {
     }, HEARTBEAT_MS));
     this.tools.refreshVersions().then(() => this.broadcast('tools:status', this.tools.status())).catch(() => {});
     this.accounts.purge();
+    this.updater.start();
   }
 
   close() {
+    this.updater.stop();
     for (const t of this.timers) clearInterval(t);
     clearTimeout(this.watchTimer);
     for (const w of this.watchers) w.close();

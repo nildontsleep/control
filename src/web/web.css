@@ -386,3 +386,86 @@ body.admin {
   width: 18px;
   height: 18px;
 }
+
+/* ─── Mises à jour du serveur ─── */
+.upd-admin {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+}
+
+.upd-admin .grow {
+  flex: 1 1 260px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.upd-admin .hint {
+  font-size: 12.5px;
+  color: var(--text-2);
+  overflow-wrap: anywhere;
+}
+
+.upd-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.upd-buttons a.btn {
+  text-decoration: none;
+}
+
+.upd-bar {
+  height: 5px;
+  margin-top: 6px;
+  border-radius: 999px;
+  background: var(--fill);
+  overflow: hidden;
+}
+
+.upd-bar i {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.2s;
+}
+
+.upd-notes details,
+.upd-token {
+  margin: 6px 0;
+  font-size: 13px;
+  color: var(--text-2);
+}
+
+.upd-notes summary,
+.upd-token summary {
+  cursor: pointer;
+}
+
+.upd-notes pre {
+  margin: 8px 0 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--fill);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font: inherit;
+  max-height: 240px;
+  overflow: auto;
+}
+
+.group select.text-input {
+  width: auto;
+  min-width: 160px;
+}
+
+.group > .hint {
+  margin: 0 0 8px;
+  font-size: 12.5px;
+  color: var(--text-2);
+}

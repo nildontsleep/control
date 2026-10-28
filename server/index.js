@@ -25,6 +25,8 @@ async function main() {
     const shown = config.host === '0.0.0.0' || config.host === '::' ? 'localhost' : config.host;
     console.log(`control (web) écoute sur http://${shown}:${config.port}`);
     console.log(`Données : ${config.dataDir}`);
+    // Lancé par le lanceur : il sait maintenant que cette version tient debout (sinon il revient à la précédente).
+    if (process.send) process.send({ type: 'ready', version: require('../package.json').version });
     if (!hub.accounts.count()) {
       console.log(`Aucun compte pour l'instant : ouvrez http://${shown}:${config.port}/setup pour créer l'administrateur.`);
       if (!config.setupToken) console.log('Astuce : définissez CONTROL_SETUP_TOKEN pour que seul vous puissiez créer ce premier compte tant que le serveur est exposé.');
@@ -42,6 +44,7 @@ async function main() {
   };
   process.on('SIGINT', stop);
   process.on('SIGTERM', stop);
+  process.on('message', (message) => { if (message?.type === 'stop') stop(); }); // demande du lanceur (redémarrage, arrêt)
 }
 
 main().catch((err) => {

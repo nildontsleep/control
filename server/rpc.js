@@ -11,6 +11,7 @@ const ADMIN_ONLY = new Set([
   'srv:browse', 'srv:add-folder', 'srv:remove-folder', 'srv:settings', 'srv:users:list', 'srv:users:create',
   'srv:users:update', 'srv:users:password', 'srv:users:delete', 'srv:rescan', 'srv:me:add-folder',
   'srv:users:detail', 'srv:users:add-folder', 'srv:users:remove-folder', 'srv:users:personal-folder', 'srv:users:set-grants',
+  'srv:update:status', 'srv:update:check', 'srv:update:download', 'srv:update:install',
 ]);
 const DOWNLOADS = new Set(['dl:add', 'dl:info', 'dl:search', 'dl:cancel', 'dl:retry', 'dl:remove', 'dl:clear']);
 const DENIED = new Set(['lib:add-paths']); // des chemins du poste de l'utilisateur ne veulent rien dire pour un serveur
@@ -90,9 +91,15 @@ function install(hub, entry, registry) {
   handlers.set('srv:rescan', () => { hub.rescanAll(); return true; });
   handlers.set('srv:settings', (e, patch) => {
     hub.patchSettings(patch && typeof patch === 'object' ? patch : {});
-    return { ...hub.settings };
+    return hub.publicSettings();
   });
-  handlers.set('srv:settings:get', () => ({ ...hub.settings }));
+  handlers.set('srv:settings:get', () => hub.publicSettings());
+
+  // Mise à jour du serveur : vérifier, télécharger (installe à côté de la version en cours), puis redémarrer dessus.
+  handlers.set('srv:update:status', () => hub.updater.status);
+  handlers.set('srv:update:check', () => hub.updater.check({ manual: true }));
+  handlers.set('srv:update:download', () => hub.updater.download());
+  handlers.set('srv:update:install', () => hub.updater.install());
 
   handlers.set('srv:users:list', () => hub.accounts.list());
   handlers.set('srv:users:create', async (e, body) => {

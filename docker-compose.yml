@@ -14,6 +14,9 @@ services:
       # CONTROL_TRUST_PROXY: "1"
       # Clé TMDB gratuite (films et séries), facultative : chaque compte peut aussi avoir la sienne.
       # CONTROL_TMDB_KEY: ""
+      # Mise à jour automatique du serveur (releases GitHub) : « notify » (par défaut, l'administrateur installe d'un clic),
+      # « auto » ou « off ». Sans cette variable, le mode se règle dans /admin.
+      # CONTROL_UPDATE: "notify"
     volumes:
       # Comptes, réglages, bibliothèques, pochettes, outils.
       - ./data:/data

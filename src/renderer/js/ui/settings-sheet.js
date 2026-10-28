@@ -56,8 +56,9 @@ export function openSettings(initial = 'general') {
 
 
   /** Mises à jour : état en direct, un seul bouton pour télécharger, installer et relancer. */
-  function updateGroup() {
+  function updateGroup({ web = false } = {}) {
     const line = h('div.upd-line');
+    const failure = h('p.upd-failure', { hidden: true });
     const paint = (st) => {
       const phase = st.phase;
       const text = (key, vars) => h('span.upd-text', { text: t(key, vars) });
@@ -65,7 +66,7 @@ export function openSettings(initial = 'general') {
       if (phase === 'checking') nodes = [h('span.spinner.small', {}, ...Array.from({ length: 12 }, (_, i) => h('i', { style: { '--i': i } }))), text('upd.checking')];
       else if (phase === 'available') {
         nodes = [
-          h('div.upd-info', {}, h('strong', { text: t('upd.available', { v: st.version }) }), h('span', { text: st.manual ? t('upd.manual') : st.size ? fmtBytes(st.size) : '' })),
+          h('div.upd-info', {}, h('strong', { text: t('upd.available', { v: st.version }) }), h('span', { text: st.manual ? (st.reason ? t(`upd.reason.${st.reason}`) : t('upd.manual')) : st.size ? fmtBytes(st.size) : '' })),
           h('div.row-buttons', {},
             // Paquet .deb, macOS, lancement depuis les sources : pas d'installation automatique, on renvoie vers la page.
             st.manual
@@ -87,7 +88,7 @@ export function openSettings(initial = 'general') {
       } else if (phase === 'installing') nodes = [h('span.spinner.small', {}, ...Array.from({ length: 12 }, (_, i) => h('i', { style: { '--i': i } }))), text('upd.installing')];
       else if (phase === 'error') {
         nodes = [
-          h('div.upd-info', {}, h('strong', { text: t('upd.failed') }), h('span', { text: t(`upd.err.${st.code}`) })),
+          h('div.upd-info', {}, h('strong', { text: t('upd.failed') }), h('span', { text: `${t(`upd.err.${st.code}`)}${st.detail ? ` (${st.detail})` : ''}` })),
           button(t('action.retry'), { small: true, onClick: () => checkNow() }),
         ];
       } else {
@@ -105,13 +106,22 @@ export function openSettings(initial = 'general') {
     // Visible seulement quand GitHub refuse l'accès sans jeton (dépôt privé) ou qu'un jeton est déjà enregistré.
     const tokenRow = row(t('upd.token'), tokenInput, { hint: t('upd.tokenHint'), badge: badge('key-round', B.gray) });
     const base = paint;
-    const paintAll = (st) => { base(st); tokenRow.hidden = !(['private', 'token'].includes(st.code) || settings.update?.token); };
+    const paintAll = (st) => {
+      base(st);
+      tokenRow.hidden = web || !(['private', 'token'].includes(st.code) || settings.update?.token);
+      // Serveur web : une version qui n'a pas démarré a été abandonnée, le serveur est revenu à la précédente.
+      failure.hidden = !st.failure;
+      if (st.failure) failure.textContent = t('upd.rolledBack', { v: st.failure.version });
+    };
     offUpdate?.();
     offUpdate = onUpdate(paintAll);
     return group(t('upd.title'), [
-      h('div.row.row-block', {}, line),
+      h('div.row.row-block', {}, line, failure),
       tokenRow,
-      row(t('upd.auto'), toggle({ get: () => settings.update?.auto !== false, set: (v) => update({ update: { auto: v } }) }), { hint: t('upd.autoHint'), badge: badge('refresh-cw', B.green) }),
+      // Serveur web : les réglages (mode, heure, jeton) sont ceux du serveur, dans sa page d'administration.
+      web
+        ? row(t('upd.webSettings'), button(t('web.admin'), { icon: 'settings', small: true, onClick: () => window.open('/admin#updates', '_blank', 'noopener') }), { hint: t('upd.webHint'), badge: badge('refresh-cw', B.green) })
+        : row(t('upd.auto'), toggle({ get: () => settings.update?.auto !== false, set: (v) => update({ update: { auto: v } }) }), { hint: t('upd.autoHint'), badge: badge('refresh-cw', B.green) }),
     ]);
   }
 
@@ -446,7 +456,7 @@ export function openSettings(initial = 'general') {
           h('div.about-name', { text: 'control' }),
           h('div.about-tagline', { text: t('about.tagline') }),
           h('div.about-meta', { text: `${t('about.version', { v: info?.version || '0.1.0' })}${edition ? ` · ${edition}` : ''}` })),
-        isWeb ? null : updateGroup(),
+        isWeb ? (can('manageServer') ? updateGroup({ web: true }) : null) : updateGroup(),
         group(t('set.shortcuts'), SHORTCUTS.map(([keys, label]) => row(t(label), h('span.kbds', {}, ...keys.map((k) => h('kbd', { text: k === 'Espace' ? space : k })))))),
         group(t('set.data'), [
           h('div.row.row-block', {}, h('div.row-buttons', {}, reset, isWeb ? null : button(t('about.dataDir'), { icon: 'folder-open', small: true, onClick: () => app.openDataDir() }))),

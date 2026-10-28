@@ -143,6 +143,8 @@ CONTROL_LIBRARY=/chemin/vers/ma/musique npm run web
 # puis ouvrir http://localhost:5180
 ```
 
+`npm run web` passe par le lanceur (mise à jour automatique, voir plus bas) ; `npm run web:direct` lance le serveur seul.
+
 Avec Docker (image `ghcr.io/nildontsleep/control`, ou `docker compose up -d` après avoir adapté `docker-compose.yml`) :
 
 ```bash
@@ -163,6 +165,31 @@ docker run -d --name control -p 5180:5180 \
 | `CONTROL_TRUST_PROXY` | `1` derrière un reverse proxy (nginx, Caddy, Traefik) : adresse réelle du client et cookie `Secure` en HTTPS. |
 | `CONTROL_TMDB_KEY` | Clé TMDB offerte à tous les comptes (films et séries) ; chacun peut aussi mettre la sienne. |
 | `CONTROL_SESSION_DAYS`, `CONTROL_RESCAN_MINUTES` | Durée d’une session (30 jours) ; période de la réanalyse complète des dossiers (30 min, en plus de la surveillance des fichiers). |
+| `CONTROL_UPDATE` | `off`, `notify` ou `auto` : impose le mode de mise à jour du serveur (sinon l’administrateur le choisit dans `/admin`, *Prévenir seulement* par défaut). `off` convient si tu mets à jour l’image toi-même (Watchtower…). |
+| `CONTROL_UPDATE_TOKEN` | Jeton GitHub en lecture, seulement si le dépôt des releases est privé (il peut aussi se saisir dans `/admin`). |
+
+### Mises à jour du serveur
+
+Le serveur sait **se mettre à jour tout seul** à partir des releases GitHub, sans toucher à Docker ni à un terminal. `npm run web` et l’image Docker lancent un petit **lanceur** (`server/launcher.js`) qui fait tourner le serveur ; la mise à jour passe par lui :
+
+1. toutes les 6 heures (et au lancement), le serveur cherche une release plus récente ;
+2. il télécharge l’archive du serveur jointe à la release (`control-web-<version>.tgz`, environ 700 Ko), **vérifie son empreinte SHA-256**, puis l’installe dans `<données>/app/versions/<version>` à côté de la version en cours (une copie de `server.db` est faite avant) ;
+3. il demande au lanceur de redémarrer le serveur sur cette version (quelques secondes de coupure : les pages se reconnectent toutes seules, et celle de l’administrateur se recharge) ;
+4. **si la nouvelle version ne démarre pas**, le lanceur revient seul à la précédente, ne la réessaie plus et l’administrateur en est informé.
+
+Dans `/admin` → *Mises à jour du serveur* (et dans *Réglages* → *À propos* pour un administrateur, avec une pastille quand une version est disponible), trois modes :
+
+- **Prévenir seulement** (par défaut) : on vérifie et on signale ; l’installation se fait d’un clic (*Mettre à jour et redémarrer*) ;
+- **Automatiques** : téléchargement automatique, puis installation dès que plus personne n’est connecté, ou à l’heure choisie au plus tard (4 h par défaut) ;
+- **Désactivées** : aucune vérification (le bouton *Rechercher* reste là).
+
+À savoir :
+
+- Seul le code de l’application change. Les dépendances de l’installation d’origine servent tant qu’elles ne changent pas ; si une version en change, le serveur lance `npm ci` pour elle (réseau et npm requis), et renonce proprement s’il échoue.
+- Une image Docker plus récente que la version téléchargée reprend la main (la version téléchargée est oubliée) : les deux voies se combinent.
+- Sans lanceur (`npm run web:direct`, ou `node server/index.js`), le serveur signale les nouvelles versions mais ne peut pas se redémarrer lui-même.
+- **Un serveur en 0.8.x ne peut pas encore se mettre à jour tout seul** : passe une fois à cette version (`docker pull`, ou `git pull` et `npm ci`), ensuite les suivantes sont automatiques.
+- Sécurité : seules les releases de ce dépôt sont acceptées, l’archive doit correspondre à l’empreinte calculée par GitHub, son contenu est lu strictement (ni lien, ni chemin hors du dossier d’installation, taille limitée), et le jeton GitHub éventuel ne quitte jamais le serveur.
 
 ### Se connecter à un serveur depuis l’application de bureau
 
@@ -258,6 +285,9 @@ src/main/           processus principal : fenêtre, protocole app://, SQLite, sc
   platform.js       ce qui dépend d’Electron (réseau, images, corbeille) ; image-lite.js remplace nativeImage sur le serveur
   sources.js        serveurs control affichés dans la fenêtre (vue web isolée par serveur, bascule, pause de l’autre source)
 server/             version web : HTTP, comptes et sessions, un noyau par compte, RPC, événements en direct, médias (Range)
+  launcher.js       lanceur : fait tourner le serveur, le redémarre sur sa nouvelle version, revient en arrière si elle ne démarre pas
+  updater.js        mise à jour : releases GitHub, archive vérifiée (SHA-256) et installée à côté ; tar.js : archives lues strictement ;
+                    appstate.js : versions installées ; bundle.js : construit l’archive publiée avec chaque release
   hub.js            comptes chargés à la demande, dossiers (communs / propres à chaque compte), analyses
   social.js         profils, partages (qui voit quoi) ; compare.js : comparaison de deux récaps
 src/web/            côté navigateur : pont window.control, pages de connexion / installation / administration, PWA, mise en page mobile

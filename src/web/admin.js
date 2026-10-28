@@ -74,6 +74,163 @@
         h('button', { class: 'btn btn-secondary', text: 'Enregistrer', onclick: guard(async () => { await rpc('srv:settings', { usersRoot: usersRoot.value.trim() }); flash('Enregistré.', false); reload(); }) })));
   }
 
+  // ─── Mises à jour du serveur ───────────────────────────────────────────────
+  const fmtBytes = (n) => (n >= 1048576 ? `${(n / 1048576).toFixed(1)} Mo` : `${Math.max(1, Math.round(n / 1024))} Ko`);
+  const UPDATE_ERRORS = {
+    network: 'Connexion à GitHub impossible.',
+    http: 'GitHub ne répond pas correctement.',
+    busy: 'GitHub limite les requêtes : réessayez dans quelques minutes.',
+    private: 'Le dépôt est privé : renseignez un jeton GitHub en lecture ci-dessous.',
+    token: 'Jeton GitHub refusé ou expiré.',
+    untrusted: 'Adresse de téléchargement non reconnue.',
+    corrupt: 'Le fichier téléchargé est corrompu (empreinte différente).',
+    stage: 'L’archive téléchargée est inattendue ou n’a pas pu être installée.',
+    engine: 'Cette version demande une version de Node.js plus récente.',
+    deps: 'Impossible d’installer les dépendances de cette version (npm).',
+    unsupervised: 'Ce serveur n’est pas lancé par le lanceur : il ne peut pas redémarrer tout seul.',
+    launch: 'Le serveur ne s’est pas redémarré : relancez-le à la main, la nouvelle version est déjà choisie.',
+  };
+  const UPDATE_REASONS = {
+    unsupervised: 'Ce serveur n’est pas lancé par le lanceur (npm run web ou l’image Docker) : à mettre à jour à la main.',
+    asset: 'Cette version n’a pas d’archive pour le serveur : à mettre à jour à la main.',
+    nodigest: 'L’archive de cette version n’a pas d’empreinte à vérifier : à mettre à jour à la main.',
+  };
+
+  /** Le serveur redémarre sur sa nouvelle version : on recharge la page dès qu'il répond de nouveau. */
+  async function reloadWhenBack(from) {
+    const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+    let wentDown = false;
+    await sleep(1200);
+    for (let i = 0; i < 120; i++) {
+      try {
+        const res = await fetch('/api/health', { cache: 'no-store' });
+        if (res.ok && ((await res.json()).version !== from || wentDown)) {
+          location.reload();
+          return;
+        }
+      } catch {
+        wentDown = true;
+      }
+      await sleep(1000);
+    }
+  }
+
+  function updatesGroup(initial, s) {
+    let status = initial;
+    let timer = null;
+    const line = h('div', { class: 'upd-admin' });
+    const notes = h('div', { class: 'upd-notes' });
+    const warn = h('p', { class: 'error', hidden: true });
+    const mode = h('select', { class: 'text-input' },
+      h('option', { value: 'off', text: 'Désactivées' }),
+      h('option', { value: 'notify', text: 'Prévenir seulement' }),
+      h('option', { value: 'auto', text: 'Automatiques' }));
+    mode.value = s.updateMode;
+    mode.disabled = !!s.updateLocked;
+    const hour = h('select', { class: 'text-input' }, ...Array.from({ length: 24 }, (_, i) => h('option', { value: String(i), text: `${i} h` })));
+    hour.value = String(s.updateHour ?? 4);
+    const hourRow = h('div', { class: 'toggle-row' }, h('span', { text: 'Redémarrer au plus tard à' }), hour);
+    hourRow.hidden = s.updateMode !== 'auto';
+    const modeHint = h('p', { class: 'hint' });
+    const token = h('input', { class: 'text-input', type: 'password', placeholder: s.hasUpdateToken ? '•••••••• (définie)' : 'github_pat_…', autocomplete: 'off', spellcheck: 'false' });
+
+    const saveSettings = guard(async (patch) => {
+      await rpc('srv:settings', patch);
+      if ('updateMode' in patch) { hourRow.hidden = patch.updateMode !== 'auto'; paintHint(); }
+      await refresh();
+    });
+    const paintHint = () => {
+      modeHint.textContent = s.updateLocked
+        ? 'Mode imposé par la variable d’environnement CONTROL_UPDATE du serveur.'
+        : mode.value === 'auto'
+          ? 'Le serveur télécharge les mises à jour et les installe dès que plus personne n’est connecté, ou à l’heure indiquée au plus tard (une courte coupure : les pages se reconnectent seules).'
+          : mode.value === 'notify'
+            ? 'Le serveur vérifie toutes les 6 heures et prévient les administrateurs ; l’installation se déclenche d’un clic.'
+            : 'Aucune vérification automatique : le bouton « Rechercher » reste disponible.';
+    };
+    mode.addEventListener('change', () => saveSettings({ updateMode: mode.value }));
+    hour.addEventListener('change', () => saveSettings({ updateHour: Number(hour.value) }));
+
+    const act = (fn) => guard(async () => { await fn(); await refresh(); });
+    const run = guard(async () => {
+      // Un seul clic : télécharger (en vérifiant), puis installer et redémarrer.
+      poll();
+      let st = status.phase === 'ready' ? status : await rpc('srv:update:download');
+      if (st.phase === 'ready') {
+        st = await rpc('srv:update:install');
+        if (st.phase === 'installing') reloadWhenBack(status.current);
+      }
+      await refresh();
+    });
+
+    function paint() {
+      const st = status;
+      const buttons = [];
+      let title;
+      let sub = '';
+      let bar = null;
+      if (st.phase === 'checking') title = 'Recherche en cours…';
+      else if (st.phase === 'available') {
+        title = `La version ${st.version} est disponible`;
+        sub = st.manual ? (UPDATE_REASONS[st.reason] || '') : st.size ? fmtBytes(st.size) : '';
+        if (st.manual) buttons.push(h('a', { class: 'btn btn-primary', href: st.page, target: '_blank', rel: 'noopener', text: 'Voir la version' }));
+        else buttons.push(h('button', { class: 'btn btn-primary', text: 'Mettre à jour et redémarrer', onclick: run }));
+      } else if (st.phase === 'downloading') {
+        title = `Téléchargement de la version ${st.version}…`;
+        const pct = st.size ? Math.min(100, Math.round(((st.received || 0) / st.size) * 100)) : 0;
+        sub = st.size ? `${fmtBytes(st.received || 0)} / ${fmtBytes(st.size)}` : '';
+        bar = h('div', { class: 'upd-bar' }, h('i', { style: `width:${pct}%` }));
+      } else if (st.phase === 'ready') {
+        title = `La version ${st.version} est prête`;
+        sub = st.verified ? 'Archive vérifiée (SHA-256).' : '';
+        buttons.push(h('button', { class: 'btn btn-primary', text: 'Redémarrer maintenant', onclick: run }));
+      } else if (st.phase === 'installing') title = 'Redémarrage du serveur…';
+      else if (st.phase === 'error') {
+        title = 'La mise à jour a échoué';
+        sub = `${UPDATE_ERRORS[st.code] || 'Erreur inconnue.'}${st.detail ? ` (${st.detail})` : ''}`;
+        buttons.push(h('button', { class: 'btn btn-secondary', text: 'Réessayer', onclick: act(() => rpc('srv:update:check')) }));
+      } else {
+        title = st.phase === 'none' ? 'control est à jour' : 'Aucune vérification pour l’instant';
+        sub = st.skipped ? `La version ${st.skipped} n’a pas démarré sur ce serveur : elle n’est plus proposée automatiquement.` : '';
+      }
+      if (['idle', 'none', 'available', 'error'].includes(st.phase)) buttons.push(h('button', { class: 'btn btn-secondary', text: 'Rechercher', onclick: act(() => rpc('srv:update:check')) }));
+      line.replaceChildren(
+        h('div', { class: 'grow' }, h('strong', { text: title }), h('span', { class: 'hint', text: [`Version installée : ${st.current}`, st.checkedAt ? `vérifié à ${new Date(st.checkedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : '', sub].filter(Boolean).join(' · ') }), bar),
+        h('div', { class: 'upd-buttons' }, ...buttons));
+      notes.replaceChildren(...(st.phase === 'available' && st.notes ? [h('details', {}, h('summary', { text: 'Nouveautés' }), h('pre', { text: st.notes }))] : []));
+      warn.hidden = !st.failure;
+      if (st.failure) warn.textContent = `La version ${st.failure.version} n’a pas démarré sur ce serveur : il est revenu à la précédente.`;
+      if (['checking', 'downloading', 'installing'].includes(st.phase)) poll();
+    }
+
+    async function refresh() {
+      status = await rpc('srv:update:status');
+      paint();
+    }
+    function poll() {
+      clearTimeout(timer);
+      timer = setTimeout(() => refresh().catch(() => poll()), 1000);
+    }
+    paintHint();
+    paint();
+
+    return h('section', { class: 'group', id: 'updates' },
+      h('h2', { text: 'Mises à jour du serveur' }),
+      h('p', { text: 'control se met à jour depuis ses releases GitHub : l’archive du serveur est téléchargée, vérifiée (SHA-256), installée à côté de la version en cours, puis le serveur redémarre dessus. Si la nouvelle version ne démarre pas, il revient tout seul à la précédente.' }),
+      line,
+      notes,
+      warn,
+      h('div', { class: 'toggle-row' }, h('span', { text: 'Mises à jour' }), mode),
+      modeHint,
+      hourRow,
+      h('details', { class: 'upd-token' },
+        h('summary', { text: 'Dépôt privé : jeton GitHub' }),
+        h('p', { class: 'hint', text: 'Seulement si le dépôt des releases est privé : un jeton en lecture seule (Contents : Read). Il reste sur le serveur et ne revient jamais dans cette page.' }),
+        h('div', { class: 'inline-form' }, token,
+          h('button', { class: 'btn btn-secondary', text: 'Enregistrer', onclick: guard(async () => { if (!token.value.trim()) return; await rpc('srv:settings', { updateToken: token.value.trim() }); token.value = ''; flash('Jeton enregistré.', false); await rpc('srv:update:check'); await refresh(); }) }),
+          s.hasUpdateToken ? h('button', { class: 'btn btn-secondary', text: 'Effacer', onclick: guard(async () => { await rpc('srv:settings', { updateToken: '' }); flash('Jeton effacé.', false); }) }) : null)));
+  }
+
   // ─── Dossiers ──────────────────────────────────────────────────────────────
   function foldersGroup(s, reload) {
     const picker = h('div', { class: 'picker', hidden: true });
@@ -210,22 +367,26 @@
   }
 
   async function render() {
-    const [s, users, me, tools] = await Promise.all([
+    const [s, users, me, tools, updates] = await Promise.all([
       rpc('srv:settings:get'),
       rpc('srv:users:list'),
       fetch('/api/auth/me', { credentials: 'same-origin' }).then((r) => r.json()),
       rpc('tools:status').catch(() => null),
+      rpc('srv:update:status').catch(() => null),
     ]);
     const reload = () => render().catch((err) => flash(err.message));
-    root.replaceChildren(
+    root.replaceChildren(...[
       h('div', { class: 'admin-head' },
         h('h1', { text: 'Administration' }),
         h('a', { class: 'btn btn-secondary', href: '/', text: 'Retour à l’application' })),
       notice,
       settingsGroup(s, reload),
+      updates ? updatesGroup(updates, s) : null,
       foldersGroup(s, reload),
       usersGroup(users, me.user.id, reload, s),
-      tools ? toolsGroup(tools, reload) : null);
+      tools ? toolsGroup(tools, reload) : null,
+    ].filter(Boolean));
+    if (location.hash === '#updates') document.getElementById('updates')?.scrollIntoView();
   }
 
   render().catch((err) => flash(err.message));

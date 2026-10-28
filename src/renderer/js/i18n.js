@@ -357,6 +357,9 @@ const fr = {
   'upd.manual': 'Cette installation ne se met pas à jour toute seule', 'upd.download': 'Télécharger', 'about.appimage': 'Édition AppImage',
   'upd.token': 'Jeton GitHub', 'upd.tokenHint': 'Pour un dépôt privé : jeton en lecture seule (Contents : Read). Il reste sur cet ordinateur.', 'upd.tokenPlaceholder': 'github_pat_…',
   'upd.err.private': 'Le dépôt est privé : renseignez un jeton GitHub en lecture ci-dessous (ou rendez le dépôt public).', 'upd.err.token': 'Jeton GitHub refusé ou expiré.',
+  'upd.reason.unsupervised': 'Ce serveur n’est pas lancé par le lanceur (npm run web, image Docker) : à mettre à jour à la main.', 'upd.reason.asset': 'Cette version n’a pas d’archive pour le serveur : à mettre à jour à la main.', 'upd.reason.nodigest': 'L’archive de cette version n’a pas d’empreinte à vérifier : à mettre à jour à la main.',
+  'upd.err.unsupervised': 'Ce serveur n’est pas lancé par le lanceur : redémarrage impossible.', 'upd.err.engine': 'Cette version demande une version de Node.js plus récente.', 'upd.err.deps': 'Impossible d’installer les dépendances de cette version (npm).', 'upd.err.stage': 'L’archive téléchargée est inattendue ou n’a pas pu être installée.',
+  'upd.rolledBack': 'La version {v} n’a pas démarré : le serveur est revenu à la précédente.', 'upd.webSettings': 'Réglages du serveur', 'upd.webHint': 'Mode (prévenir, automatique, désactivé), heure d’installation et jeton GitHub : page d’administration.',
 };
 
 const en = {
@@ -716,6 +719,9 @@ const en = {
   'upd.manual': 'This install does not update itself', 'upd.download': 'Download', 'about.appimage': 'AppImage edition',
   'upd.token': 'GitHub token', 'upd.tokenHint': 'For a private repository: a read-only token (Contents: Read). It stays on this computer.', 'upd.tokenPlaceholder': 'github_pat_…',
   'upd.err.private': 'The repository is private: enter a read-only GitHub token below (or make the repository public).', 'upd.err.token': 'GitHub token refused or expired.',
+  'upd.reason.unsupervised': 'This server isn’t started by the launcher (npm run web, Docker image): update it by hand.', 'upd.reason.asset': 'This version has no server archive: update it by hand.', 'upd.reason.nodigest': 'This version’s archive has no checksum to verify: update it by hand.',
+  'upd.err.unsupervised': 'This server isn’t started by the launcher: it can’t restart itself.', 'upd.err.engine': 'This version needs a newer Node.js.', 'upd.err.deps': 'Couldn’t install this version’s dependencies (npm).', 'upd.err.stage': 'The downloaded archive was unexpected or couldn’t be installed.',
+  'upd.rolledBack': 'Version {v} failed to start: the server went back to the previous one.', 'upd.webSettings': 'Server settings', 'upd.webHint': 'Mode (notify, automatic, off), install time and GitHub token: administration page.',
 };
 
 const DICTS = { fr, en };

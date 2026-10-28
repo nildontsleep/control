@@ -175,6 +175,11 @@ jobs:
           pattern: control-*
           merge-multiple: true
 
+      # Archive du serveur web : c'est elle que la mise à jour automatique des serveurs télécharge (et vérifie par son SHA-256).
+      - name: Construire l’archive du serveur web
+        if: startsWith(github.ref, 'refs/tags/v') || steps.version.outputs.tagged == 'false'
+        run: node server/bundle.js dist
+
       - name: Publier la release
         if: startsWith(github.ref, 'refs/tags/v') || steps.version.outputs.tagged == 'false'
         uses: softprops/action-gh-release@v2
@@ -188,6 +193,7 @@ jobs:
             dist/*-setup.exe
             dist/*.AppImage
             dist/*.deb
+            dist/control-web-*.tgz
           body: |
             ## Télécharger
 
@@ -198,5 +204,7 @@ jobs:
             **Linux (64 bits)**
             - **`control-${{ steps.version.outputs.version }}-x86_64.AppImage`** : un seul fichier, à rendre exécutable (`chmod +x`) puis à lancer ; il se met à jour tout seul. Demande FUSE 2 (`libfuse2`) sur Ubuntu récent, sinon : `./control-….AppImage --appimage-extract-and-run`.
             - **`control-${{ steps.version.outputs.version }}-amd64.deb`** : paquet pour Debian, Ubuntu et dérivés (`sudo apt install ./control-….deb`) ; une nouvelle version est signalée dans l’application, à télécharger à la main.
+
+            **Serveur web** : image Docker `ghcr.io/nildontsleep/control`, ou `npm run web`. **`control-web-${{ steps.version.outputs.version }}.tgz`** est l’archive que la mise à jour automatique du serveur télécharge : il n’y a rien à en faire à la main.
 
             L’application n’est pas signée : au premier lancement, Windows SmartScreen peut afficher « Windows a protégé votre ordinateur ». Cliquez sur **Informations complémentaires**, puis **Exécuter quand même**.

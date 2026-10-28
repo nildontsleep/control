@@ -47,6 +47,25 @@
     return body.result;
   }
   const invoke = (channel) => (...args) => call('rpc', channel, args);
+
+  /** Le serveur redémarre sur sa nouvelle version : on recharge la page dès qu'il répond de nouveau. */
+  async function reloadWhenBack(from) {
+    const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+    let wentDown = false;
+    await sleep(1200);
+    for (let i = 0; i < 120; i++) {
+      try {
+        const res = await fetch('/api/health', { cache: 'no-store' });
+        if (res.ok && ((await res.json()).version !== from || wentDown)) {
+          location.reload();
+          return;
+        }
+      } catch {
+        wentDown = true;
+      }
+      await sleep(1000);
+    }
+  }
   const send = (channel) => (...args) => { call('send', channel, args).catch(() => {}); };
 
   // ─── Événements du serveur ─────────────────────────────────────────────────
@@ -243,7 +262,18 @@
       saveFile: invoke('lyrics:save-file'),
     },
 
-    update: {
+    // Mise à jour du serveur : réservée à l'administrateur (les autres comptes n'ont rien à voir avec elle).
+    update: boot.caps?.manageServer ? {
+      state: () => invoke('srv:update:status')().catch(() => idle),
+      check: invoke('srv:update:check'),
+      download: invoke('srv:update:download'),
+      install: async () => {
+        const state = await invoke('srv:update:install')();
+        if (state?.phase === 'installing') reloadWhenBack(boot.info.version);
+        return state;
+      },
+      onState: listen('update:state'),
+    } : {
       state: async () => idle,
       check: async () => idle,
       download: async () => idle,

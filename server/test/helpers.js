@@ -89,4 +89,70 @@ const until = async (fn, ms = 15000) => {
   }
 };
 
-module.exports = { wav, boot, client, until };
+// ─── Mise à jour : faux GitHub, archives de fausses versions ────────────────────
+const http = require('node:http');
+const net = require('node:net');
+const crypto = require('node:crypto');
+const { collect } = require('../bundle');
+const { pack } = require('../tar');
+
+/** L'archive d'une version fictive : le code actuel, avec la version demandée (et au besoin un serveur cassé). */
+function fakeBundle(version, { broken = false, engines, extra = [] } = {}) {
+  const files = collect().map((f) => {
+    if (f.name === 'package.json') {
+      const pkg = JSON.parse(f.data.toString('utf8'));
+      pkg.version = version;
+      if (engines) pkg.engines = { node: engines };
+      return { ...f, data: Buffer.from(JSON.stringify(pkg, null, 2)) };
+    }
+    if (broken && f.name === 'server/index.js') return { ...f, data: Buffer.from("throw new Error('version cassée (essai)');\n") };
+    return f;
+  });
+  const data = pack([...files, ...extra]);
+  return { version, data, sha256: crypto.createHash('sha256').update(data).digest('hex') };
+}
+
+/** Un GitHub de poche : `releases/latest` et le téléchargement de l'archive. `release` est modifiable à tout moment. */
+async function mockGithub() {
+  const state = { release: null, hits: [] };
+  const server = http.createServer((req, res) => {
+    state.hits.push(req.url);
+    const rel = state.release;
+    if (req.url === '/releases/latest' && rel) {
+      const port = server.address().port;
+      res.writeHead(200, { 'content-type': 'application/json' });
+      return res.end(JSON.stringify({
+        tag_name: `v${rel.version}`,
+        name: `control ${rel.version}`,
+        body: 'Nouveautés de la version.',
+        html_url: `http://127.0.0.1:${port}/release`,
+        draft: false,
+        prerelease: false,
+        assets: rel.noAsset ? [] : [{
+          name: `control-web-${rel.version}.tgz`,
+          size: rel.data.length,
+          browser_download_url: `http://127.0.0.1:${port}/asset/${rel.version}.tgz`,
+          digest: rel.noDigest ? null : `sha256:${rel.digestOverride || rel.sha256}`,
+        }],
+      }));
+    }
+    if (rel && req.url === `/asset/${rel.version}.tgz`) {
+      res.writeHead(200, { 'content-type': 'application/gzip', 'content-length': rel.data.length });
+      return res.end(rel.data);
+    }
+    res.writeHead(404).end();
+  });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  return {
+    url: `http://127.0.0.1:${server.address().port}/releases/latest`,
+    state,
+    publish: (bundle, flags = {}) => { state.release = { ...bundle, ...flags }; },
+    close: () => new Promise((resolve) => { server.closeAllConnections?.(); server.close(resolve); }),
+  };
+}
+
+const freePort = () => new Promise((resolve) => {
+  const s = net.createServer().listen(0, '127.0.0.1', () => { const { port } = s.address(); s.close(() => resolve(port)); });
+});
+
+module.exports = { wav, boot, client, until, fakeBundle, mockGithub, freePort };

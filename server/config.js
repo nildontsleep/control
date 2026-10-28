@@ -26,6 +26,10 @@ function loadConfig(env = process.env) {
     tmdbKey: env.CONTROL_TMDB_KEY || '',
     // Si défini, la création du premier compte (administrateur) exige ce code : utile tant que le serveur est exposé.
     setupToken: env.CONTROL_SETUP_TOKEN || '',
+    // Mise à jour automatique : « off », « notify » ou « auto » force le réglage (vide : choisi par l'administrateur dans /admin).
+    update: ['off', 'notify', 'auto'].includes(String(env.CONTROL_UPDATE || '').toLowerCase()) ? String(env.CONTROL_UPDATE).toLowerCase() : '',
+    // Jeton GitHub en lecture, si le dépôt des releases est privé.
+    updateToken: env.CONTROL_UPDATE_TOKEN || '',
   };
 }
 
