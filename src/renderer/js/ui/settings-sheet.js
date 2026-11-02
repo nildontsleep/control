@@ -138,6 +138,32 @@ export function openSettings(initial = 'general') {
     return row(t('set.cookiesFile'), h('div.row-buttons', {}, name, choose, clear), { hint: t('set.cookiesFileHint'), badge: badge('key-round', B.gray) });
   }
 
+  /** Version web : le cookies.txt de ce compte, exporté du navigateur de l'utilisateur et gardé sur le serveur. */
+  function cookiesUploadRow() {
+    const web = window.control.web;
+    const name = h('span.row-hint');
+    const clear = button(t('common.remove'), { icon: 'x', small: true, onClick: async () => { paint(await web.rpc('dl:clear-cookies')); } });
+    const paint = (st) => {
+      name.textContent = st?.present
+        ? t('set.cookiesSaved', { date: new Date(st.savedAt).toLocaleDateString(currentLanguage()), n: st.count })
+        : t('set.cookiesFileNone');
+      clear.hidden = !st?.present;
+    };
+    const upload = button(t('set.cookiesUpload'), { icon: 'upload', small: true, onClick: async () => {
+      const picked = await web.pickText();
+      if (!picked) return;
+      if (picked.error) { toast(picked.error, 'triangle-alert'); return; }
+      try {
+        paint(await web.rpc('dl:set-cookies', picked.text));
+        toast(t('set.cookiesDone'), 'check');
+      } catch (err) {
+        toast(err.message, 'triangle-alert');
+      }
+    } });
+    web.rpc('dl:cookies-status').then(paint).catch(() => paint(null));
+    return row(t('set.cookiesFile'), h('div.row-buttons', {}, name, upload, clear), { hint: t('set.cookiesFileHintWeb'), badge: badge('key-round', B.gray) });
+  }
+
   /** Version web : le compte connecté. */
   function accountGroup() {
     const { user } = window.control.web;
@@ -415,12 +441,12 @@ export function openSettings(initial = 'general') {
             set: (v) => update({ dl: { cookies: v } }),
           }, [{ value: '', label: t('cookies.none') }, ...['firefox', 'chrome', 'edge', 'brave', 'opera', 'vivaldi', 'chromium'].map((b) => ({ value: b, label: b[0].toUpperCase() + b.slice(1) }))]),
           { hint: t('set.cookiesHint'), badge: badge('globe', B.blue) }),
-          isWeb ? null : cookiesFileRow(),
+          isWeb ? cookiesUploadRow() : cookiesFileRow(),
           row(t('set.autoUpdate'), toggle({
             get: () => settings.dl.autoUpdate !== false,
             set: (v) => update({ dl: { autoUpdate: v } }),
           }), { hint: t('set.autoUpdateHint'), badge: badge('refresh-cw', B.green) }),
-        ]),
+        ], isWeb ? { footer: t('set.cookiesHowTo') } : undefined),
         group(t('set.tools'), [toolRows], {
           action: button(t('tools.update'), { small: true, kind: 'plain', onClick: async () => {
             toast(t('tools.updating'), 'refresh-cw');

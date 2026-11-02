@@ -3,8 +3,10 @@
 // Les commandes que la page envoie au serveur : les mêmes canaux que l'IPC d'Electron (le noyau les enregistre tels
 // quels), plus quelques canaux « srv: » propres au serveur. Chaque appel passe par un contrôle des droits.
 
+const path = require('node:path');
 const { httpError } = require('./auth');
 const { compare } = require('./compare');
+const cookies = require('./cookies');
 
 const ADMIN_ONLY = new Set([
   'lib:remove-folder', 'tools:install', 'tools:update', 'tags:write', 'tags:undo', 'lyrics:save-file',
@@ -13,7 +15,7 @@ const ADMIN_ONLY = new Set([
   'srv:users:detail', 'srv:users:add-folder', 'srv:users:remove-folder', 'srv:users:personal-folder', 'srv:users:set-grants',
   'srv:update:status', 'srv:update:check', 'srv:update:download', 'srv:update:install',
 ]);
-const DOWNLOADS = new Set(['dl:add', 'dl:info', 'dl:search', 'dl:cancel', 'dl:retry', 'dl:remove', 'dl:clear']);
+const DOWNLOADS = new Set(['dl:add', 'dl:info', 'dl:search', 'dl:cancel', 'dl:retry', 'dl:remove', 'dl:clear', 'dl:cookies-status', 'dl:set-cookies', 'dl:clear-cookies']);
 const DENIED = new Set(['lib:add-paths']); // des chemins du poste de l'utilisateur ne veulent rien dire pour un serveur
 // Hôtes de pochettes que le serveur accepte de télécharger (résultats de la recherche de pochettes).
 const COVER_HOSTS = [/(^|\.)mzstatic\.com$/i, /(^|\.)dzcdn\.net$/i, /(^|\.)deezer\.com$/i, /(^|\.)coverartarchive\.org$/i, /(^|\.)archive\.org$/i];
@@ -70,6 +72,18 @@ function install(hub, entry, registry) {
     } catch { /* adresse invalide */ }
     if (!host || !COVER_HOSTS.some((re) => re.test(host))) return { ok: false, message: 'Source de pochette refusée.' };
     return baseCover(e, { url });
+  });
+
+  // Cookies YouTube de ce compte : le serveur ne voit pas son navigateur, il envoie lui-même un cookies.txt exporté.
+  const cookiesFile = () => path.join(entry.core.dir, 'cookies.txt');
+  handlers.set('dl:cookies-status', () => cookies.status(cookiesFile()));
+  handlers.set('dl:set-cookies', (e, text) => {
+    cookies.save(cookiesFile(), text);
+    return cookies.status(cookiesFile());
+  });
+  handlers.set('dl:clear-cookies', () => {
+    cookies.clear(cookiesFile());
+    return { present: false };
   });
 
   // ─── Serveur ───────────────────────────────────────────────────────────────

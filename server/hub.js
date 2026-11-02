@@ -281,6 +281,7 @@ class Hub {
       tools: this.tools,
       emit: entry.emit,
       defaultDownloadDir: this.downloadDirFor(user),
+      cookiesFile: path.join(dir, 'cookies.txt'), // cookies YouTube envoyés par ce compte (voir server/cookies.js)
       // Le service films/séries reçoit la clé TMDB du serveur sans que le compte la voie dans ses réglages.
       mediaStore: {
         get: (key, fallback) => {

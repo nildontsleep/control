@@ -26,8 +26,9 @@ class Core {
    * emit(channel, payload) : envoie un événement à tous les clients de ce noyau.
    * defaultDownloadDir : dossier des téléchargements quand le réglage est vide.
    * mediaStore : réglages vus par le service films/séries (le serveur y ajoute sa clé TMDB sans l'exposer).
+   * cookiesFile : fichier cookies.txt du compte pour yt-dlp (serveur : envoyé par l'utilisateur ; bureau : aucun).
    */
-  constructor({ dir, coversDir, tools, emit, defaultDownloadDir, mediaStore }) {
+  constructor({ dir, coversDir, tools, emit, defaultDownloadDir, mediaStore, cookiesFile }) {
     this.dir = dir;
     this.emit = emit;
     this.defaultDownloadDir = defaultDownloadDir;
@@ -39,7 +40,7 @@ class Core {
     this.stats = new Stats(this.db);
     this.lyrics = new Lyrics({ db: this.db, library: this.library, tags: this.tags });
     this.tools = tools || new Tools({ binDir: path.join(dir, 'bin'), tmpDir: path.join(dir, 'tmp'), emit });
-    this.downloads = new Downloads({ tools: this.tools, library: this.library, store: this.store, file: path.join(dir, 'downloads.json'), emit });
+    this.downloads = new Downloads({ tools: this.tools, library: this.library, store: this.store, file: path.join(dir, 'downloads.json'), emit, cookiesFile });
     this.downloads.defaultDir = defaultDownloadDir;
     this.media = new MediaService({ db: this.db, store: mediaStore || this.store, emit });
   }

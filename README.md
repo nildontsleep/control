@@ -168,6 +168,10 @@ docker run -d --name control -p 5180:5180 \
 | `CONTROL_UPDATE` | `off`, `notify` ou `auto` : impose le mode de mise à jour du serveur (sinon l’administrateur le choisit dans `/admin`, *Prévenir seulement* par défaut). `off` convient si tu mets à jour l’image toi-même (Watchtower…). |
 | `CONTROL_UPDATE_TOKEN` | Jeton GitHub en lecture, seulement si le dépôt des releases est privé (il peut aussi se saisir dans `/admin`). |
 
+### YouTube bloque les téléchargements (« confirmer que vous n’êtes pas un robot »)
+
+Sur un serveur, YouTube demande souvent une connexion. Le serveur ne peut pas lire les cookies de ton navigateur : *Réglages* → *Téléchargements* → *Fichier cookies.txt* → **Envoyer…**. Exporte d’abord le fichier toi-même : connecte-toi à YouTube (idéalement dans une fenêtre privée), utilise l’extension « Get cookies.txt LOCALLY », puis ferme la fenêtre privée (sinon YouTube renouvelle les cookies et le fichier cesse de marcher). Le fichier est vérifié (format Netscape), gardé sur le serveur **pour ton compte seulement** (lisible par le serveur seul) et ne sert qu’à yt-dlp ; il n’est jamais renvoyé au navigateur. Préfère un compte YouTube secondaire : YouTube peut restreindre un compte utilisé par un outil automatique, et il n’est pas certain qu’un fichier de cookies suffise à lever tous les blocages d’une adresse de serveur.
+
 ### Mises à jour du serveur
 
 Le serveur sait **se mettre à jour tout seul** à partir des releases GitHub, sans toucher à Docker ni à un terminal. `npm run web` et l’image Docker lancent un petit **lanceur** (`server/launcher.js`) qui fait tourner le serveur ; la mise à jour passe par lui :

@@ -197,6 +197,13 @@
       location.assign(id ? `/?lib=${encodeURIComponent(id)}` : '/');
     },
     pickImage,
+    /** Un fichier texte choisi dans le navigateur (cookies.txt) : { name, text }, { error } ou null. */
+    async pickText({ max = 2 * 1024 * 1024 } = {}) {
+      const file = await pickFile('.txt,text/plain');
+      if (!file) return null;
+      if (file.size > max) return { error: 'Fichier trop volumineux.' };
+      return { name: file.name, text: await file.text() };
+    },
     social: {
       me: invoke('social:me'),
       others: invoke('social:others'),

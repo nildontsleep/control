@@ -34,8 +34,9 @@ function isMix(url) {
 }
 
 class Downloads {
-  constructor({ tools, library, store, file, emit }) {
+  constructor({ tools, library, store, file, emit, cookiesFile }) {
     this.tools = tools;
+    this.cookiesFile = cookiesFile || null; // fichier imposé par le serveur web (envoyé par l'utilisateur) : prioritaire
     this.library = library;
     this.store = store;
     this.file = file;
@@ -83,6 +84,7 @@ class Downloads {
 
   /** Cookies donnés à yt-dlp : un fichier cookies.txt (exporté du navigateur) passe avant les cookies d'un navigateur. */
   #cookieArgs() {
+    if (this.cookiesFile && fs.existsSync(this.cookiesFile)) return ['--cookies', this.cookiesFile];
     const dl = this.store.get('dl', {}) || {};
     if (dl.cookiesFile && fs.existsSync(dl.cookiesFile)) return ['--cookies', dl.cookiesFile];
     if (dl.cookies) return ['--cookies-from-browser', dl.cookies];

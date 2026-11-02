@@ -119,6 +119,10 @@ const fr = {
   'set.cookiesFile': 'Fichier cookies.txt', 'set.cookiesFilePick': 'Choisir…', 'set.cookiesFileNone': 'Aucun',
   'set.cookiesFileHint': 'Plus fiable que les cookies d’un navigateur Chrome, Edge ou Brave, que Windows chiffre. Exporte-le depuis ton navigateur connecté à YouTube avec l’extension « Get cookies.txt LOCALLY ». Il remplace le réglage ci-dessus.',
   'dl.errCookies': 'Impossible de lire les cookies du navigateur (il les verrouille ou les chiffre). Ferme-le complètement, ou choisis un fichier cookies.txt dans Réglages → Téléchargements.',
+  'dl.errBotWeb': 'YouTube demande de confirmer que vous n’êtes pas un robot. Envoyez un fichier cookies.txt dans Réglages → Téléchargements, puis réessayez.',
+  'set.cookiesUpload': 'Envoyer…', 'set.cookiesDone': 'Fichier cookies.txt envoyé.', 'set.cookiesSaved': 'Envoyé le {date} · {n} cookies',
+  'set.cookiesFileHintWeb': 'Exporté de ton navigateur, gardé sur le serveur pour ton compte seulement.',
+  'set.cookiesHowTo': 'YouTube bloque parfois les téléchargements d’un serveur (« confirmer que vous n’êtes pas un robot »). Le serveur ne voit pas les cookies de ton navigateur : exporte-les toi-même. Connecte-toi à YouTube (idéalement dans une fenêtre privée), exporte le fichier avec l’extension « Get cookies.txt LOCALLY », ferme la fenêtre privée, puis envoie-le ici. Préfère un compte secondaire : YouTube peut restreindre un compte utilisé par un outil automatique.',
   'cookies.none': 'Aucun',
 
   'tools.needTitle': 'Outils de téléchargement requis', 'tools.needText': 'yt-dlp et ffmpeg seront téléchargés une seule fois dans le dossier de l’application.',
@@ -481,6 +485,10 @@ const en = {
   'set.cookiesFile': 'cookies.txt file', 'set.cookiesFilePick': 'Choose…', 'set.cookiesFileNone': 'None',
   'set.cookiesFileHint': 'More reliable than cookies from Chrome, Edge or Brave, which Windows encrypts. Export it from your browser while signed in to YouTube with the “Get cookies.txt LOCALLY” extension. It replaces the setting above.',
   'dl.errCookies': 'Could not read the browser cookies (it locks or encrypts them). Close it completely, or choose a cookies.txt file in Settings → Downloads.',
+  'dl.errBotWeb': 'YouTube asks to confirm you are not a bot. Upload a cookies.txt file in Settings → Downloads, then try again.',
+  'set.cookiesUpload': 'Upload…', 'set.cookiesDone': 'cookies.txt uploaded.', 'set.cookiesSaved': 'Uploaded {date} · {n} cookies',
+  'set.cookiesFileHintWeb': 'Exported from your browser, kept on the server for your account only.',
+  'set.cookiesHowTo': 'YouTube sometimes blocks downloads from a server (“confirm you’re not a bot”). The server can’t see your browser’s cookies: export them yourself. Sign in to YouTube (ideally in a private window), export the file with the “Get cookies.txt LOCALLY” extension, close the private window, then upload it here. Prefer a secondary account: YouTube may restrict an account used by an automated tool.',
   'cookies.none': 'None',
 
   'tools.needTitle': 'Download tools required', 'tools.needText': 'yt-dlp and ffmpeg will be downloaded once into the app’s data folder.',
