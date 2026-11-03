@@ -17,6 +17,8 @@ services:
       # Mise à jour automatique du serveur (releases GitHub) : « notify » (par défaut, l'administrateur installe d'un clic),
       # « auto » ou « off ». Sans cette variable, le mode se règle dans /admin.
       # CONTROL_UPDATE: "notify"
+      # Plafond mémoire de Node (Mo), utile sur une petite machine.
+      # CONTROL_MAX_MEMORY: "768"
     volumes:
       # Comptes, réglages, bibliothèques, pochettes, outils.
       - ./data:/data

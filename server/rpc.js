@@ -7,6 +7,7 @@ const path = require('node:path');
 const { httpError } = require('./auth');
 const { compare } = require('./compare');
 const cookies = require('./cookies');
+const { checkUrl } = require('../src/main/urlguard');
 
 const ADMIN_ONLY = new Set([
   'lib:remove-folder', 'tools:install', 'tools:update', 'tags:write', 'tags:undo', 'lyrics:save-file',
@@ -189,6 +190,10 @@ function install(hub, entry, registry) {
     const theirs = hub.entry(owner).core.stats.get(span);
     return { with: hub.social.profile(owner), years: mine.years, months: mine.months, ...compare(mine, theirs) };
   });
+  // Sessions ouvertes de ce compte (navigateurs, téléphones…) : les voir, en fermer une, fermer toutes les autres.
+  handlers.set('srv:me:sessions', (e) => hub.accounts.sessionsOf(e.user.id, e.user.sid));
+  handlers.set('srv:me:revoke-session', (e, id) => hub.accounts.revokeSession(e.user.id, id));
+  handlers.set('srv:me:revoke-others', (e) => hub.accounts.revokeOthers(e.user.id, e.user.sid));
   handlers.set('srv:me:password', async (e, current, next) => {
     const user = await hub.accounts.check(e.user.username, current);
     if (!user) throw httpError(403, 'wrong_password', 'Mot de passe actuel incorrect.');
@@ -210,6 +215,7 @@ function createRegistry(hub, entry) {
     applySettingEffects: () => {},
     emitOthers: (e, channel, payload) => entry.emit(channel, payload, e.sender),
     onReset: () => hub.mirror(entry),
+    guardUrl: (url) => checkUrl(url).catch((err) => { throw httpError(400, 'invalid_url', err.message); }),
   });
   install(hub, entry, registry);
   return registry;

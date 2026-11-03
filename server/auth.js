@@ -162,7 +162,23 @@ class Accounts {
     if (now - row.lastSeen > 60 * 1000) {
       this.db.prepare('UPDATE sessions SET last_seen = ?, expires_at = ? WHERE token_hash = ?').run(now, now + this.sessionMs, hash);
     }
-    return row;
+    return { ...row, sid: hash.slice(0, 16) }; // sid : identifiant public de cette session (le début de l'empreinte du jeton)
+  }
+
+  /** Les sessions ouvertes d'un compte, la plus récente d'abord ; `current` : l'identifiant de la session qui demande. */
+  sessionsOf(userId, current) {
+    return this.db.prepare('SELECT substr(token_hash, 1, 16) AS id, created_at AS createdAt, last_seen AS lastSeen, expires_at AS expiresAt, user_agent AS userAgent, ip FROM sessions WHERE user_id = ? AND expires_at > ? ORDER BY last_seen DESC')
+      .all(userId, Date.now()).map((r) => ({ ...r, current: r.id === current }));
+  }
+
+  /** Ferme une session d'un compte (jamais celle d'un autre). */
+  revokeSession(userId, id) {
+    return this.db.prepare('DELETE FROM sessions WHERE user_id = ? AND substr(token_hash, 1, 16) = ?').run(userId, String(id)).changes > 0;
+  }
+
+  /** Ferme toutes les sessions d'un compte sauf celle-ci. */
+  revokeOthers(userId, current) {
+    return this.db.prepare('DELETE FROM sessions WHERE user_id = ? AND substr(token_hash, 1, 16) <> ?').run(userId, String(current)).changes;
   }
 
   close(token) {

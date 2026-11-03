@@ -250,3 +250,49 @@ test('mise à jour : ménage au démarrage et copie de sauvegarde de la base', a
     await t.close();
   }
 });
+
+test('mise à jour signée : archive acceptée seulement si une clé de confiance l’a signée', async () => {
+  const { keygen, sign } = require('../sign');
+  const trusted = keygen();
+  const stranger = keygen();
+  const t = await setup();
+  const keyed = () => new WebUpdater({ version: '0.9.0', dataDir: t.dataDir, settings: () => t.config, supervised: true, restart() {}, publicKeys: [trusted.publicKey] });
+  try {
+    const bundle = fakeBundle('0.9.1');
+    const signedBy = (key, version = '0.9.1') => sign(version, bundle.data, key.privateKey);
+    const updater = keyed();
+    assert.equal(updater.status.signed, true);
+
+    // Signée par la bonne clé : installée.
+    t.github.publish(bundle, { signature: signedBy(trusted) });
+    assert.equal((await updater.check({ manual: true })).phase, 'available');
+    const ready = await updater.download();
+    assert.deepEqual([ready.phase, ready.signed], ['ready', true]);
+    assert.ok(appstate.versionDir(t.dataDir, '0.9.1'));
+    fs.rmSync(path.join(t.dataDir, 'app'), { recursive: true, force: true });
+
+    // Signature d'une autre clé, ou faite pour une autre version : refusée, rien n'est installé.
+    for (const bad of [signedBy(stranger), signedBy(trusted, '0.9.2'), 'AAAA']) {
+      t.github.publish(bundle, { signature: bad });
+      const fresh = keyed();
+      await fresh.check({ manual: true });
+      const st = await fresh.download();
+      assert.deepEqual([st.phase, st.code], ['error', 'signature']);
+      assert.equal(appstate.versionDir(t.dataDir, '0.9.1'), null);
+    }
+
+    // Archive modifiée après la signature : refusée (l'empreinte publiée par GitHub est celle de l'archive modifiée).
+    const forged = fakeBundle('0.9.1', { extra: [{ name: 'server/evil.js', data: 'process.exit(0)' }] });
+    t.github.publish(forged, { signature: signedBy(trusted) });
+    const forgedUpdater = keyed();
+    await forgedUpdater.check({ manual: true });
+    assert.equal((await forgedUpdater.download()).code, 'signature');
+
+    // Pas de signature du tout alors que des clés sont configurées : on prévient, sans installer.
+    t.github.publish(bundle);
+    const unsigned = await keyed().check({ manual: true });
+    assert.deepEqual([unsigned.phase, unsigned.manual, unsigned.reason], ['available', true, 'nosignature']);
+  } finally {
+    await t.close();
+  }
+});

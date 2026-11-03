@@ -10,6 +10,7 @@ import { button } from '../ui/controls.js';
 import { avatarEl, onMyProfile } from '../ui/avatar.js';
 import { playlistCover } from '../ui/cards.js';
 import { openProfileEditor, openSharingEditor } from '../ui/profile-edit.js';
+import { openSessionsSheet } from '../ui/sessions-sheet.js';
 import { fmtDuration } from '../stats/format.js';
 import { accessChips } from './people.js';
 import { emptyState } from './shared.js';
@@ -46,7 +47,8 @@ export function profileView(root, param) {
     if (self) {
       actions.push(
         button(t('profile.edit'), { icon: 'square-pen', kind: 'primary', onClick: () => openProfileEditor(profile, load) }),
-        button(t('profile.sharing'), { icon: 'users', onClick: () => openSharingEditor(load) }));
+        button(t('profile.sharing'), { icon: 'users', onClick: () => openSharingEditor(load) }),
+        button(t('sessions.title'), { icon: 'monitor', onClick: () => openSessionsSheet() }));
     } else {
       if (access.browse) actions.push(button(t('profile.browse'), { icon: 'headphones', kind: 'primary', onClick: () => web.switchLibrary(id) }));
       if (access.compare) actions.push(button(t('profile.compare'), { icon: 'chart-column', kind: access.browse ? 'secondary' : 'primary', onClick: () => navigate('compare', id) }));

@@ -166,6 +166,7 @@ docker run -d --name control -p 5180:5180 \
 | `CONTROL_TMDB_KEY` | Clé TMDB offerte à tous les comptes (films et séries) ; chacun peut aussi mettre la sienne. |
 | `CONTROL_SESSION_DAYS`, `CONTROL_RESCAN_MINUTES` | Durée d’une session (30 jours) ; période de la réanalyse complète des dossiers (30 min, en plus de la surveillance des fichiers). |
 | `CONTROL_UPDATE` | `off`, `notify` ou `auto` : impose le mode de mise à jour du serveur (sinon l’administrateur le choisit dans `/admin`, *Prévenir seulement* par défaut). `off` convient si tu mets à jour l’image toi-même (Watchtower…). |
+| `CONTROL_MAX_MEMORY` | Plafond du tas de Node, en Mo (par exemple `1024`) : il nettoie davantage au lieu de laisser le système tuer le processus. Voir *Mémoire* plus bas. |
 | `CONTROL_UPDATE_TOKEN` | Jeton GitHub en lecture, seulement si le dépôt des releases est privé (il peut aussi se saisir dans `/admin`). |
 
 ### YouTube bloque les téléchargements (« confirmer que vous n’êtes pas un robot »)
@@ -194,6 +195,20 @@ Dans `/admin` → *Mises à jour du serveur* (et dans *Réglages* → *À propos
 - Sans lanceur (`npm run web:direct`, ou `node server/index.js`), le serveur signale les nouvelles versions mais ne peut pas se redémarrer lui-même.
 - **Un serveur en 0.8.x ne peut pas encore se mettre à jour tout seul** : passe une fois à cette version (`docker pull`, ou `git pull` et `npm ci`), ensuite les suivantes sont automatiques.
 - Sécurité : seules les releases de ce dépôt sont acceptées, l’archive doit correspondre à l’empreinte calculée par GitHub, son contenu est lu strictement (ni lien, ni chemin hors du dossier d’installation, taille limitée), et le jeton GitHub éventuel ne quitte jamais le serveur.
+
+### Signer les mises à jour (recommandé)
+
+L’empreinte SHA-256 publiée par GitHub protège d’un fichier abîmé, pas d’un dépôt ou d’un compte GitHub compromis. En mode *Automatiques*, un tel compromis reviendrait à exécuter du code sur tous les serveurs : la **signature Ed25519** l’empêche, car seule la clé gardée dans les secrets de la CI peut signer.
+
+1. Génère une paire de clés : `node server/sign.js keygen` (ou `docker run --rm ghcr.io/nildontsleep/control node server/sign.js keygen`).
+2. Ajoute la **clé privée** dans les secrets du dépôt GitHub sous le nom `WEB_SIGNING_KEY` (*Settings* → *Secrets and variables* → *Actions*). La CI signe alors chaque archive (`control-web-<version>.tgz.sig`).
+3. Mets la **clé publique** dans `server/update-key.json` (`{ "publicKeys": ["…"] }`) et publie une version : à partir de celle-ci, les serveurs **exigent** une signature valide (et une version non signée n’est plus installée toute seule). Ajouter une deuxième clé permet de la renouveler sans casser les serveurs existants.
+
+Tant que `publicKeys` est vide, rien n’est exigé (la page d’administration le rappelle).
+
+### Mémoire
+
+Mesuré sur une bibliothèque de morceaux fictifs : la base d’un compte reste légère (environ 90 Mo pour 5 000 morceaux, 180 Mo pour 30 000, 390 Mo pour 100 000, en comptant Node) ; chaque compte chargé s’y ajoute, et se décharge après 30 minutes d’inactivité. Le calcul de la liste des morceaux se fait dans un fil séparé et reste prêt tant que la bibliothèque ne change pas : un serveur à 30 000 morceaux reste fluide pour les autres comptes pendant qu’un compte ouvre sa page. Sur une petite machine (1 Go), fixe par exemple `CONTROL_MAX_MEMORY=512`.
 
 ### Se connecter à un serveur depuis l’application de bureau
 
@@ -227,6 +242,8 @@ Un utilisateur ne choisit pas de dossier sur le serveur : il voit ses dossiers e
 
 - **Administrateur** : dossiers communs et de chaque compte, comptes, outils de téléchargement, édition des tags et suppression de fichiers. **Utilisateur** : écouter, playlists, paroles, statistiques, films et séries, profil, partage ; les téléchargements peuvent lui être ouverts (`/admin`).
 - L’administrateur parcourt **toutes** les bibliothèques (c’est lui qui gère les fichiers), mais **jamais les récaps** d’un compte qui ne les lui a pas ouverts.
+- **Sessions** : chaque compte voit ses sessions ouvertes (navigateur, appareil, adresse, dernière activité) et peut en fermer une ou toutes les autres (*Mon profil* → *Sessions*).
+- **Téléchargements** : un lien doit être en http(s) et pointer vers une adresse publique ; le serveur refuse `127.0.0.1`, le réseau local et les services de métadonnées des hébergeurs. C’est une première barrière (une redirection ou un changement de DNS y échappe) : pour une vraie garantie, isole le réseau du conteneur.
 - Ce que le serveur lit : seulement les dossiers de musique des comptes (les siens, ceux d’un compte qui les partage avec toi, et les dossiers communs) ; un fichier hors de ces dossiers n’est jamais servi. Monte la musique en lecture seule (`:ro`) si tu ne veux pas que l’éditeur de tags la modifie.
 - Mets un **HTTPS** devant dès que le serveur sort de ton réseau local (Caddy, nginx, Cloudflare Tunnel, Tailscale…).
 - Les navigateurs lisent MP3, AAC/M4A, FLAC, Ogg, Opus, WAV et les vidéos MP4 (H.264) ou WebM ; les autres formats (MKV surtout) ne sont pas convertis à la volée.

@@ -73,7 +73,10 @@ function start() {
 
   let ready = false;
   let requested = false;
-  const proc = fork(path.join(pick.dir, 'server', 'index.js'), process.argv.slice(2), { env, stdio: ['inherit', 'inherit', 'inherit', 'ipc'] });
+  // CONTROL_MAX_MEMORY (Mo) : plafond du tas de Node ; au-delà, il nettoie davantage au lieu de laisser le système tuer le processus.
+  const maxMemory = Math.floor(Number(process.env.CONTROL_MAX_MEMORY));
+  const execArgv = [...process.execArgv, ...(maxMemory >= 128 ? [`--max-old-space-size=${maxMemory}`] : [])];
+  const proc = fork(path.join(pick.dir, 'server', 'index.js'), process.argv.slice(2), { env, execArgv, stdio: ['inherit', 'inherit', 'inherit', 'ipc'] });
   child = proc;
   const timer = setTimeout(() => {
     if (ready) return;

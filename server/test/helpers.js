@@ -133,8 +133,17 @@ async function mockGithub() {
           size: rel.data.length,
           browser_download_url: `http://127.0.0.1:${port}/asset/${rel.version}.tgz`,
           digest: rel.noDigest ? null : `sha256:${rel.digestOverride || rel.sha256}`,
-        }],
+        }, ...(rel.signature ? [{
+          name: `control-web-${rel.version}.tgz.sig`,
+          size: rel.signature.length,
+          browser_download_url: `http://127.0.0.1:${port}/asset/${rel.version}.tgz.sig`,
+          digest: null,
+        }] : [])],
       }));
+    }
+    if (rel?.signature && req.url === `/asset/${rel.version}.tgz.sig`) {
+      res.writeHead(200, { 'content-type': 'text/plain', 'content-length': Buffer.byteLength(rel.signature) });
+      return res.end(rel.signature);
     }
     if (rel && req.url === `/asset/${rel.version}.tgz`) {
       res.writeHead(200, { 'content-type': 'application/gzip', 'content-length': rel.data.length });

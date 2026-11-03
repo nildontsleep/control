@@ -47,6 +47,7 @@ class Core {
 
   /** Ferme ce que le noyau garde ouvert (serveur : utilisateur inactif). */
   close() {
+    this.library.close();
     this.downloads.killAll();
     this.store.flush();
     try { this.db.close(); } catch { /* déjà fermée */ }
@@ -55,7 +56,7 @@ class Core {
   /**
    * Enregistre les commandes qui ne dépendent ni d'une fenêtre ni d'une boîte de dialogue.
    * ipc : { handle(channel, (event, ...args) => any), on(channel, (event, ...args) => void) } — ipcMain convient.
-   * host : { scanRoots(), applySettingEffects(patch), emitOthers(event, channel, payload), onReset() }
+   * host : { scanRoots(), applySettingEffects(patch), emitOthers(event, channel, payload), onReset(), guardUrl?(url) }
    */
   register(ipc, host) {
     const { store, library, lyrics, stats, tags, tools, downloads, media, emit } = this;
@@ -186,14 +187,19 @@ class Core {
     });
     handle('tools:update', () => tools.update());
     handle('dl:list', () => downloads.list());
+    // host.guardUrl (serveur) : n'accepte que des liens publics en http(s) ; sur le bureau, tout lien est permis.
+    const guard = async (url) => (host.guardUrl ? host.guardUrl(url) : url);
     handle('dl:info', async (e, url) => {
       try {
-        return { ok: true, info: await downloads.info(url) };
+        return { ok: true, info: await downloads.info(await guard(url)) };
       } catch (err) {
         return { ok: false, error: err.message };
       }
     });
-    handle('dl:add', (e, opts) => downloads.add(opts));
+    handle('dl:add', async (e, opts) => {
+      if (!isObj(opts)) throw Object.assign(new Error('Demande invalide.'), { status: 400 }); // status : lu par le serveur web
+      return downloads.add({ ...opts, url: await guard(opts.url) });
+    });
     handle('dl:search', async (e, source, query) => {
       try {
         return { ok: true, results: await downloads.search(String(source || ''), String(query || '')) };

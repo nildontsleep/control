@@ -191,6 +191,7 @@ function createWindow() {
   if (saved.maximized) mainWin.maximize();
   mainWin.loadURL('app://nilcam/index.html');
   sources.attach(mainWin);
+  if (process.env.CONTROL_SMOKE) require('./smoke').attach(mainWin, app); // test de démarrage de la CI
   mainWin.once('ready-to-show', () => mainWin.show());
 
   const push = () => mainWin && !mainWin.isDestroyed() && mainWin.webContents.send('window:state', windowState(mainWin));

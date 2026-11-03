@@ -88,12 +88,14 @@
     engine: 'Cette version demande une version de Node.js plus récente.',
     deps: 'Impossible d’installer les dépendances de cette version (npm).',
     unsupervised: 'Ce serveur n’est pas lancé par le lanceur : il ne peut pas redémarrer tout seul.',
+    signature: 'La signature de l’archive est absente ou invalide : la mise à jour est refusée.',
     launch: 'Le serveur ne s’est pas redémarré : relancez-le à la main, la nouvelle version est déjà choisie.',
   };
   const UPDATE_REASONS = {
     unsupervised: 'Ce serveur n’est pas lancé par le lanceur (npm run web ou l’image Docker) : à mettre à jour à la main.',
     asset: 'Cette version n’a pas d’archive pour le serveur : à mettre à jour à la main.',
     nodigest: 'L’archive de cette version n’a pas d’empreinte à vérifier : à mettre à jour à la main.',
+    nosignature: 'Cette version n’est pas signée alors que ce serveur exige une signature : à mettre à jour à la main.',
   };
 
   /** Le serveur redémarre sur sa nouvelle version : on recharge la page dès qu'il répond de nouveau. */
@@ -220,6 +222,7 @@
       line,
       notes,
       warn,
+      h('p', { class: 'hint', text: status.signed ? 'Archives vérifiées : empreinte SHA-256 et signature Ed25519.' : 'Archives vérifiées par leur empreinte SHA-256 seulement. Pour exiger aussi une signature (protège d’un dépôt GitHub compromis), voir « Signer les mises à jour » dans le README.' }),
       h('div', { class: 'toggle-row' }, h('span', { text: 'Mises à jour' }), mode),
       modeHint,
       hourRow,

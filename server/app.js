@@ -12,7 +12,7 @@ const { invoke, send: sendCommand } = require('./rpc');
 const { httpError } = require('./auth');
 const { Hub } = require('./hub');
 const {
-  parseCookies, cookieHeader, readJson, send, sendJson, sendBuffer, sendFile, safeJoin, MIME,
+  parseCookies, cookieHeader, readJson, send, sendJson, sendGzipped, sendBuffer, sendFile, safeJoin, MIME,
 } = require('./http');
 
 const RENDERER_DIR = path.resolve(__dirname, '../src/renderer');
@@ -338,6 +338,8 @@ function createApp(hub, config) {
         sendCommand(hub, entry, user, channel, args, clientId, view);
         return send(res, 204, null);
       }
+      // La liste de tous les morceaux est le plus gros envoi : elle est construite à part et gardée prête.
+      if (channel === 'lib:tracks' && !view) return sendGzipped(req, res, 200, await hub.tracksPayload(entry));
       const result = await invoke(hub, entry, user, channel, args, clientId, view);
       return json(req, res, 200, { ok: true, result: result === undefined ? null : result });
     }

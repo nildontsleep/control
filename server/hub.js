@@ -14,6 +14,7 @@ const { Accounts, Throttle, httpError } = require('./auth');
 const { Social } = require('./social');
 const { createRegistry } = require('./rpc');
 const { WebUpdater } = require('./updater');
+const { TracksBuilder } = require('./tracks');
 const pkg = require('../package.json');
 
 const IDLE_MS = 30 * 60 * 1000;
@@ -49,6 +50,25 @@ class Hub {
       ...(config.updateOptions || {}),
     });
     this.updater.on('state', (state) => this.toAdmins('update:state', state));
+    this.tracksBuilder = new TracksBuilder();
+    this.cacheStats = { hits: 0, misses: 0 };
+  }
+
+  /**
+   * La liste des morceaux d'un compte, en JSON compressé, prête à envoyer. Elle est gardée tant que rien n'a changé dans
+   * sa base (total_changes augmente à chaque écriture : scan, écoute, tags, playlists…).
+   */
+  tracksPayload(entry) {
+    const version = entry.core.db.prepare('SELECT total_changes() AS n').get().n;
+    if (entry.tracksCache?.version === version) {
+      this.cacheStats.hits++;
+      return entry.tracksCache.promise;
+    }
+    this.cacheStats.misses++;
+    const promise = this.tracksBuilder.build(path.join(entry.core.dir, 'library.db'));
+    entry.tracksCache = { version, promise };
+    promise.catch(() => { if (entry.tracksCache?.promise === promise) entry.tracksCache = null; });
+    return promise;
   }
 
   // ─── Réglages du serveur ───────────────────────────────────────────────────
@@ -426,6 +446,7 @@ class Hub {
 
   close() {
     this.updater.stop();
+    this.tracksBuilder.close();
     for (const t of this.timers) clearInterval(t);
     clearTimeout(this.watchTimer);
     for (const w of this.watchers) w.close();

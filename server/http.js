@@ -89,6 +89,14 @@ async function sendJson(req, res, status, data, headers = {}) {
   return send(res, status, raw, { ...base, 'content-length': raw.length });
 }
 
+/** Envoie une réponse JSON déjà compressée (gzip) ; décompressée pour un client qui ne sait pas la lire. */
+function sendGzipped(req, res, status, packed, headers = {}) {
+  const base = { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', ...headers };
+  if (/\bgzip\b/.test(req.headers['accept-encoding'] || '')) return send(res, status, packed, { ...base, 'content-encoding': 'gzip', vary: 'Accept-Encoding', 'content-length': packed.length });
+  const raw = zlib.gunzipSync(packed);
+  return send(res, status, raw, { ...base, 'content-length': raw.length });
+}
+
 async function sendBuffer(req, res, status, buffer, type, headers = {}) {
   const base = { 'content-type': type, ...headers };
   if (COMPRESSIBLE.test(type) && buffer.length > 1024 && /\bgzip\b/.test(req.headers['accept-encoding'] || '')) {
@@ -163,4 +171,4 @@ function safeJoin(root, urlPath) {
   return file === root || file.startsWith(root + path.sep) ? file : null;
 }
 
-module.exports = { MIME, mimeOf, parseCookies, cookieHeader, readJson, send, sendJson, sendBuffer, sendFile, safeJoin };
+module.exports = { MIME, mimeOf, parseCookies, cookieHeader, readJson, send, sendJson, sendGzipped, sendBuffer, sendFile, safeJoin };

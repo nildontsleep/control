@@ -16,6 +16,7 @@ const { spawn } = require('node:child_process');
 const { EventEmitter } = require('node:events');
 const { unpack } = require('./tar');
 const appstate = require('./appstate');
+const signing = require('./sign');
 
 const REPO = 'nildontsleep/control';
 const API = () => process.env.CONTROL_UPDATE_URL || `https://api.github.com/repos/${REPO}/releases/latest`;
@@ -25,6 +26,7 @@ const TRUSTED = [
 ];
 const AGENT = 'control-web-updater (https://github.com/nildontsleep/control)';
 const ASSET = /^control-web-(\d+\.\d+\.\d+)\.tgz$/;
+const SIGNATURE = /^control-web-(\d+\.\d+\.\d+)\.tgz\.sig$/;
 const MAX_ARCHIVE = 100 * 1024 * 1024;
 const CHECK_EVERY_MS = 6 * 60 * 60 * 1000;
 const KEEP_BACKUPS = 3;
@@ -50,8 +52,9 @@ class WebUpdater extends EventEmitter {
    * @param {Function} [o.backup]  () → copie de la base du serveur avant de changer de version
    * @param {Function} [o.idle]  () → plus personne n'est connecté ?
    * @param {Function} [o.fetch]  équivalent de fetch
+   * @param {string[]} [o.publicKeys]  clés publiques de confiance (base64) : si elles existent, l'archive doit être signée
    */
-  constructor({ version, dataDir, settings, supervised, restart, backup, idle, fetch: fetchFn }) {
+  constructor({ version, dataDir, settings, supervised, restart, backup, idle, fetch: fetchFn, publicKeys }) {
     super();
     this.version = version;
     this.dataDir = dataDir;
@@ -61,6 +64,7 @@ class WebUpdater extends EventEmitter {
     this.backup = backup || (() => null);
     this.idle = idle || (() => false);
     this.fetch = fetchFn || ((...args) => globalThis.fetch(...args));
+    this.publicKeys = publicKeys || signing.trustedKeys();
     this.paths = appstate.paths(dataDir);
     this.release = null;
     this.state = { phase: 'idle' };
@@ -78,6 +82,7 @@ class WebUpdater extends EventEmitter {
       hour,
       locked,
       supervised: this.supervised,
+      signed: this.publicKeys.length > 0,
       failure: appstate.readState(this.dataDir).failure || null,
       ...patch,
     };
@@ -150,8 +155,9 @@ class WebUpdater extends EventEmitter {
       const info = { version: latest, name: rel.name || `v${latest}`, notes: String(rel.body || '').slice(0, 4000), page: rel.html_url, checkedAt: Date.now() };
       const asset = (rel.assets || []).find((a) => ASSET.exec(a.name)?.[1] === latest && a.browser_download_url);
       const digest = /^sha256:([0-9a-f]{64})$/i.exec(asset?.digest || '')?.[1]?.toLowerCase() || null;
+      const sigAsset = (rel.assets || []).find((a) => SIGNATURE.exec(a.name)?.[1] === latest && a.browser_download_url);
       // Rien à installer tout seul : on signale la version et on renvoie vers sa page.
-      const reason = !this.supervised ? 'unsupervised' : !asset ? 'asset' : !digest ? 'nodigest' : null;
+      const reason = !this.supervised ? 'unsupervised' : !asset ? 'asset' : !digest ? 'nodigest' : this.publicKeys.length && !sigAsset ? 'nosignature' : null;
       if (reason) {
         this.release = null;
         this.#set({ phase: 'available', manual: true, reason, ...info });
@@ -159,9 +165,12 @@ class WebUpdater extends EventEmitter {
       }
       // Dépôt privé : le téléchargement passe par l'API (avec le jeton) ; sinon par l'adresse publique.
       const authed = !!this.#auth().authorization;
-      const url = authed && asset.url ? asset.url : asset.browser_download_url;
-      if (!TRUSTED.some((re) => re.test(url)) && !process.env.CONTROL_UPDATE_URL) throw Object.assign(new Error('untrusted'), { code: 'untrusted' });
-      this.release = { ...info, url, size: asset.size || 0, digest, api: url === asset.url };
+      const locate = (a) => {
+        const url = authed && a.url ? a.url : a.browser_download_url;
+        if (!TRUSTED.some((re) => re.test(url)) && !process.env.CONTROL_UPDATE_URL) throw Object.assign(new Error('untrusted'), { code: 'untrusted' });
+        return { url, api: url === a.url };
+      };
+      this.release = { ...info, ...locate(asset), size: asset.size || 0, digest, signature: sigAsset ? locate(sigAsset) : null };
       this.#set({ phase: 'available', size: this.release.size, ...info });
     } catch (err) {
       if (manual) this.#set({ phase: 'error', code: err.code || 'network', checkedAt: Date.now() });
@@ -180,48 +189,63 @@ class WebUpdater extends EventEmitter {
     const info = { version: rel.version, name: rel.name, notes: rel.notes, page: rel.page };
     this.#set({ phase: 'downloading', size: rel.size, received: 0, ...info });
     try {
-      let url = rel.url;
-      let headers = { 'user-agent': AGENT };
-      if (rel.api) {
-        const target = await this.#redirect(rel.url, { 'user-agent': AGENT, accept: 'application/octet-stream', ...this.#auth() });
-        if (target) {
-          const host = (() => { try { const u = new URL(target); return u.protocol === 'https:' ? u.hostname : ''; } catch { return ''; } })();
-          if (!/(^|\.)(github|githubusercontent)\.com$/i.test(host) && !process.env.CONTROL_UPDATE_URL) throw Object.assign(new Error('untrusted'), { code: 'untrusted' });
-          url = target;
-        } else {
-          headers = { 'user-agent': AGENT, accept: 'application/octet-stream', ...this.#auth() };
-        }
-      }
-      const res = await this.fetch(url, { headers, redirect: 'follow' });
-      if (!res.ok || !res.body) throw Object.assign(new Error(`HTTP ${res.status}`), { code: 'http' });
-      const total = Number(res.headers.get('content-length')) || rel.size;
-      const chunks = [];
-      let received = 0;
-      let last = 0;
-      const reader = res.body.getReader();
-      for (;;) {
-        // eslint-disable-next-line no-await-in-loop
-        const { done, value } = await reader.read();
-        if (done) break;
-        chunks.push(value);
-        received += value.length;
-        if (received > MAX_ARCHIVE) throw Object.assign(new Error('taille'), { code: 'corrupt' });
-        if (Date.now() - last > 200) {
-          last = Date.now();
-          this.#set({ phase: 'downloading', size: total, received, ...info });
-        }
-      }
-      const archive = Buffer.concat(chunks);
+      const { buffer: archive, total } = await this.#getAsset(rel, {
+        max: MAX_ARCHIVE,
+        size: rel.size,
+        progress: (received, size) => this.#set({ phase: 'downloading', size, received, ...info }),
+      });
       if (rel.size && archive.length !== rel.size) throw Object.assign(new Error('taille'), { code: 'corrupt' });
       if (sha256(archive) !== rel.digest) throw Object.assign(new Error('empreinte'), { code: 'corrupt' });
+      // Signature (si des clés de confiance sont configurées) : c'est elle qui protège d'un dépôt compromis.
+      if (this.publicKeys.length) {
+        if (!rel.signature) throw Object.assign(new Error('signature'), { code: 'signature' });
+        const { buffer: sig } = await this.#getAsset(rel.signature, { max: 1024, size: 0 });
+        if (!signing.verify(rel.version, archive, sig.toString('utf8'), this.publicKeys)) throw Object.assign(new Error('signature'), { code: 'signature' });
+      }
       await this.#stage(archive, rel.version);
-      this.#set({ phase: 'ready', size: total, verified: true, ...info });
+      this.#set({ phase: 'ready', size: total, verified: true, signed: this.publicKeys.length > 0, ...info });
     } catch (err) {
       this.#set({ phase: 'error', code: err.code || 'network', detail: err.detail || undefined, ...info });
     } finally {
       this.busy = false;
     }
     return this.state;
+  }
+
+  /** Télécharge un fichier de la release (dépôt privé : l'API répond par une adresse signée, que le jeton ne suit jamais). */
+  async #getAsset({ url, api }, { max, size, progress }) {
+    let target = url;
+    let headers = { 'user-agent': AGENT };
+    if (api) {
+      const location = await this.#redirect(url, { 'user-agent': AGENT, accept: 'application/octet-stream', ...this.#auth() });
+      if (location) {
+        const host = (() => { try { const u = new URL(location); return u.protocol === 'https:' ? u.hostname : ''; } catch { return ''; } })();
+        if (!/(^|\.)(github|githubusercontent)\.com$/i.test(host) && !process.env.CONTROL_UPDATE_URL) throw Object.assign(new Error('untrusted'), { code: 'untrusted' });
+        target = location;
+      } else {
+        headers = { 'user-agent': AGENT, accept: 'application/octet-stream', ...this.#auth() };
+      }
+    }
+    const res = await this.fetch(target, { headers, redirect: 'follow' });
+    if (!res.ok || !res.body) throw Object.assign(new Error(`HTTP ${res.status}`), { code: 'http' });
+    const total = Number(res.headers.get('content-length')) || size;
+    const chunks = [];
+    let received = 0;
+    let last = 0;
+    const reader = res.body.getReader();
+    for (;;) {
+      // eslint-disable-next-line no-await-in-loop
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+      received += value.length;
+      if (received > max) throw Object.assign(new Error('taille'), { code: 'corrupt' });
+      if (progress && Date.now() - last > 200) {
+        last = Date.now();
+        progress(received, total);
+      }
+    }
+    return { buffer: Buffer.concat(chunks), total };
   }
 
   /** Extrait l'archive vérifiée dans `versions/<version>` : complète ou absente, jamais à moitié. */

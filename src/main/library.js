@@ -53,8 +53,15 @@ class Library {
     this.rescan = null;
     this.folderCovers = new Map();
     this.changeTimer = null;
+    this.closed = false;
     fs.mkdirSync(coversDir, { recursive: true });
     fs.mkdirSync(thumbsDir, { recursive: true });
+  }
+
+  /** Fermeture : une analyse en cours s'arrête sans bruit (la base va se fermer sous ses pieds). */
+  close() {
+    this.closed = true;
+    clearTimeout(this.changeTimer);
   }
 
   // ─── Lecture ───────────────────────────────────────────────────────────────
@@ -129,12 +136,12 @@ class Library {
     }
     this.scanning = this.#scan(roots)
       .catch((err) => {
-        console.error('Scan interrompu :', err);
+        if (!this.closed) console.error('Scan interrompu :', err); // fermeture en cours : rien d'anormal
         return { added: 0, removed: 0, total: 0 };
       })
       .then(async (result) => {
         this.scanning = null;
-        if (this.rescan) {
+        if (this.rescan && !this.closed) {
           const next = this.rescan;
           this.rescan = null;
           await this.scan(next);
@@ -204,7 +211,7 @@ class Library {
       this.changed('tracks');
     };
     const worker = async () => {
-      while (index < todo.length) {
+      while (index < todo.length && !this.closed) {
         const file = todo[index++];
         const row = await this.#read(file);
         if (row) {
