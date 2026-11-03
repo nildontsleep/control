@@ -53,6 +53,13 @@ const MIGRATIONS = [
   -- « En écoute » : le compte montre ce qu'il écoute à ceux qui peuvent parcourir sa bibliothèque.
   ALTER TABLE users ADD COLUMN share_listening INTEGER NOT NULL DEFAULT 0;
   `,
+  `
+  -- API compatible Subsonic : mot de passe d'application du compte (chiffré, la signature « token » en a besoin en clair
+  -- côté serveur) et empreinte de ce secret pour la connexion par clé d'API.
+  ALTER TABLE users ADD COLUMN subsonic_secret TEXT;
+  ALTER TABLE users ADD COLUMN subsonic_key_hash TEXT;
+  CREATE INDEX idx_users_subsonic_key ON users(subsonic_key_hash);
+  `,
 ];
 
 function openServerDb(file) {

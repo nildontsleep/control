@@ -17,6 +17,7 @@ const { WebUpdater } = require('./updater');
 const { TracksBuilder } = require('./tracks');
 const { Backups } = require('./backup');
 const { Presence } = require('./presence');
+const { Subsonic } = require('./subsonic');
 const pkg = require('../package.json');
 const { checkUrl } = require('../src/main/urlguard');
 
@@ -57,6 +58,8 @@ class Hub {
     this.cacheStats = { hits: 0, misses: 0 };
     this.backups = new Backups({ hub: this, options: config.backupOptions });
     this.presence = new Presence(this);
+    this.subsonicThrottle = new Throttle({ max: 30, windowMs: 10 * 60 * 1000 });
+    this.subsonic = new Subsonic(this);
   }
 
   /**
@@ -84,6 +87,7 @@ class Hub {
       allowUserDownloads: false,
       allowUserUploads: false, // envois de musique depuis le navigateur pour tous les comptes (sinon l'administrateur seulement)
       uploadMaxMb: 500, // taille maximale d'un fichier envoyé
+      subsonicEnabled: true, // API compatible Subsonic (/rest) : chaque compte y accède avec son mot de passe d'application
       libraryFolders: [], // dossiers communs : tous les comptes les voient (les dossiers propres à un compte sont dans la table users)
       usersRoot: '', // si défini, chaque nouveau compte reçoit un dossier de musique à son nom dedans
       downloadDir: path.join(this.config.dataDir, 'downloads'), // un sous-dossier par compte
@@ -114,12 +118,12 @@ class Hub {
       const url = String(patch.backupWebhook || '').trim();
       if (url && !this.backups.validUrl(url)) throw httpError(400, 'bad_webhook', 'Adresse de webhook invalide (https://discord.com/api/webhooks/…).');
     }
-    const allowed = ['serverName', 'registrationEnabled', 'allowUserDownloads', 'allowUserUploads', 'uploadMaxMb', 'libraryFolders', 'downloadDir', 'tmdbKey', 'usersRoot', 'updateMode', 'updateHour', 'updateToken', 'backupWebhook', 'backupEvery', 'backupHour', 'backupPassphrase', 'lastfmKey', 'lastfmSecret'];
+    const allowed = ['serverName', 'registrationEnabled', 'allowUserDownloads', 'allowUserUploads', 'uploadMaxMb', 'subsonicEnabled', 'libraryFolders', 'downloadDir', 'tmdbKey', 'usersRoot', 'updateMode', 'updateHour', 'updateToken', 'backupWebhook', 'backupEvery', 'backupHour', 'backupPassphrase', 'lastfmKey', 'lastfmSecret'];
     for (const key of allowed) {
       if (!(key in patch)) continue;
       const v = patch[key];
       if (key === 'libraryFolders') this.settings.libraryFolders = (Array.isArray(v) ? v : []).filter((x) => typeof x === 'string' && x);
-      else if (key === 'registrationEnabled' || key === 'allowUserDownloads' || key === 'allowUserUploads') this.settings[key] = !!v;
+      else if (key === 'registrationEnabled' || key === 'allowUserDownloads' || key === 'allowUserUploads' || key === 'subsonicEnabled') this.settings[key] = !!v;
       else if (key === 'uploadMaxMb') this.settings.uploadMaxMb = Math.min(20480, Math.max(1, Math.floor(Number(v)) || 500));
       else if (key === 'serverName') this.settings.serverName = String(v || 'control').trim().slice(0, 60) || 'control';
       else if (key === 'updateMode') this.settings.updateMode = ['off', 'notify', 'auto'].includes(v) ? v : 'notify';

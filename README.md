@@ -215,6 +215,15 @@ Glisse des fichiers ou des dossiers dans la fenêtre, ou *Réglages* → *Biblio
 - **Last.fm** demande une application (gratuite) : sur le web, l’administrateur la crée sur `last.fm/api/account/create` et renseigne sa clé d’API et son secret dans `/admin` → *Last.fm* ; sur le bureau, saisis les tiens à la première connexion.
 - Une adresse ListenBrainz personnalisée (serveur auto-hébergé) n’est acceptée que si elle est publique.
 
+### Applications Subsonic / OpenSubsonic
+
+Le serveur parle l’API **Subsonic 1.16.1** (avec les extensions OpenSubsonic courantes) sur `/rest/…` : tu peux donc écouter ta bibliothèque depuis Symfonium, DSub, Feishin, Amperfy, Sonixd, Substreamer, Tempo… *Mon profil* → *Applications compatibles Subsonic* donne l’adresse du serveur, ton identifiant et un **mot de passe d’application** (à confirmer avec le mot de passe du compte, renouvelable et révocable à tout moment). Ce mot de passe ne sert qu’à l’API : il ne donne jamais accès au site, et ta session ou ton mot de passe réel ne transitent jamais par une application tierce. Les clients utilisent l’authentification par jeton (`u` + `t` + `s`), par mot de passe (`p`, y compris `enc:`) ou par clé d’API OpenSubsonic (`apiKey`) ; réponses en XML, JSON ou JSONP. L’administrateur peut tout couper dans `/admin` → *API Subsonic*. Les tentatives ratées sont limitées.
+
+- **Géré** : artistes, albums, morceaux, genres, dossiers, recherche (`search2` / `search3`), listes d’albums (aléatoire, récents, fréquents, par année ou genre, alphabétiques), morceaux aléatoires, playlists (création, modification, suppression), flux avec `Range` (lecture et déplacement dans le morceau), téléchargement, pochettes (taille demandée), paroles, favoris, « en écoute », comptage des écoutes (qui alimente tes statistiques et ton scrobbling Last.fm / ListenBrainz).
+- **Favoris** : le « ♥ » des applications range les morceaux dans une playlist manuelle nommée **Favoris**.
+- **Seulement ta bibliothèque** : un identifiant qui n’en fait pas partie est refusé, jamais servi.
+- **Pas géré** : transcodage (les fichiers sont servis tels quels, ce qui suffit à la plupart des applications), podcasts, radios, partages, signets, jukebox, gestion d’utilisateurs. Ces appels répondent proprement (listes vides ou refus), sans faire échouer le client.
+
 ### Sauvegardes (webhook Discord)
 
 `/admin` → *Sauvegardes* : colle l’adresse d’un **webhook Discord** (Paramètres du salon → Intégrations → Webhooks), choisis la fréquence (chaque jour ou chaque semaine, à partir de l’heure voulue) et, de préférence, une **phrase secrète**. Le serveur archive alors la base des comptes (`server.db`) et, pour chaque compte, sa base (écoutes, playlists, tags, progression, récaps) et ses réglages, chiffre l’archive (AES-256-GCM) si une phrase est définie, la découpe en parties de 9 Mo au plus et les poste dans le salon. Les deux dernières sauvegardes restent aussi dans `<données>/backups/`. Boutons *Sauvegarder maintenant* et *Tester le webhook*.
@@ -303,7 +312,7 @@ Dans une liste : `↑` `↓` pour se déplacer, `Maj` ou `Ctrl` pour sélectionn
 ## Idées pour la suite
 
 - Mini-lecteur flottant.
-- Version web : conversion à la volée des vidéos que les navigateurs ne lisent pas (MKV), envoi de musique depuis le navigateur.
+- Version web : conversion à la volée des vidéos que les navigateurs ne lisent pas (MKV), transcodage pour l’API Subsonic.
 
 ## Développer
 
@@ -340,6 +349,7 @@ server/             version web : HTTP, comptes et sessions, un noyau par compte
                     appstate.js : versions installées ; bundle.js : construit l’archive publiée avec chaque release
   hub.js            comptes chargés à la demande, dossiers (communs / propres à chaque compte), analyses
   social.js         profils, partages (qui voit quoi) ; compare.js : comparaison de deux récaps
+  subsonic.js       API Subsonic / OpenSubsonic (/rest) : authentification, modèle artistes-albums, flux, favoris ; secrets.js : secrets scellés
 src/web/            côté navigateur : pont window.control, pages de connexion / installation / administration, PWA, mise en page mobile
 src/renderer/       interface (modules ES, sans framework ni bundler)
   js/player.js      moteur de lecture : file, égaliseur, MediaSession, comptage d’écoutes

@@ -69,6 +69,7 @@
       toggle('Téléchargements pour tous', 'sinon réservés aux administrateurs', 'allowUserDownloads'),
       toggle('Envois de musique pour tous', 'depuis le navigateur (glisser-déposer), dans le dossier Envois de chaque compte ; sinon réservés aux administrateurs', 'allowUserUploads'),
       h('div', { class: 'toggle-row' }, h('span', { text: 'Taille maximale d’un fichier envoyé (Mo)' }), uploadMax),
+      toggle('API Subsonic', 'permet aux applications Subsonic / OpenSubsonic (Symfonium, DSub, Feishin…) de se connecter avec un mot de passe d’application propre à chaque compte', 'subsonicEnabled'),
       h('div', { class: 'inline-form' }, tmdb,
         h('button', { class: 'btn btn-secondary', text: 'Enregistrer la clé TMDB', onclick: guard(async () => { if (!tmdb.value.trim()) return; await rpc('srv:settings', { tmdbKey: tmdb.value.trim() }); tmdb.value = ''; flash('Clé enregistrée.', false); reload(); }) })),
       h('p', { class: 'hint', text: 'La clé TMDB (gratuite) sert aux films et séries ; chaque compte peut aussi renseigner la sienne dans ses réglages.' }),

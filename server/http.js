@@ -72,6 +72,25 @@ function readJson(req, limit = 40 * 1024 * 1024) {
   });
 }
 
+/** Corps de la requête en texte (limité en taille). */
+function readText(req, limit = 1024 * 1024) {
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    let size = 0;
+    req.on('data', (chunk) => {
+      size += chunk.length;
+      if (size > limit) {
+        reject(Object.assign(new Error('Requête trop volumineuse.'), { status: 413, code: 'too_large' }));
+        req.destroy();
+        return;
+      }
+      chunks.push(chunk);
+    });
+    req.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
+    req.on('error', reject);
+  });
+}
+
 function send(res, status, body, headers = {}) {
   if (res.headersSent) return;
   res.writeHead(status, { 'x-content-type-options': 'nosniff', ...headers });
@@ -171,4 +190,4 @@ function safeJoin(root, urlPath) {
   return file === root || file.startsWith(root + path.sep) ? file : null;
 }
 
-module.exports = { MIME, mimeOf, parseCookies, cookieHeader, readJson, send, sendJson, sendGzipped, sendBuffer, sendFile, safeJoin };
+module.exports = { MIME, mimeOf, parseCookies, cookieHeader, readJson, readText, send, sendJson, sendGzipped, sendBuffer, sendFile, safeJoin };

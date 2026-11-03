@@ -60,7 +60,11 @@ export function promptSheet({ title, message, value = '', placeholder = '', conf
     const ok = h('button.btn.btn-primary', { type: 'button', text: confirmLabel, onclick: () => finish(input.value.trim() || null) });
     const cancel = h('button.btn.btn-secondary', { type: 'button', text: t('common.cancel'), onclick: () => finish(null) });
     input.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') finish(input.value.trim() || null);
+      if (e.key !== 'Enter') return;
+      // Sans preventDefault, la fermeture rend le focus au bouton qui a ouvert la fenêtre et la même frappe le « clique » :
+      // la fenêtre se rouvrirait aussitôt.
+      e.preventDefault();
+      finish(input.value.trim() || null);
     });
     const handle = openSheet({
       title,

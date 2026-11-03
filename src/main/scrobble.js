@@ -214,6 +214,17 @@ class Scrobbler {
     await Promise.allSettled(jobs);
   }
 
+  /** Pour l'API Subsonic : un lecteur externe annonce un morceau en cours, ou une écoute terminée à telle date. */
+  nowPlaying(trackId) {
+    const play = this.#describe(trackId);
+    if (play && this.#services().length) this.#nowPlaying(play).catch(() => {});
+  }
+
+  submit(trackId, listenedAt) {
+    const play = this.#describe(trackId);
+    if (play && counts(play.duration, play.duration)) this.enqueue(play, listenedAt);
+  }
+
   /** Un morceau s'arrête : si l'écoute compte, elle est mise en file puis envoyée. */
   ended(playId, seconds) {
     const rec = this.plays.get(playId);

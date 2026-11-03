@@ -54,6 +54,7 @@ class Library {
     this.folderCovers = new Map();
     this.changeTimer = null;
     this.closed = false;
+    this.rev = 0; // augmente à chaque changement des morceaux (scan, tags, suppressions) : de quoi garder des index en cache
     fs.mkdirSync(coversDir, { recursive: true });
     fs.mkdirSync(thumbsDir, { recursive: true });
   }
@@ -94,6 +95,7 @@ class Library {
 
   /** Prévient l'interface : immédiatement, ou au plus une fois toutes les 400 ms pendant un scan. */
   changed(what = 'tracks', now = false) {
+    if (what === 'tracks') this.rev++;
     if (now) {
       clearTimeout(this.changeTimer);
       this.changeTimer = null;

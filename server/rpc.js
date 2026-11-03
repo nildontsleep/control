@@ -226,6 +226,19 @@ function install(hub, entry, registry) {
   handlers.set('srv:me:sessions', (e) => hub.accounts.sessionsOf(e.user.id, e.user.sid));
   handlers.set('srv:me:revoke-session', (e, id) => hub.accounts.revokeSession(e.user.id, id));
   handlers.set('srv:me:revoke-others', (e) => hub.accounts.revokeOthers(e.user.id, e.user.sid));
+  // Mot de passe d'application (API Subsonic) : le voir, le renouveler ou le révoquer demande le mot de passe du compte.
+  const confirmPassword = async (e, password) => {
+    const key = `subsonic:${e.user.id}`;
+    if (hub.loginThrottle.wait(key)) throw httpError(429, 'throttled', 'Trop d’essais : patientez quelques minutes.');
+    if (!(await hub.accounts.check(e.user.username, String(password || '')))) {
+      hub.loginThrottle.fail(key);
+      throw httpError(403, 'wrong_password', 'Mot de passe incorrect.');
+    }
+  };
+  handlers.set('srv:me:subsonic', (e) => ({ enabled: !!hub.settings.subsonicEnabled, hasSecret: !!hub.subsonic.secretOf(e.user.id), username: e.user.username }));
+  handlers.set('srv:me:subsonic-reveal', async (e, password) => { await confirmPassword(e, password); return { secret: hub.subsonic.ensureSecret(e.user.id) }; });
+  handlers.set('srv:me:subsonic-renew', async (e, password) => { await confirmPassword(e, password); return { secret: hub.subsonic.ensureSecret(e.user.id, { renew: true }) }; });
+  handlers.set('srv:me:subsonic-revoke', (e) => { hub.subsonic.revokeSecret(e.user.id); return true; });
   handlers.set('srv:me:password', async (e, current, next) => {
     const user = await hub.accounts.check(e.user.username, current);
     if (!user) throw httpError(403, 'wrong_password', 'Mot de passe actuel incorrect.');
