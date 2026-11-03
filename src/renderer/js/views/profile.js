@@ -11,6 +11,7 @@ import { avatarEl, onMyProfile } from '../ui/avatar.js';
 import { playlistCover } from '../ui/cards.js';
 import { openProfileEditor, openSharingEditor } from '../ui/profile-edit.js';
 import { openSessionsSheet } from '../ui/sessions-sheet.js';
+import { listeningLine } from '../ui/listening.js';
 import { fmtDuration } from '../stats/format.js';
 import { accessChips } from './people.js';
 import { emptyState } from './shared.js';
@@ -39,7 +40,7 @@ export function profileView(root, param) {
     paint(data);
   }
 
-  function paint({ profile, access, library, playlists, stats }) {
+  function paint({ profile, access, library, playlists, stats, listening }) {
     if (profile.color) body.style.setProperty('--pf', profile.color);
     else body.style.removeProperty('--pf');
     const since = new Date(profile.createdAt).toLocaleDateString(currentLanguage(), { month: 'long', year: 'numeric' });
@@ -55,6 +56,12 @@ export function profileView(root, param) {
     }
 
     const blocks = [];
+    if (!self && listening) {
+      blocks.push(h('section.pf-block.pf-now', {},
+        h('h2', { text: t('listen.now') }),
+        h('div.pf-now-row', {}, listeningLine(listening).el,
+          access.browse ? button(t('listen.playThis'), { icon: 'play', small: true, onClick: () => window.location.assign(`/?lib=${encodeURIComponent(id)}#play/${listening.trackId}`) }) : null)));
+    }
     if (stats) {
       blocks.push(h('section.pf-block', {},
         h('h2', { text: t('profile.thisYear', { year: stats.year }) }),
@@ -95,6 +102,7 @@ export function profileView(root, param) {
   }
 
   if (self) offProfile = onMyProfile(() => load());
+  const offListening = self ? null : web.social.onListening((e) => { if (e.id === id) load(); });
   load();
-  return { destroy: () => { destroyed = true; offProfile?.(); } };
+  return { destroy: () => { destroyed = true; offProfile?.(); offListening?.(); } };
 }

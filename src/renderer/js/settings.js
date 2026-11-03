@@ -30,6 +30,8 @@ export const DEFAULTS = {
   rate: 1,
   crossfade: 0,
   automix: false,
+  normalize: false, // normalisation du volume (niveau mesuré par ffmpeg)
+  normalizeTarget: -16, // LUFS
   eq: { enabled: false, preset: 'flat', gains: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0] },
   session: null,
 

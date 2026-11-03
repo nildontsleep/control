@@ -132,6 +132,12 @@ const MIGRATIONS = [
   ALTER TABLE playlists ADD COLUMN cover TEXT;
   ALTER TABLE playlists ADD COLUMN shared INTEGER NOT NULL DEFAULT 0;
   `,
+  `
+  -- Normalisation du volume : niveau mesuré (LUFS intégrés, EBU R128) et crête vraie (dBTP) ; checked = 1 une fois la mesure tentée.
+  ALTER TABLE tracks ADD COLUMN loudness REAL;
+  ALTER TABLE tracks ADD COLUMN true_peak REAL;
+  ALTER TABLE tracks ADD COLUMN loudness_checked INTEGER NOT NULL DEFAULT 0;
+  `,
 ];
 
 function open(file) {
@@ -170,7 +176,7 @@ const TRACK_COLUMNS = `
   id, path, kind, title, artist, album, album_artist AS albumArtist, genre, year,
   track_no AS trackNo, disc_no AS discNo, duration, bitrate, codec, size, cover,
   width, height, added_at AS addedAt, source_url AS sourceUrl,
-  play_count AS playCount, last_played AS lastPlayed`;
+  play_count AS playCount, last_played AS lastPlayed, loudness, true_peak AS truePeak`;
 
 const plain = (rows) => rows.map((r) => ({ ...r }));
 

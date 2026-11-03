@@ -5,7 +5,7 @@ import { icon } from './icons.js';
 import { t, setLanguage, currentLanguage, resolveLanguage } from './i18n.js';
 import { settings, update, subscribe } from './settings.js';
 import { ACCENTS, hexToRgb, luminance } from './color.js';
-import { loadAll, loadPlaylists } from './data.js';
+import { loadAll, loadPlaylists, lib } from './data.js';
 import { player, on as onPlayer } from './player.js';
 import {
   registerView, mount, navigate, back, forward, canBack, canForward, onRoute, refresh, currentRoute,
@@ -329,9 +329,15 @@ async function init() {
   const last = viewing ? null : settings.lastView;
   const valid = new Set(['songs', 'albums', 'artists', 'videos', 'album', 'artist', 'playlist', 'watch', 'anime', 'mylist', 'stats', 'people']);
   const go = /^#playlist\/(\d+)$/.exec(location.hash); // lien vers une playlist d'une bibliothèque partagée
+  const goPlay = /^#play\/(\d+)$/.exec(location.hash); // « écouter ce morceau » depuis le profil d'un compte
   if (go) navigate('playlist', Number(go[1]));
   else if (last && valid.has(last.name)) navigate(last.name, last.param);
   else navigate('songs');
+  if (goPlay) {
+    const track = lib.tracks.find((x) => x.id === Number(goPlay[1]));
+    if (track) player.playQueue([track], 0);
+    history.replaceState(null, '', location.pathname + location.search);
+  }
 
   subscribe((patch, source) => {
     if ([...LOOK_KEYS, 'animations', 'compact'].some((k) => k in patch)) applyTheme();

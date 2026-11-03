@@ -5,6 +5,7 @@ import { lib, bumpPlay } from './data.js';
 import { planMix } from './automix/analysis.js';
 import { peekAnalysis, warm } from './automix/analyzer.js';
 import { mediaUrl, coverFile } from './urls.js';
+import { gainDb, toLinear, fillLevels } from './loudness.js';
 import { isWeb } from './web.js';
 
 const api = window.control?.library;
@@ -54,6 +55,10 @@ let preamp = null;
 const deckGain = new Map();
 // Filtre de graves de chaque platine : neutre (0 dB) sauf pendant un mixage, où l'on échange les basses des deux morceaux.
 const deckBass = new Map();
+// Normalisation du volume : un gain par platine (avant le gain des fondus, qui ne le voit donc pas) et le morceau qui y joue.
+const deckNorm = new Map();
+const deckTrack = new Map();
+const normScale = new Map(); // sans graphe Web Audio : atténuation appliquée au volume de l'élément
 const BASS_CUT = -30;
 
 // Sur un téléphone, passer par Web Audio peut couper la musique quand l'écran s'éteint (iOS surtout) : tant que ni
@@ -76,9 +81,11 @@ function ensureAudioGraph() {
       bass.type = 'lowshelf';
       bass.frequency.value = 200;
       bass.gain.value = 0;
-      audioCtx.createMediaElementSource(el).connect(bass).connect(gain).connect(preamp);
+      const norm = audioCtx.createGain();
+      audioCtx.createMediaElementSource(el).connect(bass).connect(norm).connect(gain).connect(preamp);
       deckGain.set(el, gain);
       deckBass.set(el, bass);
+      deckNorm.set(el, norm);
     }
     eqFilters = EQ_BANDS.map((freq, i) => {
       const f = audioCtx.createBiquadFilter();
@@ -91,6 +98,7 @@ function ensureAudioGraph() {
     for (const f of eqFilters) node = node.connect(f);
     node.connect(audioCtx.destination);
     applyEq();
+    applyNormAll(); // le graphe vient d'être créé : les atténuations par le volume passent par les nœuds de gain
   } catch (err) {
     console.warn('Graphe audio indisponible :', err);
     audioCtx = null;
@@ -135,7 +143,7 @@ export const player = {
 const volumeCurve = (v) => v * v;
 function applyVolume() {
   for (const el of decks) {
-    el.volume = volumeCurve(Math.min(1, Math.max(0, settings.volume)));
+    el.volume = volumeCurve(Math.min(1, Math.max(0, settings.volume))) * (normScale.get(el) ?? 1);
     el.muted = !!settings.muted;
   }
 }
@@ -214,6 +222,7 @@ function load(index, { autoplay = true, position = 0 } = {}) {
   resetListen(track.id);
   state.loading = true;
   media.src = mediaUrl(track.id);
+  setDeckTrack(media, track);
   media.playbackRate = settings.rate;
   if (position > 0) {
     const seek = () => {
@@ -291,6 +300,32 @@ function bindDeck(el) {
   }));
 }
 decks.forEach(bindDeck);
+
+/** Applique à une platine le gain de normalisation du morceau qui y joue (0 dB : rien, ou option coupée). */
+function applyNorm(el) {
+  const track = deckTrack.get(el);
+  const node = deckNorm.get(el);
+  const db = gainDb(track, { enabled: !!settings.normalize, target: Number(settings.normalizeTarget) || -16, boost: !!node });
+  if (node) {
+    node.gain.cancelScheduledValues(0);
+    node.gain.value = toLinear(db);
+    normScale.delete(el);
+  } else {
+    if (db) normScale.set(el, toLinear(db)); else normScale.delete(el);
+    applyVolume();
+  }
+}
+
+function applyNormAll() {
+  for (const el of decks) applyNorm(el);
+}
+
+/** Un morceau arrive sur une platine : son gain est appliqué tout de suite, puis corrigé si son niveau n'était pas encore connu. */
+function setDeckTrack(el, track) {
+  deckTrack.set(el, track);
+  applyNorm(el);
+  if (settings.normalize && track && track.kind !== 'video') fillLevels([track]).then((any) => { if (any && deckTrack.get(el) === track) applyNorm(el); });
+}
 
 // ─── Fondu enchaîné et AutoMix ───────────────────────────────────────────────
 // `fade` décrit une transition en cours entre deux platines. Pour un fondu simple, la platine entrante devient la platine
@@ -403,6 +438,7 @@ function startCrossfade(index, seconds, startAt = 0) {
   const next = state.queue[index];
   finishListen(true);
   incoming.src = mediaUrl(next.id);
+  setDeckTrack(incoming, next);
   incoming.playbackRate = settings.rate;
   seekWhenReady(incoming, startAt);
   setGain(incoming, 0);
@@ -474,6 +510,7 @@ function startAutomix(index, plan) {
   const incoming = outgoing === videoEl ? audioEl : videoEl;
   const next = state.queue[index];
   incoming.src = mediaUrl(next.id);
+  setDeckTrack(incoming, next);
   incoming.playbackRate = plan.rateIn;
   setGain(incoming, 0);
   setGain(outgoing, 1);
@@ -809,6 +846,7 @@ player.restoreSession = () => {
 // ─── Réglages ────────────────────────────────────────────────────────────────
 onSettings((patch) => {
   if ('volume' in patch || 'muted' in patch) applyVolume();
+  if ('normalize' in patch || 'normalizeTarget' in patch) applyNormAll();
   if ('rate' in patch) {
     cancelEase();
     for (const el of decks) el.playbackRate = settings.rate;

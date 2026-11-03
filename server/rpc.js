@@ -47,6 +47,22 @@ function install(hub, entry, registry) {
   const { handlers, listeners } = registry;
   const publicUser = (u) => ({ id: u.id, username: u.username, role: u.role, disabled: !!u.disabled, createdAt: u.createdAt ?? u.created_at, lastLogin: u.lastLogin ?? u.last_login });
 
+  // « En écoute » : le serveur sait ce que ce compte joue (début et fin des écoutes) et le montre à ceux qu'il a choisis.
+  const baseStart = handlers.get('lib:play-start');
+  handlers.set('lib:play-start', async (e, id, duration) => {
+    const playId = await baseStart(e, id, duration);
+    try {
+      const track = entry.core.library.db.prepare('SELECT id, kind, title, artist, album, cover, duration FROM tracks WHERE id = ?').get(id);
+      hub.presence.start(entry.id, playId, track && { ...track });
+    } catch { /* la présence n'est jamais bloquante */ }
+    return playId;
+  });
+  const baseEnd = listeners.get('lib:play-end');
+  listeners.set('lib:play-end', (e, playId, ...rest) => {
+    baseEnd(e, playId, ...rest);
+    hub.presence.end(entry.id, playId);
+  });
+
   // Les dossiers sont attribués par l'administrateur : un compte ne règle que les siens via ces commandes.
   handlers.set('lib:remove-folder', async (e, folder) => hub.removeOwnFolder(e.user.id, String(folder || '')));
   handlers.set('srv:me:add-folder', (e, dir) => hub.addOwnFolder(e.user.id, dir));
@@ -161,6 +177,7 @@ function install(hub, entry, registry) {
     return owner;
   };
   handlers.set('social:me', (e) => ({
+    shareListening: !!hub.db.prepare('SELECT share_listening AS v FROM users WHERE id = ?').get(e.user.id)?.v,
     profile: hub.social.profile(hub.accounts.byId(e.user.id)),
     grants: hub.social.grantsOf(e.user.id),
     folders: hub.ownFolders(e.user.id),
@@ -168,11 +185,20 @@ function install(hub, entry, registry) {
   }));
   handlers.set('social:set-profile', (e, patch) => hub.social.setProfile(e.user.id, patch && typeof patch === 'object' ? patch : {}));
   handlers.set('social:set-grants', (e, list) => hub.social.setGrants(e.user.id, list));
-  handlers.set('social:others', (e) => hub.social.others(e.user));
+  handlers.set('social:set-listening', (e, on) => {
+    hub.db.prepare('UPDATE users SET share_listening = ? WHERE id = ?').run(on ? 1 : 0, e.user.id);
+    if (!on) hub.presence.clear(e.user.id);
+    return !!on;
+  });
+  // Les comptes avec lesquels on partage, et ce que ceux qui l'ont choisi écoutent en ce moment.
+  handlers.set('social:others', (e) => {
+    const now = hub.presence.snapshotFor(e.user.id);
+    return hub.social.others(e.user).map((p) => ({ ...p, listening: now[p.id] || null }));
+  });
   handlers.set('social:profile', async (e, id) => {
     const owner = ownerOf(id);
     const access = hub.social.access(e.user, owner);
-    const out = { profile: hub.social.profile(owner), access, library: null, playlists: [], stats: null };
+    const out = { profile: hub.social.profile(owner), access, library: null, playlists: [], stats: null, listening: hub.presence.snapshotFor(e.user.id)[owner.id] || null };
     if (access.browse) {
       const other = hub.entry(owner);
       const roots = hub.ownerRoots(owner);

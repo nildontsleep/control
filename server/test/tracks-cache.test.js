@@ -12,7 +12,7 @@ test('lib:tracks : réponse gardée en cache tant que rien ne change, refaite ap
   const admin = client(s.base);
   await admin.json('POST', '/api/setup/init', { username: 'nil', password: 'long enough password', libraryFolders: [s.music] });
   const tracks = await until(async () => { const l = await admin.rpc('lib:tracks'); return l.length === 3 ? l : null; });
-  assert.deepEqual(Object.keys(tracks[0]).sort(), ['addedAt', 'album', 'albumArtist', 'artist', 'bitrate', 'codec', 'cover', 'discNo', 'duration', 'genre', 'height', 'id', 'kind', 'lastPlayed', 'path', 'playCount', 'sourceUrl', 'size', 'title', 'trackNo', 'width', 'year'].sort());
+  assert.deepEqual(Object.keys(tracks[0]).sort(), ['addedAt', 'album', 'albumArtist', 'artist', 'bitrate', 'codec', 'cover', 'discNo', 'duration', 'genre', 'height', 'id', 'kind', 'lastPlayed', 'loudness', 'path', 'playCount', 'sourceUrl', 'size', 'title', 'trackNo', 'truePeak', 'width', 'year'].sort());
 
   // Sans autre changement : la même réponse, sans refaire la requête.
   await until(async () => { const before = { ...s.hub.cacheStats }; await admin.rpc('lib:tracks'); return s.hub.cacheStats.hits > before.hits; });

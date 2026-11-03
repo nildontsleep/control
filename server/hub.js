@@ -16,6 +16,7 @@ const { createRegistry } = require('./rpc');
 const { WebUpdater } = require('./updater');
 const { TracksBuilder } = require('./tracks');
 const { Backups } = require('./backup');
+const { Presence } = require('./presence');
 const pkg = require('../package.json');
 const { checkUrl } = require('../src/main/urlguard');
 
@@ -55,6 +56,7 @@ class Hub {
     this.tracksBuilder = new TracksBuilder();
     this.cacheStats = { hits: 0, misses: 0 };
     this.backups = new Backups({ hub: this, options: config.backupOptions });
+    this.presence = new Presence(this);
   }
 
   /**
@@ -469,6 +471,7 @@ class Hub {
   close() {
     this.updater.stop();
     this.backups.stop();
+    this.presence.stop();
     this.tracksBuilder.close();
     for (const t of this.timers) clearInterval(t);
     clearTimeout(this.watchTimer);

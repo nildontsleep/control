@@ -6,6 +6,7 @@ import { t } from '../i18n.js';
 import { navigate } from '../router.js';
 import { avatarEl } from '../ui/avatar.js';
 import { pageHead, emptyState } from './shared.js';
+import { listeningLine } from '../ui/listening.js';
 
 const web = window.control.web;
 
@@ -19,18 +20,24 @@ export function accessChips(access) {
 
 export function peopleView(root) {
   let destroyed = false;
+  const lines = new Map(); // compte → ligne « en écoute »
   const body = h('div.pp-grid.loading');
   root.append(pageHead({ title: t('people.title'), subtitle: t('people.subtitle') }), body, h('div.page-foot'));
 
   web.social.others().then((others) => {
     if (destroyed) return;
     body.classList.remove('loading');
-    const card = (person, { self = false } = {}) => h('button.pp-card', { type: 'button', style: person.color ? { '--accent-card': person.color } : null, onclick: () => navigate('profile', person.id) },
-      avatarEl(person, { size: 72 }),
-      h('div.pp-name', {}, h('strong', { text: person.name }), self ? h('span.pp-me', { text: t('people.you') }) : null),
-      h('span.pp-user', { text: `@${person.username}` }),
-      person.bio ? h('p.pp-bio', { text: person.bio }) : null,
-      self ? null : accessChips(person.access));
+    const card = (person, { self = false } = {}) => {
+      const live = self ? null : listeningLine(person.listening);
+      if (live) lines.set(person.id, live);
+      return h('button.pp-card', { type: 'button', style: person.color ? { '--accent-card': person.color } : null, onclick: () => navigate('profile', person.id) },
+        avatarEl(person, { size: 72 }),
+        h('div.pp-name', {}, h('strong', { text: person.name }), self ? h('span.pp-me', { text: t('people.you') }) : null),
+        h('span.pp-user', { text: `@${person.username}` }),
+        live?.el || null,
+        person.bio ? h('p.pp-bio', { text: person.bio }) : null,
+        self ? null : accessChips(person.access));
+    };
     const mine = web.user;
     body.replaceChildren(
       card({ ...mine }, { self: true }),
@@ -40,5 +47,7 @@ export function peopleView(root) {
     if (!destroyed) body.replaceChildren(emptyState({ icon: 'triangle-alert', title: t('err.title'), text: err.message }));
   });
 
-  return { destroy: () => { destroyed = true; } };
+  // Ce que les autres écoutent : mis à jour en direct.
+  const off = web.social.onListening(({ id, now }) => lines.get(id)?.set(now));
+  return { destroy: () => { destroyed = true; off?.(); } };
 }

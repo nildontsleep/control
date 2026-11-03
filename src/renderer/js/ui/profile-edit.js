@@ -106,8 +106,15 @@ export async function openSharingEditor(onSaved) {
         h('label.sh-switch', {}, h('span', { text: t('share.compare') }), toggle({ get: () => g.compare, set: set('compare') })))));
   };
 
+  let listening = !!mine.shareListening;
+  const listeningRow = h('div.sh-row', {},
+    h('span.sh-everyone', { html: icon('headphones', 17, 1.9) }),
+    h('div.sh-name', {}, h('strong', { text: t('listen.share') }), h('span', { text: t('listen.shareHint') })),
+    withScope(scope, () => h('div.sh-switches', {}, toggle({ get: () => listening, set: (v) => { listening = v; } }))));
+
   const body = h('div.sh-list', {},
     h('p.sheet-text', { text: t('share.intro') }),
+    listeningRow,
     line(null, '*'),
     ...others.map((p) => line(p, p.id)));
   if (!others.length) body.append(h('p.sheet-text', { text: t('share.noOthers') }));
@@ -121,6 +128,7 @@ export async function openSharingEditor(onSaved) {
     try {
       const list = [...grants].map(([viewerId, g]) => ({ viewerId, browse: g.browse, compare: g.compare })).filter((g) => g.browse || g.compare);
       await social.setGrants(list);
+      if (listening !== !!mine.shareListening) await social.setListening(listening);
       sheet.close();
       toast(t('share.saved'), 'check');
       onSaved?.();

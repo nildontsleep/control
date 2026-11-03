@@ -210,6 +210,8 @@
       profile: invoke('social:profile'),
       setProfile: invoke('social:set-profile'),
       setGrants: invoke('social:set-grants'),
+      setListening: invoke('social:set-listening'),
+      onListening: listen('social:listening'),
       compare: invoke('social:compare'),
     },
     async logout() {
@@ -267,6 +269,12 @@
       get: invoke('lyrics:get'),
       set: invoke('lyrics:set'),
       saveFile: invoke('lyrics:save-file'),
+    },
+
+    loudness: {
+      progress: invoke('loudness:progress'),
+      levels: invoke('loudness:levels'),
+      onProgress: listen('loudness:progress'),
     },
 
     scrobble: {

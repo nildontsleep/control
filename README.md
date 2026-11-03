@@ -196,6 +196,18 @@ Dans `/admin` → *Mises à jour du serveur* (et dans *Réglages* → *À propos
 - **Un serveur en 0.8.x ne peut pas encore se mettre à jour tout seul** : passe une fois à cette version (`docker pull`, ou `git pull` et `npm ci`), ensuite les suivantes sont automatiques.
 - Sécurité : seules les releases de ce dépôt sont acceptées, l’archive doit correspondre à l’empreinte calculée par GitHub, son contenu est lu strictement (ni lien, ni chemin hors du dossier d’installation, taille limitée), et le jeton GitHub éventuel ne quitte jamais le serveur.
 
+### Envoyer de la musique depuis le navigateur
+
+Glisse des fichiers ou des dossiers dans la fenêtre, ou *Réglages* → *Bibliothèque* → *Envoyer des fichiers…* / *Envoyer un dossier…* (également dans l’écran d’une bibliothèque vide). Les fichiers arrivent en flux dans `<téléchargements>/<ton nom>/Envois` (les sous-dossiers d’un dossier envoyé sont conservés), entrent aussitôt dans ta bibliothèque et ne remplacent jamais un fichier existant (`titre (2).mp3`). Seuls les vrais fichiers audio et vidéo sont gardés : le contenu est vérifié, le nom nettoyé, la taille limitée (500 Mo par défaut) et le serveur garde de la place libre sur son disque. Réservé à l’administrateur tant que `/admin` → *Envois de musique pour tous* n’est pas coché.
+
+### Normalisation du volume
+
+*Réglages* → *Général* → *Lecture* → *Normaliser le volume* : tous les morceaux sonnent au même niveau (−16 LUFS par défaut, ou −18 / −14). Le niveau de chaque morceau est mesuré en arrière-plan par ffmpeg (norme EBU R128, un morceau à la fois, seulement tant que l’option est active : compte quelques secondes par morceau) ; le lecteur applique ensuite un gain par morceau, sans écrêtage (la relève s’arrête 1 dB avant la crête), y compris pendant les fondus et AutoMix. Sur téléphone, où le graphe Web Audio est évité, seule l’atténuation s’applique.
+
+### Voir ce que les autres écoutent
+
+*Mon profil* → *Partage* : *Montrer ce que j’écoute* (désactivé par défaut). Les comptes avec lesquels tu partages ta bibliothèque (ou tout le monde, si tu l’as choisi) voient alors, sur la page *Personnes* et sur ton profil, le morceau en cours, en direct, avec un bouton *Écouter ce morceau* qui ouvre ta bibliothèque et le lance. L’administrateur n’y a droit que s’il a un partage comme les autres. Rien n’est gardé sur le disque : l’information disparaît à la fin du morceau ou si l’option est coupée.
+
 ### Scrobbling (Last.fm, ListenBrainz)
 
 *Réglages* → *Général* → *Scrobbling* (application de bureau et web). Chaque compte peut envoyer ses écoutes à **ListenBrainz** (colle ton jeton, `listenbrainz.org/settings`) et/ou à **Last.fm** (autorisation sur leur site, sans jamais confier ton mot de passe à control). Un morceau est annoncé « en écoute » à son début, puis compte comme une écoute quand il dure au moins 30 s et que la moitié (ou 4 minutes) a été écoutée ; les vidéos et les morceaux sans artiste sont ignorés. Si le réseau est coupé, les écoutes attendent dans une file (14 jours au plus, 500 écoutes) et partent dès que possible. Les jetons sont gardés dans un fichier à part (`scrobble.json`), pas dans les réglages et pas dans les sauvegardes.

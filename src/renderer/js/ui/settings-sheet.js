@@ -54,8 +54,27 @@ export function openSettings(initial = 'general') {
   ].filter((tab) => (tab.id !== 'downloads' || can('download')) && (tab.id !== 'servers' || hasSources));
 
   let offDiscord = null;
+  let offLoudness = null;
   let offUpdate = null;
 
+
+  /** Normalisation du volume : où en est la mesure du niveau des morceaux (ffmpeg, en arrière-plan). */
+  function normalizeStatus() {
+    const api = window.control.loudness;
+    const text = h('span.row-hint');
+    const box = h('div.row.row-block', {}, text);
+    const paint = (st) => {
+      box.hidden = !st?.enabled || !settings.normalize;
+      if (!st) return;
+      text.textContent = !st.ffmpeg ? t('set.normalizeNoFfmpeg') : st.done >= st.total ? t('set.normalizeDone', { n: st.total }) : t('set.normalizeProgress', { done: st.done, total: st.total });
+    };
+    const refresh = () => api.progress().then(paint).catch(() => {});
+    live(() => { refresh(); });
+    const off = api.onProgress(paint);
+    offLoudness?.();
+    offLoudness = off;
+    return box;
+  }
 
   /** Mises à jour : état en direct, un seul bouton pour télécharger, installer et relancer. */
   function updateGroup({ web = false } = {}) {
@@ -226,6 +245,9 @@ export function openSettings(initial = 'general') {
         ]),
         group(t('set.playback'), [
           sliderRow(t('set.crossfade'), 'crossfade', { min: 0, max: 12, step: 1, format: (v) => (v ? t('set.seconds', { n: v }) : t('set.off')) }),
+          row(t('set.normalize'), toggle('normalize'), { hint: t('set.normalizeHint'), badge: badge('volume-2', B.green) }),
+          row(t('set.normalizeTarget'), popup('normalizeTarget', [-18, -16, -14].map((v) => ({ value: v, label: t(`set.normalizeTarget.${-v}`) }))), { badge: badge('gauge', B.teal) }),
+          normalizeStatus(),
         ], { footer: t('set.crossfadeHint') }),
         isWeb ? accountGroup() : discordGroup(),
         scrobbleGroup(),
@@ -520,7 +542,7 @@ export function openSettings(initial = 'general') {
     width: 680,
     className: 'settings-sheet',
     body: [nav, body],
-    onClose: () => { unsub(); offTools(); offDiscord?.(); offUpdate?.(); },
+    onClose: () => { unsub(); offTools(); offDiscord?.(); offUpdate?.(); offLoudness?.(); },
   });
   app.info().then((i) => { info = i; if (tabId === 'about' || tabId === 'downloads') render(); else refreshScope(scope); });
   render();

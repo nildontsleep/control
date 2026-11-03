@@ -49,6 +49,10 @@ const MIGRATIONS = [
     PRIMARY KEY (owner_id, viewer_id)
   );
   `,
+  `
+  -- « En écoute » : le compte montre ce qu'il écoute à ceux qui peuvent parcourir sa bibliothèque.
+  ALTER TABLE users ADD COLUMN share_listening INTEGER NOT NULL DEFAULT 0;
+  `,
 ];
 
 function openServerDb(file) {

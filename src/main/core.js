@@ -18,6 +18,7 @@ const { Lyrics } = require('./lyrics');
 const { MediaService } = require('./media');
 const images = require('./images');
 const { Scrobbler } = require('./scrobble');
+const { Loudness } = require('./loudness');
 
 class Core {
   /**
@@ -47,10 +48,13 @@ class Core {
     // Scrobbling (Last.fm, ListenBrainz) : lastfmKeys() et guardUrl() viennent du serveur web.
     this.scrobbler = new Scrobbler({ dir, library: this.library, emit, keys: lastfmKeys, guardUrl });
     this.scrobbler.resume();
+    // Normalisation du volume : mesure du niveau des morceaux en arrière-plan (seulement si l'option est active).
+    this.loudness = new Loudness({ library: this.library, tools: this.tools, store: this.store, emit });
   }
 
   /** Ferme ce que le noyau garde ouvert (serveur : utilisateur inactif). */
   close() {
+    this.loudness.close();
     this.scrobbler.close();
     this.library.close();
     this.downloads.killAll();
@@ -64,13 +68,14 @@ class Core {
    * host : { scanRoots(), applySettingEffects(patch), emitOthers(event, channel, payload), onReset(), guardUrl?(url) }
    */
   register(ipc, host) {
-    const { store, library, lyrics, stats, tags, tools, downloads, media, scrobbler, emit } = this;
+    const { store, library, lyrics, stats, tags, tools, downloads, media, scrobbler, loudness, emit } = this;
     const handle = (channel, fn) => ipc.handle(channel, (event, ...args) => fn(event, ...args));
 
     // ─── Réglages ─────────────────────────────────────────────────────────────
     ipc.on('settings:set', (e, patch) => {
       if (!isObj(patch)) return;
       store.patch(patch);
+      if ('normalize' in patch) loudness.kick();
       host.applySettingEffects(patch);
       host.emitOthers(e, 'settings:changed', patch);
     });
@@ -223,6 +228,10 @@ class Core {
     ipc.on('dl:retry', (e, id) => downloads.retry(id));
     ipc.on('dl:remove', (e, id) => downloads.remove(id));
     ipc.on('dl:clear', () => downloads.clearFinished());
+
+    // ─── Normalisation du volume ───────────────────────────────────────────────
+    handle('loudness:progress', () => loudness.progress());
+    handle('loudness:levels', (e, ids) => loudness.levels(ids));
 
     // ─── Scrobbling : Last.fm et ListenBrainz ──────────────────────────────────
     const attempt = async (fn) => {

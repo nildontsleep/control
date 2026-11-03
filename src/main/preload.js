@@ -57,6 +57,12 @@ contextBridge.exposeInMainWorld('control', {
     saveFile: invoke('lyrics:save-file'),
   },
 
+  loudness: {
+    progress: invoke('loudness:progress'),
+    levels: invoke('loudness:levels'),
+    onProgress: listen('loudness:progress'),
+  },
+
   scrobble: {
     status: invoke('scrobble:status'),
     connectListenBrainz: invoke('scrobble:connect-listenbrainz'),
