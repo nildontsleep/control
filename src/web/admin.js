@@ -234,6 +234,69 @@
           s.hasUpdateToken ? h('button', { class: 'btn btn-secondary', text: 'Effacer', onclick: guard(async () => { await rpc('srv:settings', { updateToken: '' }); flash('Jeton effacé.', false); }) }) : null)));
   }
 
+  // ─── Sauvegardes vers un webhook Discord ───────────────────────────────────
+  function backupsGroup(initial, s, reload) {
+    let status = initial;
+    const line = h('div', { class: 'upd-admin' });
+    const webhook = h('input', { class: 'text-input', type: 'password', placeholder: s.hasBackupWebhook ? '•••••••• (défini)' : 'https://discord.com/api/webhooks/…', autocomplete: 'off', spellcheck: 'false' });
+    const passphrase = h('input', { class: 'text-input', type: 'password', placeholder: s.hasBackupPassphrase ? '•••••••• (définie)' : 'Phrase secrète (recommandé)', autocomplete: 'new-password' });
+    const every = h('select', { class: 'text-input' },
+      h('option', { value: 'off', text: 'Désactivée' }),
+      h('option', { value: 'daily', text: 'Chaque jour' }),
+      h('option', { value: 'weekly', text: 'Chaque semaine' }));
+    every.value = s.backupEvery || 'off';
+    const hour = h('select', { class: 'text-input' }, ...Array.from({ length: 24 }, (_, i) => h('option', { value: String(i), text: `${i} h` })));
+    hour.value = String(s.backupHour ?? 3);
+    const warn = h('p', { class: 'error', hidden: true });
+    const save = (patch, message) => guard(async () => { await rpc('srv:settings', patch); if (message) flash(message, false); await refresh(); });
+
+    function paint() {
+      const last = status.last || {};
+      let title = 'Aucune sauvegarde pour l’instant';
+      let sub = status.configured ? 'Le webhook est configuré.' : 'Renseignez un webhook Discord (Paramètres du salon → Intégrations → Webhooks).';
+      if (last.at && last.ok) {
+        title = `Dernière sauvegarde : ${new Date(last.at).toLocaleString()}`;
+        sub = `${(last.size / 1048576).toFixed(1)} Mo · ${last.accounts} compte(s)${last.parts > 1 ? ` · ${last.parts} parties` : ''}${last.encrypted ? ' · chiffrée' : ' · non chiffrée'}${last.skipped ? ` · ${last.skipped} base(s) ignorée(s) (trop volumineuses)` : ''}`;
+      } else if (last.at) {
+        title = `Dernière tentative en échec : ${new Date(last.at).toLocaleString()}`;
+        sub = last.error || '';
+      }
+      const buttons = [
+        h('button', { class: 'btn btn-primary', text: status.running ? 'Sauvegarde en cours…' : 'Sauvegarder maintenant', disabled: !status.configured || status.running, onclick: guard(async () => { flash('Sauvegarde en cours…', false); await rpc('srv:backup:run'); flash('Sauvegarde envoyée.', false); await refresh(); }) }),
+        h('button', { class: 'btn btn-secondary', text: 'Tester le webhook', disabled: !status.configured, onclick: guard(async () => { await rpc('srv:backup:test'); flash('Message de test envoyé.', false); }) }),
+      ];
+      line.replaceChildren(
+        h('div', { class: 'grow' }, h('strong', { text: title }), h('span', { class: 'hint', text: sub })),
+        h('div', { class: 'upd-buttons' }, ...buttons));
+      warn.hidden = !(status.configured && !status.encrypted);
+      warn.textContent = 'Sans phrase secrète, l’archive envoyée à Discord contient les empreintes de mots de passe de tous les comptes : n’utilisez qu’un salon privé, ou choisissez une phrase secrète.';
+    }
+    async function refresh() {
+      status = await rpc('srv:backup:status');
+      paint();
+    }
+    every.addEventListener('change', () => save({ backupEvery: every.value }, 'Planification enregistrée.')());
+    hour.addEventListener('change', () => save({ backupHour: Number(hour.value) }, 'Heure enregistrée.')());
+    paint();
+
+    return h('section', { class: 'group', id: 'backups' },
+      h('h2', { text: 'Sauvegardes' }),
+      h('p', { text: 'La base des comptes et, pour chaque compte, ses écoutes, playlists, tags et réglages sont archivés puis envoyés à un webhook Discord (découpés en parties de 9 Mo au plus). Jamais copiés : sessions, jetons et clés d’API, cookies YouTube. Les deux dernières sauvegardes restent aussi sur le disque du serveur.' }),
+      line,
+      warn,
+      h('div', { class: 'inline-form' }, webhook,
+        h('button', { class: 'btn btn-secondary', text: 'Enregistrer le webhook', onclick: guard(async () => { if (!webhook.value.trim()) return; await rpc('srv:settings', { backupWebhook: webhook.value.trim() }); webhook.value = ''; flash('Webhook enregistré.', false); reload(); }) }),
+        s.hasBackupWebhook ? h('button', { class: 'btn btn-secondary', text: 'Effacer', onclick: guard(async () => { await rpc('srv:settings', { backupWebhook: '', backupEvery: 'off' }); flash('Webhook effacé, sauvegardes désactivées.', false); reload(); }) }) : null),
+      h('div', { class: 'toggle-row' }, h('span', { text: 'Sauvegarde planifiée' }), every),
+      h('div', { class: 'toggle-row' }, h('span', { text: 'À partir de' }), hour),
+      h('details', { class: 'upd-token', open: !s.hasBackupPassphrase },
+        h('summary', { text: 'Phrase secrète (chiffrement AES-256 de l’archive)' }),
+        h('p', { class: 'hint', text: 'Gardez-la ailleurs que sur le serveur : sans elle, une sauvegarde chiffrée est illisible. Pour déchiffrer : CONTROL_BACKUP_PASSPHRASE=… node server/backup.js decrypt <fichier>.' }),
+        h('div', { class: 'inline-form' }, passphrase,
+          h('button', { class: 'btn btn-secondary', text: 'Enregistrer', onclick: guard(async () => { if (!passphrase.value) return; await rpc('srv:settings', { backupPassphrase: passphrase.value }); passphrase.value = ''; flash('Phrase secrète enregistrée.', false); reload(); }) }),
+          s.hasBackupPassphrase ? h('button', { class: 'btn btn-secondary', text: 'Effacer', onclick: guard(async () => { await rpc('srv:settings', { backupPassphrase: '' }); flash('Chiffrement désactivé.', false); reload(); }) }) : null)));
+  }
+
   // ─── Dossiers ──────────────────────────────────────────────────────────────
   function foldersGroup(s, reload) {
     const picker = h('div', { class: 'picker', hidden: true });
@@ -370,12 +433,13 @@
   }
 
   async function render() {
-    const [s, users, me, tools, updates] = await Promise.all([
+    const [s, users, me, tools, updates, backups] = await Promise.all([
       rpc('srv:settings:get'),
       rpc('srv:users:list'),
       fetch('/api/auth/me', { credentials: 'same-origin' }).then((r) => r.json()),
       rpc('tools:status').catch(() => null),
       rpc('srv:update:status').catch(() => null),
+      rpc('srv:backup:status').catch(() => null),
     ]);
     const reload = () => render().catch((err) => flash(err.message));
     root.replaceChildren(...[
@@ -385,6 +449,7 @@
       notice,
       settingsGroup(s, reload),
       updates ? updatesGroup(updates, s) : null,
+      backups ? backupsGroup(backups, s, reload) : null,
       foldersGroup(s, reload),
       usersGroup(users, me.user.id, reload, s),
       tools ? toolsGroup(tools, reload) : null,

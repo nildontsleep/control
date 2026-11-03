@@ -15,6 +15,7 @@ const ADMIN_ONLY = new Set([
   'srv:users:update', 'srv:users:password', 'srv:users:delete', 'srv:rescan', 'srv:me:add-folder',
   'srv:users:detail', 'srv:users:add-folder', 'srv:users:remove-folder', 'srv:users:personal-folder', 'srv:users:set-grants',
   'srv:update:status', 'srv:update:check', 'srv:update:download', 'srv:update:install',
+  'srv:backup:status', 'srv:backup:run', 'srv:backup:test',
 ]);
 const DOWNLOADS = new Set(['dl:add', 'dl:info', 'dl:search', 'dl:cancel', 'dl:retry', 'dl:remove', 'dl:clear', 'dl:cookies-status', 'dl:set-cookies', 'dl:clear-cookies']);
 const DENIED = new Set(['lib:add-paths']); // des chemins du poste de l'utilisateur ne veulent rien dire pour un serveur
@@ -109,6 +110,11 @@ function install(hub, entry, registry) {
     return hub.publicSettings();
   });
   handlers.set('srv:settings:get', () => hub.publicSettings());
+
+  // Sauvegardes (envoyées au webhook Discord réglé dans /admin).
+  handlers.set('srv:backup:status', () => hub.backups.status());
+  handlers.set('srv:backup:run', async () => { await hub.backups.run({ reason: 'manuelle' }); return hub.backups.status(); });
+  handlers.set('srv:backup:test', async () => hub.backups.test());
 
   // Mise à jour du serveur : vérifier, télécharger (installe à côté de la version en cours), puis redémarrer dessus.
   handlers.set('srv:update:status', () => hub.updater.status);

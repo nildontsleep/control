@@ -196,6 +196,16 @@ Dans `/admin` → *Mises à jour du serveur* (et dans *Réglages* → *À propos
 - **Un serveur en 0.8.x ne peut pas encore se mettre à jour tout seul** : passe une fois à cette version (`docker pull`, ou `git pull` et `npm ci`), ensuite les suivantes sont automatiques.
 - Sécurité : seules les releases de ce dépôt sont acceptées, l’archive doit correspondre à l’empreinte calculée par GitHub, son contenu est lu strictement (ni lien, ni chemin hors du dossier d’installation, taille limitée), et le jeton GitHub éventuel ne quitte jamais le serveur.
 
+### Sauvegardes (webhook Discord)
+
+`/admin` → *Sauvegardes* : colle l’adresse d’un **webhook Discord** (Paramètres du salon → Intégrations → Webhooks), choisis la fréquence (chaque jour ou chaque semaine, à partir de l’heure voulue) et, de préférence, une **phrase secrète**. Le serveur archive alors la base des comptes (`server.db`) et, pour chaque compte, sa base (écoutes, playlists, tags, progression, récaps) et ses réglages, chiffre l’archive (AES-256-GCM) si une phrase est définie, la découpe en parties de 9 Mo au plus et les poste dans le salon. Les deux dernières sauvegardes restent aussi dans `<données>/backups/`. Boutons *Sauvegarder maintenant* et *Tester le webhook*.
+
+- **Jamais copiés** : les sessions ouvertes, les jetons et clés (GitHub, TMDB, webhook, phrase secrète, Last.fm, ListenBrainz) et les cookies YouTube.
+- Sans phrase secrète, l’archive contient les **empreintes des mots de passe** (scrypt) : réserve-la à un salon privé.
+- Les bibliothèques musicales elles-mêmes (les fichiers) ne sont pas dans la sauvegarde : seulement ce qui ne se reconstruit pas en rescannant.
+
+Restauration : recolle les parties (`cat control-backup-*.part* > control-backup.tgz.enc`), déchiffre (`CONTROL_BACKUP_PASSPHRASE=… node server/backup.js decrypt control-backup.tgz.enc`), puis serveur arrêté, extrais l’archive (`tar xzf`) et copie `server.db` dans `<données>/` et `users/<id>/library.db` et `settings.json` dans `<données>/users/<id>/` (supprime les fichiers `*-wal` et `*-shm` voisins). Au redémarrage, tout le monde doit se reconnecter et les clés (TMDB, GitHub, Last.fm…) sont à saisir de nouveau.
+
 ### Signer les mises à jour (recommandé)
 
 L’empreinte SHA-256 publiée par GitHub protège d’un fichier abîmé, pas d’un dépôt ou d’un compte GitHub compromis. En mode *Automatiques*, un tel compromis reviendrait à exécuter du code sur tous les serveurs : la **signature Ed25519** l’empêche, car seule la clé gardée dans les secrets de la CI peut signer.

@@ -68,8 +68,8 @@ function unpack(gz, limits = {}) {
 const put = (buf, text, start, length) => buf.write(text, start, length, 'utf8');
 const putOctal = (buf, value, start, length) => put(buf, `${value.toString(8).padStart(length - 1, '0')}\0`, start, length);
 
-/** Écrit une archive .tgz déterministe (dates à zéro) : [{ name, data, mode? }] → Buffer. */
-function pack(files) {
+/** Écrit l'archive tar (non compressée) : [{ name, data, mode? }] → Buffer. */
+function packRaw(files) {
   const parts = [];
   for (const { name, data, mode = 0o644 } of files) {
     const path = safeName(name);
@@ -100,7 +100,12 @@ function pack(files) {
     parts.push(head, body, Buffer.alloc((BLOCK - (body.length % BLOCK)) % BLOCK));
   }
   parts.push(Buffer.alloc(BLOCK * 2));
-  return zlib.gzipSync(Buffer.concat(parts), { level: 9 });
+  return Buffer.concat(parts);
 }
 
-module.exports = { pack, unpack, safeName, LIMITS };
+/** Écrit une archive .tgz déterministe (dates à zéro) : [{ name, data, mode? }] → Buffer. */
+function pack(files) {
+  return zlib.gzipSync(packRaw(files), { level: 9 });
+}
+
+module.exports = { pack, packRaw, unpack, safeName, LIMITS };

@@ -15,6 +15,7 @@ const { Social } = require('./social');
 const { createRegistry } = require('./rpc');
 const { WebUpdater } = require('./updater');
 const { TracksBuilder } = require('./tracks');
+const { Backups } = require('./backup');
 const pkg = require('../package.json');
 
 const IDLE_MS = 30 * 60 * 1000;
@@ -52,6 +53,7 @@ class Hub {
     this.updater.on('state', (state) => this.toAdmins('update:state', state));
     this.tracksBuilder = new TracksBuilder();
     this.cacheStats = { hits: 0, misses: 0 };
+    this.backups = new Backups({ hub: this, options: config.backupOptions });
   }
 
   /**
@@ -85,6 +87,10 @@ class Hub {
       updateMode: 'notify', // mise à jour du serveur : 'off', 'notify' (on prévient) ou 'auto'
       updateHour: 4, // heure (0-23) à laquelle une mise à jour automatique s'installe même si des comptes sont connectés
       updateToken: '', // jeton GitHub en lecture (dépôt privé)
+      backupWebhook: '', // webhook Discord qui reçoit les sauvegardes (jamais renvoyé au navigateur)
+      backupEvery: 'off', // 'off', 'daily' ou 'weekly'
+      backupHour: 3, // heure (0-23) de la sauvegarde planifiée
+      backupPassphrase: '', // chiffre l'archive envoyée (jamais renvoyée au navigateur)
     };
     let saved = {};
     try {
@@ -97,7 +103,11 @@ class Hub {
   }
 
   patchSettings(patch) {
-    const allowed = ['serverName', 'registrationEnabled', 'allowUserDownloads', 'libraryFolders', 'downloadDir', 'tmdbKey', 'usersRoot', 'updateMode', 'updateHour', 'updateToken'];
+    if ('backupWebhook' in patch) {
+      const url = String(patch.backupWebhook || '').trim();
+      if (url && !this.backups.validUrl(url)) throw httpError(400, 'bad_webhook', 'Adresse de webhook invalide (https://discord.com/api/webhooks/…).');
+    }
+    const allowed = ['serverName', 'registrationEnabled', 'allowUserDownloads', 'libraryFolders', 'downloadDir', 'tmdbKey', 'usersRoot', 'updateMode', 'updateHour', 'updateToken', 'backupWebhook', 'backupEvery', 'backupHour', 'backupPassphrase'];
     for (const key of allowed) {
       if (!(key in patch)) continue;
       const v = patch[key];
@@ -106,6 +116,9 @@ class Hub {
       else if (key === 'serverName') this.settings.serverName = String(v || 'control').trim().slice(0, 60) || 'control';
       else if (key === 'updateMode') this.settings.updateMode = ['off', 'notify', 'auto'].includes(v) ? v : 'notify';
       else if (key === 'updateHour') this.settings.updateHour = Math.min(23, Math.max(0, Math.floor(Number(v)) || 0));
+      else if (key === 'backupHour') this.settings.backupHour = Math.min(23, Math.max(0, Math.floor(Number(v)) || 0));
+      else if (key === 'backupEvery') this.settings.backupEvery = ['off', 'daily', 'weekly'].includes(v) ? v : 'off';
+      else if (key === 'backupWebhook') this.settings.backupWebhook = String(v || '').trim();
       else this.settings[key] = String(v || '').trim();
     }
     this.db.prepare("INSERT INTO kv (key, value) VALUES ('settings', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run(JSON.stringify(this.settings));
@@ -115,8 +128,8 @@ class Hub {
 
   /** Les réglages tels que la page d'administration les voit (le jeton GitHub ne quitte jamais le serveur). */
   publicSettings() {
-    const { updateToken, ...rest } = this.settings;
-    return { ...rest, hasUpdateToken: !!(updateToken || this.config.updateToken), updateMode: this.config.update || rest.updateMode, updateLocked: !!this.config.update };
+    const { updateToken, backupWebhook, backupPassphrase, ...rest } = this.settings;
+    return { ...rest, hasBackupWebhook: !!backupWebhook, hasBackupPassphrase: !!backupPassphrase, hasUpdateToken: !!(updateToken || this.config.updateToken), updateMode: this.config.update || rest.updateMode, updateLocked: !!this.config.update };
   }
 
   updateConfig() {
@@ -442,10 +455,12 @@ class Hub {
     this.tools.refreshVersions().then(() => this.broadcast('tools:status', this.tools.status())).catch(() => {});
     this.accounts.purge();
     this.updater.start();
+    this.backups.start();
   }
 
   close() {
     this.updater.stop();
+    this.backups.stop();
     this.tracksBuilder.close();
     for (const t of this.timers) clearInterval(t);
     clearTimeout(this.watchTimer);
