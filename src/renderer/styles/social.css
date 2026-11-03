@@ -925,3 +925,91 @@
   color: var(--accent);
   background: rgb(var(--accent-rgb) / 0.16);
 }
+
+/* ─── Envoi de musique ─── */
+.up-card {
+  position: fixed;
+  right: 18px;
+  bottom: 110px;
+  z-index: 60;
+  width: min(340px, calc(100vw - 36px));
+  padding: 12px 14px;
+  border-radius: calc(16px * var(--rk, 1));
+  background: var(--panel-solid, var(--panel));
+  border: 0.5px solid var(--panel-border);
+  box-shadow: 0 12px 40px rgb(0 0 0 / 0.35);
+  -webkit-backdrop-filter: blur(30px) saturate(1.6);
+  backdrop-filter: blur(30px) saturate(1.6);
+}
+
+.up-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.up-bar {
+  height: 4px;
+  margin: 8px 0;
+  border-radius: 999px;
+  background: var(--fill);
+  overflow: hidden;
+}
+
+.up-bar i {
+  display: block;
+  height: 100%;
+  width: 0;
+  background: var(--accent);
+  transition: width 0.2s;
+}
+
+.up-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 160px;
+  overflow: auto;
+}
+
+.up-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12.5px;
+  color: var(--text-2);
+}
+
+.up-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.up-state {
+  flex: none;
+  max-width: 55%;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-3);
+}
+
+.up-row.ok .up-state {
+  color: #30d158;
+}
+
+.up-row.failed .up-state {
+  color: #ff6a5f;
+  white-space: normal;
+  text-align: right;
+}
+
+@media (max-width: 720px) {
+  .up-card {
+    right: 12px;
+    bottom: 96px;
+  }
+}

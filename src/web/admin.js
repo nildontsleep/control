@@ -58,6 +58,7 @@
       h('input', { type: 'checkbox', checked: !!s[key], onchange: guard(async (e) => { await rpc('srv:settings', { [key]: e.target.checked }); flash('Enregistré.', false); }) }));
     const name = h('input', { class: 'text-input', value: s.serverName, maxlength: '60' });
     const tmdb = h('input', { class: 'text-input', type: 'password', placeholder: s.tmdbKey ? '•••••••• (définie)' : 'Clé d’API v3', autocomplete: 'off' });
+    const uploadMax = h('input', { class: 'text-input', type: 'number', min: '1', max: '20480', value: String(s.uploadMaxMb || 500), style: 'width:110px;flex:none', onchange: guard(async () => { await rpc('srv:settings', { uploadMaxMb: Number(uploadMax.value) }); flash('Enregistré.', false); }) });
     const usersRoot = h('input', { class: 'text-input', placeholder: '/music/comptes (vide : aucun)', value: s.usersRoot || '', spellcheck: 'false' });
     return h('section', { class: 'group' },
       h('h2', { text: 'Serveur' }),
@@ -66,6 +67,8 @@
         h('button', { class: 'btn btn-secondary', text: 'Renommer', onclick: guard(async () => { await rpc('srv:settings', { serverName: name.value }); flash('Enregistré.', false); }) })),
       toggle('Inscriptions ouvertes', 'chacun peut créer un compte depuis la page de connexion', 'registrationEnabled'),
       toggle('Téléchargements pour tous', 'sinon réservés aux administrateurs', 'allowUserDownloads'),
+      toggle('Envois de musique pour tous', 'depuis le navigateur (glisser-déposer), dans le dossier Envois de chaque compte ; sinon réservés aux administrateurs', 'allowUserUploads'),
+      h('div', { class: 'toggle-row' }, h('span', { text: 'Taille maximale d’un fichier envoyé (Mo)' }), uploadMax),
       h('div', { class: 'inline-form' }, tmdb,
         h('button', { class: 'btn btn-secondary', text: 'Enregistrer la clé TMDB', onclick: guard(async () => { if (!tmdb.value.trim()) return; await rpc('srv:settings', { tmdbKey: tmdb.value.trim() }); tmdb.value = ''; flash('Clé enregistrée.', false); reload(); }) })),
       h('p', { class: 'hint', text: 'La clé TMDB (gratuite) sert aux films et séries ; chaque compte peut aussi renseigner la sienne dans ses réglages.' }),

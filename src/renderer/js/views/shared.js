@@ -6,6 +6,7 @@ import { t } from '../i18n.js';
 import { player } from '../player.js';
 import { navigate } from '../router.js';
 import { button } from '../ui/controls.js';
+import { pickAndUpload } from '../ui/upload.js';
 import { isWeb, can } from '../web.js';
 
 const library = window.control.library;
@@ -44,8 +45,12 @@ export function emptyLibrary() {
     return emptyState({
       icon: 'headphones',
       title: t('empty.libraryTitle'),
-      text: can('manageServer') ? t('web.emptyAdmin') : t('web.emptyUser'),
-      actions: can('manageServer') ? [button(t('empty.addFolder'), { icon: 'folder-open', kind: 'primary', onClick: () => library.addFolder() })] : [],
+      text: can('upload') ? t('web.emptyUpload') : can('manageServer') ? t('web.emptyAdmin') : t('web.emptyUser'),
+      actions: [
+        can('upload') ? button(t('up.pick'), { icon: 'upload', kind: 'primary', onClick: () => pickAndUpload() }) : null,
+        can('upload') ? button(t('up.pickFolder'), { icon: 'folder-open', onClick: () => pickAndUpload({ directory: true }) }) : null,
+        can('manageServer') ? button(t('empty.addFolder'), { icon: 'folder-open', kind: can('upload') ? 'secondary' : 'primary', onClick: () => library.addFolder() }) : null,
+      ].filter(Boolean),
     });
   }
   return emptyState({

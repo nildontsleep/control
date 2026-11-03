@@ -19,7 +19,8 @@ import { initSources } from './ui/sources.js';
 import { peopleView } from './views/people.js';
 import { profileView } from './views/profile.js';
 import { compareView } from './views/compare.js';
-import { viewing } from './web.js';
+import { viewing, isWeb } from './web.js';
+import { uploadFiles, filesFromDrop } from './ui/upload.js';
 import { mountReadOnlyBanner } from './ui/library-switch.js';
 import { isSheetOpen } from './ui/sheet.js';
 import { isMenuOpen } from './ui/menu.js';
@@ -205,6 +206,11 @@ function wireDrop() {
     e.preventDefault();
     depth = 0;
     zone.classList.remove('show');
+    if (isWeb) {
+      // Web : les fichiers (et dossiers) glissés sont envoyés au serveur.
+      uploadFiles(await filesFromDrop(e.dataTransfer));
+      return;
+    }
     const paths = [...e.dataTransfer.files].map((f) => control.pathForFile(f)).filter(Boolean);
     if (!paths.length) return;
     const ids = await control.library.addPaths(paths);

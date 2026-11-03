@@ -11,6 +11,7 @@ const { frameOrigins, imageOrigins } = require('../src/main/media');
 const { invoke, send: sendCommand } = require('./rpc');
 const { httpError } = require('./auth');
 const { Hub } = require('./hub');
+const upload = require('./upload');
 const {
   parseCookies, cookieHeader, readJson, send, sendJson, sendGzipped, sendBuffer, sendFile, safeJoin, MIME,
 } = require('./http');
@@ -85,6 +86,8 @@ function createApp(hub, config) {
     const caps = {
       editFiles: user.role === 'admin' && !view,
       download: user.role === 'admin' || hub.settings.allowUserDownloads,
+      upload: user.role === 'admin' || hub.settings.allowUserUploads,
+      uploadMaxMb: Math.min(hub.settings.uploadMaxMb || 500, 20480),
       manageServer: user.role === 'admin',
       installTools: user.role === 'admin',
       readOnly: !!view, // bibliothèque d'un autre compte : on écoute, on ne modifie rien
@@ -325,6 +328,21 @@ function createApp(hub, config) {
     if (pathname === '/admin') return user.role === 'admin' ? staticPage(req, res, 'admin.html') : redirect(res, '/');
 
     if (pathname === '/api/events' && method === 'GET') return events(req, res, user, url);
+    if (pathname === '/api/upload' && method === 'POST') {
+      requireCsrf(req);
+      if (user.role !== 'admin' && !hub.settings.allowUserUploads) throw httpError(403, 'forbidden', 'Les envois de musique sont réservés à l’administrateur.');
+      const entry = hub.entry(user);
+      // Refus en cours d'envoi : la connexion est fermée une fois la réponse partie (on ne lit pas le reste du fichier).
+      res.on('finish', () => { if (!req.complete) req.destroy(); });
+      const result = await upload.receive(req, {
+        entry,
+        root: path.join(hub.downloadDirFor(user), 'Envois'),
+        name: url.searchParams.get('name'),
+        dir: url.searchParams.get('dir'),
+        maxBytes: Math.min(hub.settings.uploadMaxMb || 500, 20480) * 1048576,
+      });
+      return json(req, res, 200, { ok: true, result });
+    }
     if ((pathname.startsWith('/api/rpc/') || pathname.startsWith('/api/send/')) && method === 'POST') {
       requireCsrf(req);
       const send_ = pathname.startsWith('/api/send/');

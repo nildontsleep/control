@@ -14,6 +14,7 @@ import { isWeb, can } from '../web.js';
 import { openPasswordSheet } from './account.js';
 import { hasSources, serversTab } from './sources.js';
 import { scrobbleGroup } from './scrobble-settings.js';
+import { pickAndUpload } from './upload.js';
 import { onUpdate, checkNow, updateNow } from '../update/state.js';
 import { SCENES } from '../theme/scenes.js';
 import { PRESETS, DEFAULT_PRESET, currentLook, matchingPreset, swatchFor } from '../theme/presets.js';
@@ -342,6 +343,8 @@ export function openSettings(initial = 'general') {
           h('div.row.row-block', {}, folders),
           h('div.row.row-block', {}, h('div.row-buttons', {},
             can('manageServer') ? button(t('set.addFolder'), { icon: 'folder-plus', kind: 'primary', small: true, onClick: () => library.addFolder() }) : null,
+            can('upload') ? button(t('up.pick'), { icon: 'upload', kind: can('manageServer') ? 'secondary' : 'primary', small: true, onClick: () => pickAndUpload() }) : null,
+            can('upload') ? button(t('up.pickFolder'), { icon: 'folder-open', small: true, onClick: () => pickAndUpload({ directory: true }) }) : null,
             button(t('set.scanNow'), { icon: 'refresh-cw', small: true, onClick: async () => { toast(t('set.scanning'), 'refresh-cw'); await library.scan(); } }))),
         ], { footer: isWeb ? t(can('manageServer') ? 'set.foldersHintAdmin' : 'set.foldersHintUser') : t('set.foldersHint') }),
         isWeb ? group(t('set.commonFolders'), [h('div.row.row-block', {}, common)], { footer: t('set.commonFoldersHint') }) : null,
