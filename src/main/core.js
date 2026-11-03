@@ -17,6 +17,7 @@ const { Stats } = require('./stats');
 const { Lyrics } = require('./lyrics');
 const { MediaService } = require('./media');
 const images = require('./images');
+const { Scrobbler } = require('./scrobble');
 
 class Core {
   /**
@@ -28,7 +29,7 @@ class Core {
    * mediaStore : réglages vus par le service films/séries (le serveur y ajoute sa clé TMDB sans l'exposer).
    * cookiesFile : fichier cookies.txt du compte pour yt-dlp (serveur : envoyé par l'utilisateur ; bureau : aucun).
    */
-  constructor({ dir, coversDir, tools, emit, defaultDownloadDir, mediaStore, cookiesFile }) {
+  constructor({ dir, coversDir, tools, emit, defaultDownloadDir, mediaStore, cookiesFile, lastfmKeys, guardUrl }) {
     this.dir = dir;
     this.emit = emit;
     this.defaultDownloadDir = defaultDownloadDir;
@@ -43,10 +44,14 @@ class Core {
     this.downloads = new Downloads({ tools: this.tools, library: this.library, store: this.store, file: path.join(dir, 'downloads.json'), emit, cookiesFile });
     this.downloads.defaultDir = defaultDownloadDir;
     this.media = new MediaService({ db: this.db, store: mediaStore || this.store, emit });
+    // Scrobbling (Last.fm, ListenBrainz) : lastfmKeys() et guardUrl() viennent du serveur web.
+    this.scrobbler = new Scrobbler({ dir, library: this.library, emit, keys: lastfmKeys, guardUrl });
+    this.scrobbler.resume();
   }
 
   /** Ferme ce que le noyau garde ouvert (serveur : utilisateur inactif). */
   close() {
+    this.scrobbler.close();
     this.library.close();
     this.downloads.killAll();
     this.store.flush();
@@ -59,7 +64,7 @@ class Core {
    * host : { scanRoots(), applySettingEffects(patch), emitOthers(event, channel, payload), onReset(), guardUrl?(url) }
    */
   register(ipc, host) {
-    const { store, library, lyrics, stats, tags, tools, downloads, media, emit } = this;
+    const { store, library, lyrics, stats, tags, tools, downloads, media, scrobbler, emit } = this;
     const handle = (channel, fn) => ipc.handle(channel, (event, ...args) => fn(event, ...args));
 
     // ─── Réglages ─────────────────────────────────────────────────────────────
@@ -92,8 +97,15 @@ class Core {
       return folders;
     });
     handle('lib:remove-tracks', (e, ids, deleteFiles) => library.removeTracks(ids, { deleteFiles: !!deleteFiles }));
-    handle('lib:play-start', (e, id, duration) => library.playStart(id, duration));
-    ipc.on('lib:play-end', (e, playId, seconds, completed) => library.playEnd(playId, seconds, completed));
+    handle('lib:play-start', (e, id, duration) => {
+      const playId = library.playStart(id, duration);
+      scrobbler.started(playId, id);
+      return playId;
+    });
+    ipc.on('lib:play-end', (e, playId, seconds, completed) => {
+      library.playEnd(playId, seconds, completed);
+      scrobbler.ended(playId, seconds);
+    });
 
     // ─── Paroles ──────────────────────────────────────────────────────────────
     const lyr = (fn) => async (e, id, ...rest) => {
@@ -211,6 +223,21 @@ class Core {
     ipc.on('dl:retry', (e, id) => downloads.retry(id));
     ipc.on('dl:remove', (e, id) => downloads.remove(id));
     ipc.on('dl:clear', () => downloads.clearFinished());
+
+    // ─── Scrobbling : Last.fm et ListenBrainz ──────────────────────────────────
+    const attempt = async (fn) => {
+      try {
+        return { ok: true, data: await fn() };
+      } catch (err) {
+        return { ok: false, message: String(err?.message || err) };
+      }
+    };
+    handle('scrobble:status', () => scrobbler.status());
+    handle('scrobble:connect-listenbrainz', (e, token, url) => attempt(() => scrobbler.connectListenBrainz(token, url)));
+    handle('scrobble:lastfm-start', () => attempt(() => scrobbler.lastfmStart()));
+    handle('scrobble:lastfm-finish', (e, token) => attempt(() => scrobbler.lastfmFinish(token)));
+    handle('scrobble:set-lastfm-keys', (e, key, secret) => scrobbler.setLastfmKeys(key, secret));
+    handle('scrobble:disconnect', (e, service) => scrobbler.disconnect(service));
 
     // ─── Films, séries et animés ──────────────────────────────────────────────
     media.register(ipc);

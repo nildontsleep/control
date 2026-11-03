@@ -196,6 +196,13 @@ Dans `/admin` → *Mises à jour du serveur* (et dans *Réglages* → *À propos
 - **Un serveur en 0.8.x ne peut pas encore se mettre à jour tout seul** : passe une fois à cette version (`docker pull`, ou `git pull` et `npm ci`), ensuite les suivantes sont automatiques.
 - Sécurité : seules les releases de ce dépôt sont acceptées, l’archive doit correspondre à l’empreinte calculée par GitHub, son contenu est lu strictement (ni lien, ni chemin hors du dossier d’installation, taille limitée), et le jeton GitHub éventuel ne quitte jamais le serveur.
 
+### Scrobbling (Last.fm, ListenBrainz)
+
+*Réglages* → *Général* → *Scrobbling* (application de bureau et web). Chaque compte peut envoyer ses écoutes à **ListenBrainz** (colle ton jeton, `listenbrainz.org/settings`) et/ou à **Last.fm** (autorisation sur leur site, sans jamais confier ton mot de passe à control). Un morceau est annoncé « en écoute » à son début, puis compte comme une écoute quand il dure au moins 30 s et que la moitié (ou 4 minutes) a été écoutée ; les vidéos et les morceaux sans artiste sont ignorés. Si le réseau est coupé, les écoutes attendent dans une file (14 jours au plus, 500 écoutes) et partent dès que possible. Les jetons sont gardés dans un fichier à part (`scrobble.json`), pas dans les réglages et pas dans les sauvegardes.
+
+- **Last.fm** demande une application (gratuite) : sur le web, l’administrateur la crée sur `last.fm/api/account/create` et renseigne sa clé d’API et son secret dans `/admin` → *Last.fm* ; sur le bureau, saisis les tiens à la première connexion.
+- Une adresse ListenBrainz personnalisée (serveur auto-hébergé) n’est acceptée que si elle est publique.
+
 ### Sauvegardes (webhook Discord)
 
 `/admin` → *Sauvegardes* : colle l’adresse d’un **webhook Discord** (Paramètres du salon → Intégrations → Webhooks), choisis la fréquence (chaque jour ou chaque semaine, à partir de l’heure voulue) et, de préférence, une **phrase secrète**. Le serveur archive alors la base des comptes (`server.db`) et, pour chaque compte, sa base (écoutes, playlists, tags, progression, récaps) et ses réglages, chiffre l’archive (AES-256-GCM) si une phrase est définie, la découpe en parties de 9 Mo au plus et les poste dans le salon. Les deux dernières sauvegardes restent aussi dans `<données>/backups/`. Boutons *Sauvegarder maintenant* et *Tester le webhook*.

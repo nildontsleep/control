@@ -297,6 +297,24 @@
           s.hasBackupPassphrase ? h('button', { class: 'btn btn-secondary', text: 'Effacer', onclick: guard(async () => { await rpc('srv:settings', { backupPassphrase: '' }); flash('Chiffrement désactivé.', false); reload(); }) }) : null)));
   }
 
+  // ─── Application Last.fm (scrobbling des comptes) ──────────────────────────
+  function lastfmGroup(s, reload) {
+    const key = h('input', { class: 'text-input', placeholder: 'Clé d’API', value: s.lastfmKey || '', autocomplete: 'off', spellcheck: 'false' });
+    const secret = h('input', { class: 'text-input', type: 'password', placeholder: s.hasLastfmSecret ? '•••••••• (défini)' : 'Secret partagé', autocomplete: 'off' });
+    return h('section', { class: 'group', id: 'lastfm' },
+      h('h2', { text: 'Last.fm (scrobbling)' }),
+      h('p', { text: 'Pour que les comptes puissent envoyer leurs écoutes à Last.fm, créez une application gratuite sur last.fm/api/account/create et renseignez ici sa clé d’API et son secret partagé. Chaque compte autorise ensuite control sur le site de Last.fm (Réglages → Général → Scrobbling) ; ListenBrainz n’a besoin de rien ici.' }),
+      h('div', { class: 'inline-form' }, key, secret,
+        h('button', { class: 'btn btn-secondary', text: 'Enregistrer', onclick: guard(async () => {
+          const patch = { lastfmKey: key.value.trim() };
+          if (secret.value) patch.lastfmSecret = secret.value;
+          await rpc('srv:settings', patch);
+          flash('Application Last.fm enregistrée.', false);
+          reload();
+        }) }),
+        s.hasLastfmSecret ? h('button', { class: 'btn btn-secondary', text: 'Effacer', onclick: guard(async () => { await rpc('srv:settings', { lastfmKey: '', lastfmSecret: '' }); flash('Clés effacées.', false); reload(); }) }) : null));
+  }
+
   // ─── Dossiers ──────────────────────────────────────────────────────────────
   function foldersGroup(s, reload) {
     const picker = h('div', { class: 'picker', hidden: true });
@@ -450,6 +468,7 @@
       settingsGroup(s, reload),
       updates ? updatesGroup(updates, s) : null,
       backups ? backupsGroup(backups, s, reload) : null,
+      lastfmGroup(s, reload),
       foldersGroup(s, reload),
       usersGroup(users, me.user.id, reload, s),
       tools ? toolsGroup(tools, reload) : null,

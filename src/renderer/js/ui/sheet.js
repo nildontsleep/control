@@ -47,10 +47,10 @@ export function openSheet({ title, width = 460, body, footer, onClose, canClose,
 
 export const isSheetOpen = () => openCount > 0;
 
-export function promptSheet({ title, message, value = '', placeholder = '', confirmLabel = t('common.ok') }) {
+export function promptSheet({ title, message, value = '', placeholder = '', confirmLabel = t('common.ok'), secret = false }) {
   return new Promise((resolve) => {
     let done = false;
-    const input = h('input.text-input', { type: 'text', value, placeholder, spellcheck: 'false' });
+    const input = h('input.text-input', { type: secret ? 'password' : 'text', value, placeholder, spellcheck: 'false', autocomplete: 'off' });
     const finish = (v) => {
       if (done) return;
       done = true;

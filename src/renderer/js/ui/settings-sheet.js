@@ -13,6 +13,7 @@ import { fmtBytes } from '../format.js';
 import { isWeb, can } from '../web.js';
 import { openPasswordSheet } from './account.js';
 import { hasSources, serversTab } from './sources.js';
+import { scrobbleGroup } from './scrobble-settings.js';
 import { onUpdate, checkNow, updateNow } from '../update/state.js';
 import { SCENES } from '../theme/scenes.js';
 import { PRESETS, DEFAULT_PRESET, currentLook, matchingPreset, swatchFor } from '../theme/presets.js';
@@ -226,6 +227,7 @@ export function openSettings(initial = 'general') {
           sliderRow(t('set.crossfade'), 'crossfade', { min: 0, max: 12, step: 1, format: (v) => (v ? t('set.seconds', { n: v }) : t('set.off')) }),
         ], { footer: t('set.crossfadeHint') }),
         isWeb ? accountGroup() : discordGroup(),
+        scrobbleGroup(),
         group(t('set.language'), [
           row(t('set.language'), popup('language', langs), { badge: badge('languages', B.blue) }),
         ], { footer: t('set.languageHint') }),

@@ -57,6 +57,16 @@ contextBridge.exposeInMainWorld('control', {
     saveFile: invoke('lyrics:save-file'),
   },
 
+  scrobble: {
+    status: invoke('scrobble:status'),
+    connectListenBrainz: invoke('scrobble:connect-listenbrainz'),
+    lastfmStart: invoke('scrobble:lastfm-start'),
+    lastfmFinish: invoke('scrobble:lastfm-finish'),
+    setLastfmKeys: invoke('scrobble:set-lastfm-keys'),
+    disconnect: invoke('scrobble:disconnect'),
+    onChanged: listen('scrobble:changed'),
+  },
+
   update: {
     state: invoke('update:state'),
     check: invoke('update:check'),

@@ -17,6 +17,7 @@ const { WebUpdater } = require('./updater');
 const { TracksBuilder } = require('./tracks');
 const { Backups } = require('./backup');
 const pkg = require('../package.json');
+const { checkUrl } = require('../src/main/urlguard');
 
 const IDLE_MS = 30 * 60 * 1000;
 const HEARTBEAT_MS = 20 * 1000;
@@ -91,6 +92,8 @@ class Hub {
       backupEvery: 'off', // 'off', 'daily' ou 'weekly'
       backupHour: 3, // heure (0-23) de la sauvegarde planifiée
       backupPassphrase: '', // chiffre l'archive envoyée (jamais renvoyée au navigateur)
+      lastfmKey: '', // application Last.fm (clé d'API et secret partagé) pour le scrobbling des comptes
+      lastfmSecret: '',
     };
     let saved = {};
     try {
@@ -107,7 +110,7 @@ class Hub {
       const url = String(patch.backupWebhook || '').trim();
       if (url && !this.backups.validUrl(url)) throw httpError(400, 'bad_webhook', 'Adresse de webhook invalide (https://discord.com/api/webhooks/…).');
     }
-    const allowed = ['serverName', 'registrationEnabled', 'allowUserDownloads', 'libraryFolders', 'downloadDir', 'tmdbKey', 'usersRoot', 'updateMode', 'updateHour', 'updateToken', 'backupWebhook', 'backupEvery', 'backupHour', 'backupPassphrase'];
+    const allowed = ['serverName', 'registrationEnabled', 'allowUserDownloads', 'libraryFolders', 'downloadDir', 'tmdbKey', 'usersRoot', 'updateMode', 'updateHour', 'updateToken', 'backupWebhook', 'backupEvery', 'backupHour', 'backupPassphrase', 'lastfmKey', 'lastfmSecret'];
     for (const key of allowed) {
       if (!(key in patch)) continue;
       const v = patch[key];
@@ -128,8 +131,8 @@ class Hub {
 
   /** Les réglages tels que la page d'administration les voit (le jeton GitHub ne quitte jamais le serveur). */
   publicSettings() {
-    const { updateToken, backupWebhook, backupPassphrase, ...rest } = this.settings;
-    return { ...rest, hasBackupWebhook: !!backupWebhook, hasBackupPassphrase: !!backupPassphrase, hasUpdateToken: !!(updateToken || this.config.updateToken), updateMode: this.config.update || rest.updateMode, updateLocked: !!this.config.update };
+    const { updateToken, backupWebhook, backupPassphrase, lastfmSecret, ...rest } = this.settings;
+    return { ...rest, hasLastfmSecret: !!lastfmSecret, hasBackupWebhook: !!backupWebhook, hasBackupPassphrase: !!backupPassphrase, hasUpdateToken: !!(updateToken || this.config.updateToken), updateMode: this.config.update || rest.updateMode, updateLocked: !!this.config.update };
   }
 
   updateConfig() {
@@ -315,6 +318,8 @@ class Hub {
       emit: entry.emit,
       defaultDownloadDir: this.downloadDirFor(user),
       cookiesFile: path.join(dir, 'cookies.txt'), // cookies YouTube envoyés par ce compte (voir server/cookies.js)
+      lastfmKeys: () => ({ key: this.settings.lastfmKey, secret: this.settings.lastfmSecret }), // application Last.fm de l'administrateur
+      guardUrl: (url) => checkUrl(url), // adresse d'un serveur ListenBrainz personnalisé : publique seulement
       // Le service films/séries reçoit la clé TMDB du serveur sans que le compte la voie dans ses réglages.
       mediaStore: {
         get: (key, fallback) => {

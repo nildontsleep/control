@@ -269,6 +269,16 @@
       saveFile: invoke('lyrics:save-file'),
     },
 
+    scrobble: {
+      status: invoke('scrobble:status'),
+      connectListenBrainz: invoke('scrobble:connect-listenbrainz'),
+      lastfmStart: invoke('scrobble:lastfm-start'),
+      lastfmFinish: invoke('scrobble:lastfm-finish'),
+      setLastfmKeys: invoke('scrobble:set-lastfm-keys'),
+      disconnect: invoke('scrobble:disconnect'),
+      onChanged: listen('scrobble:changed'),
+    },
+
     // Mise à jour du serveur : réservée à l'administrateur (les autres comptes n'ont rien à voir avec elle).
     update: boot.caps?.manageServer ? {
       state: () => invoke('srv:update:status')().catch(() => idle),
