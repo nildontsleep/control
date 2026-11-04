@@ -10,7 +10,8 @@ import { openSheet, confirmSheet, promptSheet } from './sheet.js';
 import { media } from '../media/api.js';
 import { toast } from './feedback.js';
 import { fmtBytes } from '../format.js';
-import { isWeb, can } from '../web.js';
+import { isWeb, can, isMobile } from '../web.js';
+import { effectsAvailable, audioGraphActive } from '../player.js';
 import { openPasswordSheet } from './account.js';
 import { hasSources, serversTab } from './sources.js';
 import { scrobbleGroup } from './scrobble-settings.js';
@@ -235,6 +236,29 @@ export function openSettings(initial = 'general') {
     return group(t('dc.title'), rows, { footer: t('dc.footer') });
   }
 
+  // Lecture. Sur téléphone et tablette : lecture écran éteint (par défaut) ou effets audio, qui la rendraient impossible.
+  function playbackGroup() {
+    const crossfade = sliderRow(t('set.crossfade'), 'crossfade', { min: 0, max: 12, step: 1, format: (v) => (v ? t('set.seconds', { n: v }) : t('set.off')) });
+    const mobileRows = isMobile ? [
+      row(t('set.bgPlayback'), toggle({
+        get: () => settings.backgroundPlayback !== false,
+        set: (v) => {
+          update({ backgroundPlayback: v });
+          if (v && audioGraphActive()) toast(t('set.bgReload'), 'info');
+        },
+      }), { hint: t('set.bgPlaybackHint'), badge: badge('moon', B.purple) }),
+      row(t('set.bgVideo'), toggle('backgroundVideo'), { hint: t('set.bgVideoHint'), badge: badge('film', B.orange) }),
+    ] : [];
+    live(() => { crossfade.hidden = !effectsAvailable(); });
+    return group(t('set.playback'), [
+      ...mobileRows,
+      crossfade,
+      row(t('set.normalize'), toggle('normalize'), { hint: t('set.normalizeHint'), badge: badge('volume-2', B.green) }),
+      row(t('set.normalizeTarget'), popup('normalizeTarget', [-18, -16, -14].map((v) => ({ value: v, label: t(`set.normalizeTarget.${-v}`) }))), { badge: badge('gauge', B.teal) }),
+      normalizeStatus(),
+    ], { footer: effectsAvailable() ? t('set.crossfadeHint') : t('set.effectsOffHint') });
+  }
+
   const builders = {
     general() {
       const langs = ['auto', 'fr', 'en'].map((v) => ({ value: v, label: t(`lang.${v}`) }));
@@ -243,12 +267,7 @@ export function openSettings(initial = 'general') {
           row(t('set.compact'), toggle('compact'), { hint: t('set.compactHint'), badge: badge('list', B.teal) }),
           row(t('set.animations'), toggle('animations'), { badge: badge('wand-sparkles', B.orange) }),
         ]),
-        group(t('set.playback'), [
-          sliderRow(t('set.crossfade'), 'crossfade', { min: 0, max: 12, step: 1, format: (v) => (v ? t('set.seconds', { n: v }) : t('set.off')) }),
-          row(t('set.normalize'), toggle('normalize'), { hint: t('set.normalizeHint'), badge: badge('volume-2', B.green) }),
-          row(t('set.normalizeTarget'), popup('normalizeTarget', [-18, -16, -14].map((v) => ({ value: v, label: t(`set.normalizeTarget.${-v}`) }))), { badge: badge('gauge', B.teal) }),
-          normalizeStatus(),
-        ], { footer: t('set.crossfadeHint') }),
+        playbackGroup(),
         isWeb ? accountGroup() : discordGroup(),
         scrobbleGroup(),
         group(t('set.language'), [

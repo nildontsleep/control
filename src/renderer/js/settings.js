@@ -31,6 +31,8 @@ export const DEFAULTS = {
   crossfade: 0,
   automix: false,
   normalize: false, // normalisation du volume (niveau mesuré par ffmpeg)
+  backgroundPlayback: true, // téléphone et tablette (web) : lecture fiable écran éteint, sans égaliseur, fondu ni AutoMix
+  backgroundVideo: true, // téléphone et tablette (web) : le son d'une vidéo continue écran éteint
   normalizeTarget: -16, // LUFS
   eq: { enabled: false, preset: 'flat', gains: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0] },
   session: null,

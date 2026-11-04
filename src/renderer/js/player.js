@@ -4,9 +4,9 @@ import { settings, update, subscribe as onSettings } from './settings.js';
 import { lib, bumpPlay } from './data.js';
 import { planMix } from './automix/analysis.js';
 import { peekAnalysis, warm } from './automix/analyzer.js';
-import { mediaUrl, coverFile } from './urls.js';
+import { mediaUrl, coverFile, videoThumbUrl } from './urls.js';
 import { gainDb, toLinear, fillLevels } from './loudness.js';
-import { isWeb } from './web.js';
+import { isWeb, isMobile, isIOS } from './web.js';
 
 const api = window.control?.library;
 // Deux « platines » : l'élément vidéo (aussi utilisé pour l'audio et pour toutes les vidéos) et un élément audio
@@ -15,7 +15,9 @@ const videoEl = document.getElementById('media');
 const audioEl = new Audio();
 audioEl.preload = 'auto';
 const decks = [videoEl, audioEl];
-let media = videoEl;
+// Sur téléphone et tablette, la musique joue dans l'élément audio : iOS et Android mettent en pause un élément vidéo dès
+// que l'écran s'éteint, pas un élément audio. L'élément vidéo ne sert alors qu'aux vidéos.
+let media = isMobile ? audioEl : videoEl;
 
 export const EQ_BANDS = [31, 62, 125, 250, 500, 1000, 2000, 4000, 8000, 16000];
 export const EQ_PRESETS = {
@@ -61,10 +63,15 @@ const deckTrack = new Map();
 const normScale = new Map(); // sans graphe Web Audio : atténuation appliquée au volume de l'élément
 const BASS_CUT = -30;
 
-// Sur un téléphone, passer par Web Audio peut couper la musique quand l'écran s'éteint (iOS surtout) : tant que ni
-// l'égaliseur, ni le fondu, ni AutoMix n'en ont besoin, les éléments média jouent directement.
-const nativeFirst = isWeb && typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
-const graphWanted = () => !nativeFirst || !!settings.eq?.enabled || Number(settings.crossfade) > 0 || !!settings.automix;
+// Sur un téléphone ou une tablette, passer par Web Audio coupe la musique quand l'écran s'éteint (iOS surtout : le
+// contexte audio est suspendu en arrière-plan). Par défaut, les éléments média y jouent donc directement, sans égaliseur,
+// fondu ni AutoMix ; on peut les réactiver (Réglages → Lecture) en renonçant à la lecture écran éteint.
+const nativeFirst = isMobile;
+/** Égaliseur, fondu enchaîné et AutoMix utilisables ici (toujours sur le bureau). */
+export const effectsAvailable = () => !nativeFirst || settings.backgroundPlayback === false;
+const graphWanted = () => !nativeFirst || (effectsAvailable() && (!!settings.eq?.enabled || Number(settings.crossfade) > 0 || !!settings.automix));
+/** Le graphe Web Audio a été créé : sur mobile, revenir à la lecture écran éteint demande de recharger la page. */
+export const audioGraphActive = () => !!audioCtx;
 
 function ensureAudioGraph() {
   if (audioCtx) {
@@ -197,6 +204,24 @@ function trackListen() {
 }
 
 // ─── Chargement et lecture ───────────────────────────────────────────────────
+/** L'image de la vidéo est en image dans l'image (elle continue alors de jouer écran éteint ou appli en arrière-plan). */
+export function inPictureInPicture() {
+  return document.pictureInPictureElement === videoEl || videoEl.webkitPresentationMode === 'picture-in-picture';
+}
+
+/** Mobile, page cachée (écran éteint, autre appli), sans image dans l'image : une vidéo ne peut plus jouer que son seul. */
+const audioOnlyNow = () => isMobile && document.hidden && settings.backgroundVideo !== false && !inPictureInPicture();
+
+function deckFor(track) {
+  if (track.kind === 'video') return audioOnlyNow() ? audioEl : videoEl;
+  return nativeFirst && !audioCtx ? audioEl : media;
+}
+
+// Vidéo passée en son seul (écran éteint) : { id } du morceau, pour revenir à l'image quand la page réapparaît.
+let handoff = null;
+// La dernière pause vient-elle de l'utilisateur (bouton, écran verrouillé) ? Sinon c'est le système (écran éteint, appel).
+let userPaused = false;
+
 function load(index, { autoplay = true, position = 0 } = {}) {
   finishListen(false);
   killFade();
@@ -212,13 +237,16 @@ function load(index, { autoplay = true, position = 0 } = {}) {
     emit('state');
     return;
   }
-  // Une vidéo s'affiche toujours dans l'élément vidéo ; l'audio reste sur la platine en cours.
-  if (track.kind === 'video' && media !== videoEl) {
+  // Une vidéo s'affiche dans l'élément vidéo (ou, écran éteint sur mobile, joue son seul dans l'élément audio) ; sur le
+  // bureau, l'audio reste sur la platine en cours.
+  const deck = deckFor(track);
+  if (deck !== media) {
     media.pause();
     media.removeAttribute('src');
     media.load();
-    media = videoEl;
+    media = deck;
   }
+  handoff = deck === audioEl && track.kind === 'video' ? { id: track.id } : null;
   resetListen(track.id);
   state.loading = true;
   media.src = mediaUrl(track.id);
@@ -232,6 +260,7 @@ function load(index, { autoplay = true, position = 0 } = {}) {
     media.addEventListener('loadedmetadata', seek);
   }
   if (autoplay) {
+    userPaused = false;
     ensureAudioGraph();
     media.play().catch(() => {});
   }
@@ -254,6 +283,7 @@ function ended() {
     load(0);
   } else {
     state.playing = false;
+    userPaused = true; // fin de la file : rien ne doit reprendre tout seul (écran éteint compris)
     media.currentTime = 0;
     emit('state');
     emit('ended');
@@ -655,14 +685,18 @@ player.playOne = (track, context) => {
 player.toggle = () => {
   if (!player.track) return;
   ensureAudioGraph();
-  if (media.paused) media.play().catch(() => {});
-  else {
+  if (media.paused) {
+    userPaused = false;
+    media.play().catch(() => {});
+  } else {
+    userPaused = true;
     killFade();
     media.pause();
   }
 };
-player.play = () => { if (player.track && media.paused) { ensureAudioGraph(); media.play().catch(() => {}); } };
+player.play = () => { if (player.track && media.paused) { userPaused = false; ensureAudioGraph(); media.play().catch(() => {}); } };
 player.pause = () => {
+  userPaused = true;
   killFade();
   media.pause();
 };
@@ -737,7 +771,7 @@ player.toggleShuffle = () => {
   emit('queue');
 };
 
-player.toggleAutomix = () => update({ automix: !settings.automix });
+player.toggleAutomix = () => { if (effectsAvailable()) update({ automix: !settings.automix }); };
 
 /** Mixage en cours (diagnostic et tests) : étape, écart de calage de l'entrant (s), avancement. */
 player.mixInfo = () => {
@@ -843,6 +877,138 @@ player.restoreSession = () => {
   load(Math.min(s.index, tracks.length - 1), { autoplay: false, position: s.position || 0 });
 };
 
+// ─── Image dans l'image, plein écran natif, diffusion ─────────────────────────
+/** Image dans l'image possible : API standard (Chrome, Edge, Safari macOS) ou mode de présentation WebKit (iPhone, iPad). */
+export function pipSupported() {
+  if (document.pictureInPictureEnabled && !videoEl.disablePictureInPicture) return true;
+  return typeof videoEl.webkitSupportsPresentationMode === 'function' && videoEl.webkitSupportsPresentationMode('picture-in-picture');
+}
+
+export function togglePictureInPicture() {
+  const webkit = (mode) => { if (typeof videoEl.webkitSetPresentationMode === 'function') videoEl.webkitSetPresentationMode(mode); };
+  if (document.pictureInPictureElement) return document.exitPictureInPicture().catch(() => {});
+  if (videoEl.webkitPresentationMode === 'picture-in-picture') return webkit('inline');
+  if (document.pictureInPictureEnabled && videoEl.requestPictureInPicture) return videoEl.requestPictureInPicture().catch(() => webkit('picture-in-picture'));
+  return webkit('picture-in-picture');
+}
+
+/** iPhone : pas de plein écran pour une page, mais le lecteur natif de la vidéo (avec image dans l'image et AirPlay). */
+export const nativeVideoFullscreen = () => isIOS && !document.documentElement.requestFullscreen && typeof videoEl.webkitEnterFullscreen === 'function';
+player.enterNativeFullscreen = () => { try { videoEl.webkitEnterFullscreen(); } catch { /* vidéo pas encore prête */ } };
+
+for (const ev of ['enterpictureinpicture', 'leavepictureinpicture', 'webkitpresentationmodechanged']) videoEl.addEventListener(ev, () => emit('pip', inPictureInPicture()));
+// Chrome (appli installée) : image dans l'image automatique quand on change d'onglet ou d'appli pendant une vidéo.
+try { videoEl.autoPictureInPicture = true; } catch { /* non pris en charge */ }
+
+// Diffusion : AirPlay (iPhone, iPad, Safari) ou Remote Playback (Chromecast depuis Chrome sur Android).
+let castAvailable = false;
+const castWatch = (el) => {
+  if (typeof el.webkitShowPlaybackTargetPicker === 'function' && 'WebKitPlaybackTargetAvailabilityEvent' in window) {
+    el.addEventListener('webkitplaybacktargetavailabilitychanged', (e) => {
+      const on = e.availability === 'available';
+      if (on !== castAvailable) { castAvailable = on; emit('cast', on); }
+    });
+  } else if (isMobile && el.remote?.watchAvailability) {
+    el.remote.watchAvailability((on) => { if (on !== castAvailable) { castAvailable = on; emit('cast', on); } }).catch(() => {});
+  }
+};
+decks.forEach(castWatch);
+/** 'airplay', 'cast' ou null : ce que propose le bouton de diffusion. */
+player.castKind = () => (!castAvailable ? null : typeof media.webkitShowPlaybackTargetPicker === 'function' ? 'airplay' : 'cast');
+player.showCastPicker = () => {
+  if (typeof media.webkitShowPlaybackTargetPicker === 'function') media.webkitShowPlaybackTargetPicker();
+  else media.remote?.prompt().catch(() => {});
+};
+
+// ─── Écran éteint (téléphone et tablette) ────────────────────────────────────
+// iOS n'autorise un élément média à jouer sans geste de l'utilisateur que s'il a déjà joué après un geste. Au premier
+// toucher, on « déverrouille » donc l'élément audio avec un silence : il pourra prendre le relais d'une vidéo écran éteint.
+const SILENCE = '/web/silence.wav'; // servi par le serveur (la politique de sécurité refuse les médias en data:)
+if (isMobile) {
+  const unlock = () => {
+    removeEventListener('pointerup', unlock, true);
+    removeEventListener('touchend', unlock, true);
+    removeEventListener('keydown', unlock, true);
+    for (const el of decks) {
+      if (el.getAttribute('src')) continue; // déjà utilisé (le geste en cours le lance peut-être)
+      el.src = SILENCE;
+      el.play().then(() => {
+        if (el.getAttribute('src') === SILENCE) { el.pause(); el.removeAttribute('src'); el.load(); }
+      }).catch(() => { if (el.getAttribute('src') === SILENCE) { el.removeAttribute('src'); el.load(); } });
+    }
+  };
+  // Chrome (Android) se contente d'un geste sur la page : seul iOS demande ce déverrouillage élément par élément.
+  if (isIOS) {
+    addEventListener('pointerup', unlock, true);
+    addEventListener('touchend', unlock, true);
+    addEventListener('keydown', unlock, true);
+  }
+
+  // Une vidéo en cours quand la page se cache : le système va la mettre en pause (ou vient de le faire). On fait
+  // continuer son son dans l'élément audio, à la même position ; l'image revient quand la page réapparaît.
+  const toAudio = () => {
+    const track = player.track;
+    if (!document.hidden || handoff || !track || track.kind !== 'video' || media !== videoEl) return;
+    if (settings.backgroundVideo === false || inPictureInPicture()) return;
+    const systemPause = Date.now() - Number(videoEl.dataset.systemPaused || 0) < 2500;
+    if (userPaused || (videoEl.paused && !state.playing && !systemPause)) return;
+    const position = videoEl.currentTime || 0;
+    delete videoEl.dataset.systemPaused;
+    videoEl.pause();
+    handoff = { id: track.id };
+    media = audioEl;
+    audioEl.src = mediaUrl(track.id);
+    setDeckTrack(audioEl, track);
+    audioEl.playbackRate = settings.rate;
+    seekWhenReady(audioEl, position);
+    listen.last = position;
+    audioEl.play().catch(() => {
+      // Refusé (élément jamais déverrouillé) : on rend la main à l'élément vidéo, en pause.
+      audioEl.removeAttribute('src');
+      audioEl.load();
+      media = videoEl;
+      handoff = null;
+      state.playing = false;
+      emit('state');
+    });
+  };
+  // Retour à l'image : même morceau, même position, même état (lecture ou pause).
+  const toVideo = () => {
+    const track = player.track;
+    if (!handoff || !track || track.kind !== 'video' || media !== audioEl || handoff.id !== track.id) { handoff = null; return; }
+    const position = audioEl.currentTime || 0;
+    const playing = !audioEl.paused;
+    handoff = null;
+    audioEl.pause();
+    audioEl.removeAttribute('src');
+    audioEl.load();
+    media = videoEl;
+    if (videoEl.getAttribute('src') !== mediaUrl(track.id)) {
+      videoEl.src = mediaUrl(track.id);
+      seekWhenReady(videoEl, position);
+    } else videoEl.currentTime = position;
+    setDeckTrack(videoEl, track);
+    videoEl.playbackRate = settings.rate;
+    listen.last = position;
+    if (playing) videoEl.play().catch(() => {});
+    else { state.playing = false; emit('state'); }
+  };
+  // Pause qui ne vient pas de l'utilisateur (le système, juste avant ou juste après avoir caché la page) : notée avec son
+  // heure, pour que la vidéo reprenne en son seul si la page se cache dans la foulée.
+  videoEl.addEventListener('pause', () => {
+    if (!userPaused && player.track?.kind === 'video' && media === videoEl) videoEl.dataset.systemPaused = String(Date.now());
+  });
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      // Laisser au système le temps d'entrer en image dans l'image (iOS le fait seul pour une vidéo en plein écran).
+      setTimeout(toAudio, 200);
+    } else {
+      delete videoEl.dataset.systemPaused;
+      toVideo();
+    }
+  });
+}
+
 // ─── Réglages ────────────────────────────────────────────────────────────────
 onSettings((patch) => {
   if ('volume' in patch || 'muted' in patch) applyVolume();
@@ -858,22 +1024,53 @@ onSettings((patch) => {
   emit('settings', patch);
 });
 applyVolume();
+// Effets indisponibles (mobile, lecture écran éteint) : l'interface masque AutoMix et explique l'égaliseur.
+const markEffects = () => document.documentElement.classList.toggle('effects-off', !effectsAvailable());
+markEffects();
+on('settings', (patch) => { if ('backgroundPlayback' in patch) markEffects(); });
 
 // ─── MediaSession (touches multimédia, panneau Windows) ──────────────────────
 const session = 'mediaSession' in navigator ? navigator.mediaSession : null;
 
 let artworkUrl = null;
 
+function sessionAction(name, fn) {
+  try {
+    session.setActionHandler(name, fn);
+  } catch { /* action non prise en charge */ }
+}
+
+/** Écran verrouillé d'iPhone : avec les actions ±10 s, ses boutons remplacent précédent / suivant. Pour la musique sur
+ * mobile on garde précédent / suivant ; les vidéos (et le bureau) ont aussi ±10 s. */
+function setSeekActions(track) {
+  if (!session) return;
+  const seekable = !isMobile || track?.kind === 'video';
+  sessionAction('seekbackward', seekable ? (d) => player.seekBy(-(d.seekOffset || 10)) : null);
+  sessionAction('seekforward', seekable ? (d) => player.seekBy(d.seekOffset || 10) : null);
+  sessionAction('enterpictureinpicture', track?.kind === 'video' && document.pictureInPictureEnabled ? () => videoEl.requestPictureInPicture().catch(() => {}) : null);
+}
+
 function updateMediaSession(track) {
   if (!session || !track) return;
+  setSeekActions(track);
   const base = { title: track.title, artist: track.artist, album: track.album };
-  session.metadata = new MediaMetadata(base);
   if (artworkUrl) {
     URL.revokeObjectURL(artworkUrl);
     artworkUrl = null;
   }
+  if (isWeb) {
+    // Le serveur sert les pochettes en https sur la même origine : l'écran verrouillé et la notification Android les
+    // chargent directement (avec le cookie de session), en deux tailles.
+    const abs = (u) => new URL(u, location.href).href;
+    const artwork = track.cover
+      ? [{ src: abs(coverFile(track.cover, true)), sizes: '256x256', type: 'image/jpeg' }, { src: abs(coverFile(track.cover)), sizes: '512x512', type: 'image/jpeg' }]
+      : track.kind === 'video' ? [{ src: abs(videoThumbUrl(track.id)), sizes: '512x288', type: 'image/jpeg' }] : [];
+    session.metadata = new MediaMetadata({ ...base, artwork });
+    return;
+  }
+  session.metadata = new MediaMetadata(base);
   if (!track.cover) return;
-  // MediaSession n'accepte que http, data et blob : on convertit la pochette.
+  // MediaSession n'accepte que http, data et blob : on convertit la pochette (protocole app:// du bureau).
   fetch(coverFile(track.cover))
     .then((res) => res.blob())
     .then((blob) => {
@@ -902,17 +1099,11 @@ function throttledPosition(force) {
 }
 
 if (session) {
-  const action = (name, fn) => {
-    try {
-      session.setActionHandler(name, fn);
-    } catch { /* action non prise en charge */ }
-  };
-  action('play', () => player.play());
-  action('pause', () => player.pause());
-  action('previoustrack', () => player.prev());
-  action('nexttrack', () => player.next());
-  action('seekto', (d) => player.seek(d.seekTime));
-  action('seekbackward', (d) => player.seekBy(-(d.seekOffset || 10)));
-  action('seekforward', (d) => player.seekBy(d.seekOffset || 10));
-  action('stop', () => { player.pause(); player.seek(0); });
+  sessionAction('play', () => player.play());
+  sessionAction('pause', () => player.pause());
+  sessionAction('previoustrack', () => player.prev());
+  sessionAction('nexttrack', () => player.next());
+  sessionAction('seekto', (d) => player.seek(d.seekTime));
+  sessionAction('stop', () => { player.pause(); player.seek(0); });
+  setSeekActions(null);
 }

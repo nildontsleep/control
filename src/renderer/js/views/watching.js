@@ -125,8 +125,28 @@ export function watchingView(root, param) {
     } catch { /* iframe en cours de remplacement */ }
   };
 
+  // iPhone : pas de plein écran pour un élément de page. On l'émule (le lecteur occupe tout l'écran, encoche comprise).
+  let emulatedFs = false;
+  const fullscreenEl = () => document.fullscreenElement || document.webkitFullscreenElement || null;
+  const isBoxFullscreen = () => fullscreenEl() === box || emulatedFs;
+
   function sendFullscreenState() {
-    post({ type: 'vidrift:fullscreen-state', on: document.fullscreenElement === box });
+    post({ type: 'vidrift:fullscreen-state', on: isBoxFullscreen() });
+  }
+
+  function setBoxFullscreen(on) {
+    if (on) {
+      const request = box.requestFullscreen || box.webkitRequestFullscreen;
+      const emulate = () => { emulatedFs = true; onFullscreenChange(); };
+      if (!request) { emulate(); return; }
+      try {
+        const p = request.call(box, { navigationUI: 'hide' });
+        if (p?.then) p.then(() => screen.orientation?.lock?.('landscape').catch(() => {})).catch(emulate);
+      } catch { emulate(); }
+    } else {
+      if (fullscreenEl() === box) (document.exitFullscreen || document.webkitExitFullscreen)?.call(document)?.catch?.(() => {});
+      if (emulatedFs) { emulatedFs = false; onFullscreenChange(); }
+    }
   }
 
   function resumeIfNeeded() {
@@ -253,8 +273,7 @@ export function watchingView(root, param) {
         goBack();
         break;
       case 'vidrift:fullscreen':
-        if (d.on) box.requestFullscreen?.().catch(() => {});
-        else if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+        setBoxFullscreen(!!d.on);
         break;
       default:
     }
@@ -266,7 +285,10 @@ export function watchingView(root, param) {
   }
 
   function onFullscreenChange() {
-    app.classList.toggle('watch-fs', document.fullscreenElement === box);
+    const on = isBoxFullscreen();
+    app.classList.toggle('watch-fs', on);
+    box.classList.toggle('emulated-fs', emulatedFs);
+    if (!on) try { screen.orientation?.unlock?.(); } catch { /* pas de verrouillage en cours */ }
     sendFullscreenState();
   }
 
@@ -306,6 +328,7 @@ export function watchingView(root, param) {
 
   window.addEventListener('message', onMessage);
   document.addEventListener('fullscreenchange', onFullscreenChange);
+  document.addEventListener('webkitfullscreenchange', onFullscreenChange);
   start();
 
   return {
@@ -314,8 +337,9 @@ export function watchingView(root, param) {
       setWatching(null);
       window.removeEventListener('message', onMessage);
       document.removeEventListener('fullscreenchange', onFullscreenChange);
+      document.removeEventListener('webkitfullscreenchange', onFullscreenChange);
       app.classList.remove('watch-fs');
-      if (document.fullscreenElement === box) document.exitFullscreen().catch(() => {});
+      if (fullscreenEl() === box) (document.exitFullscreen || document.webkitExitFullscreen)?.call(document)?.catch?.(() => {});
       iframe?.remove();
     },
   };

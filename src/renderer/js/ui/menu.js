@@ -2,6 +2,10 @@
 
 import { h, clamp } from '../dom.js';
 import { icon } from '../icons.js';
+import { isMobile } from '../web.js';
+
+// Téléphone : les menus deviennent une feuille d'actions en bas de l'écran (grandes lignes, au pouce), sur un voile.
+const sheetMode = () => isMobile && typeof matchMedia === 'function' && matchMedia('(max-width: 640px), (max-height: 500px)').matches;
 
 let current = null;
 
@@ -49,8 +53,17 @@ export function openMenu(anchor, items, { align = 'start', placement = 'below', 
     menu.append(el);
   }
 
-  document.body.append(menu);
   const r = anchor.getBoundingClientRect();
+  const asSheet = sheetMode();
+  let scrim = null;
+  if (asSheet) {
+    menu.classList.add('menu-sheet');
+    scrim = h('div.menu-scrim');
+    document.body.append(scrim, menu);
+    requestAnimationFrame(() => { scrim.classList.add('open'); menu.classList.add('open'); });
+  } else document.body.append(menu);
+  if (!asSheet) placeMenu();
+  function placeMenu() {
   if (minWidth || align === 'selected') menu.style.minWidth = `${Math.max(minWidth || 0, r.width + 28)}px`;
   // offsetWidth : la taille réelle, sans la légère réduction de l'animation d'ouverture (sinon le menu déborde à l'arrivée).
   const m = { width: menu.offsetWidth, height: menu.offsetHeight };
@@ -73,6 +86,7 @@ export function openMenu(anchor, items, { align = 'start', placement = 'below', 
   menu.style.top = `${Math.round(y)}px`;
   menu.style.transformOrigin = `${clamp(r.left + r.width / 2 - x, 0, m.width)}px ${y > r.top ? 0 : m.height}px`;
   requestAnimationFrame(() => menu.classList.add('open'));
+  }
   anchor.classList.add('menu-anchor');
 
   const onDown = (e) => {
@@ -108,7 +122,8 @@ export function openMenu(anchor, items, { align = 'start', placement = 'below', 
     window.removeEventListener('blur', close);
     menu.classList.remove('open');
     menu.classList.add('closing');
-    setTimeout(() => menu.remove(), 160);
+    scrim?.classList.remove('open');
+    setTimeout(() => { menu.remove(); scrim?.remove(); }, asSheet ? 260 : 160);
     onClose?.();
   }
 

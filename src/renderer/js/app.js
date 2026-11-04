@@ -22,8 +22,8 @@ import { compareView } from './views/compare.js';
 import { viewing, isWeb } from './web.js';
 import { uploadFiles, filesFromDrop } from './ui/upload.js';
 import { mountReadOnlyBanner } from './ui/library-switch.js';
-import { isSheetOpen } from './ui/sheet.js';
-import { isMenuOpen } from './ui/menu.js';
+import { isSheetOpen, closeTopSheet } from './ui/sheet.js';
+import { isMenuOpen, closeMenu } from './ui/menu.js';
 import { toast, installTooltips } from './ui/feedback.js';
 import { songsView } from './views/songs.js';
 import { albumsView, albumView } from './views/albums.js';
@@ -277,6 +277,55 @@ function wireKeys() {
   });
 }
 
+// ─── Bouton retour (web) ─────────────────────────────────────────────────────
+// Android (bouton ou geste retour), geste retour de Safari, bouton précédent du navigateur : on ferme d'abord ce qui est
+// ouvert (menu, feuille, « À l'écoute », tiroir), sinon on revient à la page précédente de l'application. Une seule
+// entrée d'historique « de garde » suffit : elle est remise en place tant qu'il reste quelque chose où revenir, et
+// quand il n'y a plus rien, le retour suivant quitte l'application comme partout ailleurs.
+function wireBackButton() {
+  const npRoot = $('#nowPlaying');
+  const closeOne = () => {
+    if (isMenuOpen()) { closeMenu(); return true; }
+    if (closeTopSheet()) return true;
+    if (nowPlaying.isOpen) {
+      if (nowPlaying.isImmersive) nowPlaying.setImmersive(false);
+      else if (nowPlaying.isFullscreen) control.win.setFullscreen(false);
+      else if (npRoot.classList.contains('side-open')) npRoot.classList.remove('side-open');
+      else nowPlaying.close();
+      return true;
+    }
+    if (app.classList.contains('nav-open')) { app.classList.remove('nav-open'); return true; }
+    return false;
+  };
+  const backable = () => isMenuOpen() || isSheetOpen() || nowPlaying.isOpen || app.classList.contains('nav-open') || canBack();
+  let armed = false;
+  let consuming = false;
+  const arm = () => {
+    if (consuming) return;
+    if (armed && !backable() && history.state?.controlBack) {
+      // Tout a été refermé autrement (croix, bouton « précédent » de l'appli) : on retire l'entrée de garde, sans quoi le
+      // prochain retour ne ferait rien.
+      consuming = true;
+      history.back();
+      return;
+    }
+    if (armed || !backable()) return;
+    history.pushState({ controlBack: true }, '');
+    armed = true;
+  };
+  window.addEventListener('popstate', () => {
+    armed = false;
+    if (consuming) { consuming = false; setTimeout(arm, 50); return; }
+    if (!closeOne() && canBack()) back();
+    setTimeout(arm, 50);
+  });
+  onRoute(() => setTimeout(arm));
+  const watch = new MutationObserver(() => setTimeout(arm, 30));
+  watch.observe(document.body, { childList: true, attributes: true, attributeFilter: ['class'] }); // menus, « À l'écoute »
+  watch.observe($('#layer'), { childList: true }); // feuilles
+  watch.observe(app, { attributes: true, attributeFilter: ['class'] }); // tiroir
+}
+
 // ─── Initialisation ──────────────────────────────────────────────────────────
 async function init() {
   setLanguage(settings.language);
@@ -288,6 +337,7 @@ async function init() {
   buildShell();
   initSources({ openSettings, pause: () => player.pause() }); // serveurs control (application de bureau uniquement)
   wireKeys();
+  if (control.platform === 'web') wireBackButton();
   if (control.platform !== 'web') wireDrop(); // des fichiers déposés n'ont pas de chemin utilisable par un serveur
 
   control.win.onState((s) => {

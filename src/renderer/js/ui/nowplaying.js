@@ -5,7 +5,7 @@ import { icon } from '../icons.js';
 import { t } from '../i18n.js';
 import { fmtTime } from '../format.js';
 import { settings, update, subscribe } from '../settings.js';
-import { player, on as onPlayer, EQ_BANDS, EQ_PRESETS } from '../player.js';
+import { player, on as onPlayer, EQ_BANDS, EQ_PRESETS, effectsAvailable, pipSupported, togglePictureInPicture, nativeVideoFullscreen } from '../player.js';
 import { navigate } from '../router.js';
 import { coverEl, coverUrl } from './cover.js';
 import { createTrackList } from './tracklist.js';
@@ -14,7 +14,7 @@ import { createImmersive } from './immersive.js';
 import { openMenu } from './menu.js';
 import { trafficLights } from './traffic.js';
 import { createScope, withScope, refreshScope, popup, toggle, segmented } from './controls.js';
-import { isWeb } from '../web.js';
+import { isWeb, isMobile } from '../web.js';
 
 const win = window.control.win;
 
@@ -84,6 +84,18 @@ export function createNowPlaying(root) {
   seek.addEventListener('pointerup', () => { seeking = false; });
   seekBox.replaceChildren(seek, h('div.np-times', {}, cur, remaining));
 
+  // Diffusion (AirPlay, Chromecast) : le bouton n'apparaît que si un appareil est à portée.
+  const castBtn = (cls) => {
+    const b = h(`button.${cls}.cast-btn`, { type: 'button', 'data-tip': t('player.cast'), hidden: true, onclick: (e) => { player.showCastPicker(); e.currentTarget.blur(); } });
+    const paint = () => {
+      const kind = player.castKind();
+      b.hidden = !kind;
+      if (kind) b.innerHTML = icon(kind === 'airplay' ? 'airplay' : 'cast', cls === 'vbtn' ? 20 : 17, 1.9);
+    };
+    onPlayer('cast', paint);
+    paint();
+    return b;
+  };
   // ─── Commandes ─────────────────────────────────────────────────────────────
   const ctl = (ic, tip, fn, cls = '') => h(`button.np-btn${cls}`, { type: 'button', 'data-tip': tip, html: icon(ic, 22, 1.9), onclick: (e) => { fn(); e.currentTarget.blur(); } });
   const shuffle = ctl('shuffle', t('player.shuffle'), () => player.toggleShuffle(), '.toggle');
@@ -91,7 +103,7 @@ export function createNowPlaying(root) {
   const play = h('button.np-play', { type: 'button', onclick: (e) => { player.toggle(); e.currentTarget.blur(); } });
   const next = ctl('skip-forward', t('player.next'), () => player.next());
   const repeat = ctl('repeat', t('player.repeat'), () => player.cycleRepeat(), '.toggle');
-  const automix = ctl('blend', t('player.automixTip'), () => player.toggleAutomix(), '.toggle');
+  const automix = ctl('blend', t('player.automixTip'), () => player.toggleAutomix(), '.toggle.np-automix');
   automix.dataset.kbd = 'A';
   const volIcon = h('button.np-icon-btn', { type: 'button', 'data-tip': t('player.mute'), onclick: (e) => { player.toggleMute(); e.currentTarget.blur(); } });
   const volume = h('input.slider.volume', { type: 'range', min: '0', max: '1', step: '0.01' });
@@ -100,7 +112,7 @@ export function createNowPlaying(root) {
     ['0.75', '1', '1.25', '1.5', '2'].map((v) => ({ value: v, label: `${v}×` }))));
   controls.replaceChildren(
     h('div.np-transport', {}, shuffle, prev, play, next, repeat, automix),
-    h('div.np-extra', {}, volIcon, volume, h('span.spacer'), rate));
+    h('div.np-extra', {}, volIcon, volume, h('span.spacer'), castBtn('np-icon-btn'), rate));
 
   // ─── Barre de lecture sur l'image (vidéos) ─────────────────────────────────
   // Une vraie barre de lecteur vidéo : progression, ±10 s, précédent / suivant, volume, vitesse, image dans l'image, plein écran.
@@ -130,24 +142,34 @@ export function createNowPlaying(root) {
   const vRate = h('button.vchip', { type: 'button', 'data-tip': t('player.rate'), onclick: (e) => {
     openMenu(e.currentTarget, [0.5, 0.75, 1, 1.25, 1.5, 2].map((v) => ({ label: `${v}×`, checked: settings.rate === v, action: () => player.setRate(v) })), { align: 'end', placement: 'above' });
   } });
-  const vPip = document.pictureInPictureEnabled
-    ? vbtn('picture-in-picture-2', t('video.pip'), () => {
-      if (document.pictureInPictureElement) document.exitPictureInPicture().catch(() => {});
-      else video.requestPictureInPicture().catch(() => {});
-    })
-    : null;
-  const vFs = vbtn('maximize', t('np.fullscreen'), () => win.setFullscreen(!root.classList.contains('fullscreen-mode')));
+  // Image dans l'image : API standard, ou mode WebKit sur iPhone et iPad (la vidéo continue alors hors de l'appli).
+  const vPip = pipSupported() ? vbtn('picture-in-picture-2', t('video.pip'), () => togglePictureInPicture()) : null;
+  const vCast = castBtn('vbtn');
+  // iPhone : le lecteur natif (plein écran réel, rotation, image dans l'image, AirPlay) ; ailleurs, plein écran de la page.
+  const vFs = vbtn('maximize', t('np.fullscreen'), () => {
+    if (nativeVideoFullscreen()) player.enterNativeFullscreen();
+    else win.setFullscreen(!root.classList.contains('fullscreen-mode'));
+  });
   const vbar = h('div.vbar', {},
     h('div.vbar-seek', {}, vcur, vseek, vrem),
     h('div.vbar-row', {},
       h('div.vbar-side', {}, vVolIcon, vVolume),
       h('div.vbar-main', {}, vPrev, vBack, vPlay, vFwd, vNext),
-      h('div.vbar-side.end', {}, vRate, vPip, vFs)));
+      h('div.vbar-side.end', {}, vRate, vCast, vPip, vFs)));
   const vtopTitle = h('div.vtop-title');
   const vtop = h('div.vtop', {},
     h('button.vbtn', { type: 'button', 'data-tip': t('video.exitFullscreen'), html: icon('minimize', 20, 1.9), onclick: () => win.setFullscreen(false) }),
     vtopTitle);
   stage.append(vtop, vbar);
+  onPlayer('pip', (on) => { vPip?.classList.toggle('on', on); root.classList.toggle('pip', on); });
+  // Téléphone : une vidéo en largeur passe en paysage avec le plein écran (Android ; iOS tourne avec l'appareil).
+  if (isMobile) {
+    document.addEventListener('fullscreenchange', () => {
+      const landscape = video.videoWidth > video.videoHeight;
+      if (document.fullscreenElement && root.classList.contains('has-video') && landscape) screen.orientation?.lock?.('landscape').catch(() => {});
+      else if (!document.fullscreenElement) try { screen.orientation?.unlock?.(); } catch { /* rien à déverrouiller */ }
+    });
+  }
   // Un clic sur la barre ne doit pas mettre la vidéo en pause (le clic sur l'image le fait).
   for (const el of [vbar, vtop]) {
     el.addEventListener('click', (e) => e.stopPropagation());
@@ -191,6 +213,10 @@ export function createNowPlaying(root) {
 
   function renderEq() {
     destroyList();
+    if (!effectsAvailable()) {
+      side.replaceChildren(h('div.panel-head', {}, h('h2', { text: t('eq.title') })), h('div.panel-empty', { text: t('eq.offMobile') }));
+      return;
+    }
     const presetNames = Object.keys(EQ_PRESETS);
     const presetPopup = popup({
       get: () => settings.eq.preset,

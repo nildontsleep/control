@@ -393,3 +393,484 @@ html {
     -webkit-touch-callout: none;
   }
 }
+
+/* ═══ Téléphones et tablettes ═══════════════════════════════════════════════════════════════════════════════════ */
+
+/* L'application ne défile jamais d'un bloc (seule la page de contenu défile) : un focus ou le clavier d'iOS ne doivent
+   pas la décaler en laissant une bande vide. « clip » empêche aussi le défilement par programme. */
+.platform-web .app {
+  overflow: clip;
+}
+
+/* Le clavier virtuel : les feuilles restent au-dessus (hauteur mesurée par app-web.js). */
+.platform-web .layer {
+  bottom: var(--kb, 0px);
+}
+
+/* Safari compte sa barre d'adresse dans 100vh : la hauteur visible réelle (dvh), moins l'encoche et la barre d'accueil. */
+.platform-web .np {
+  --np-w: min(560px, calc(100dvh - 380px - env(safe-area-inset-top) - env(safe-area-inset-bottom)));
+}
+
+.platform-web .settings-sheet {
+  height: min(660px, calc(100dvh - 64px));
+}
+
+.platform-web .sheet {
+  max-height: calc(100dvh - 64px);
+}
+
+/* Barres de boutons : les boutons gardent leur taille, c'est le curseur de volume qui cède la place. */
+.platform-web .np-extra > .np-icon-btn,
+.platform-web .np-extra > .popup,
+.platform-web .vbar-side > .vbtn,
+.platform-web .vbar-side > .vchip,
+.platform-web .vbar-main > .vbtn {
+  flex: none;
+}
+
+.platform-web .vbar-side .vvolume {
+  flex: 1 1 auto;
+  min-width: 36px;
+}
+
+/* Glisser « À l'écoute » vers le bas pour le fermer : le navigateur ne doit pas prendre ce geste pour lui. */
+@media (pointer: coarse) {
+  .platform-web .np-top,
+  .platform-web .np-art,
+  .platform-web .np-info {
+    touch-action: none;
+  }
+}
+
+/* Effets coupés pour la lecture écran éteint : pas d'AutoMix à proposer. */
+.effects-off .np-automix,
+.effects-off .pb-automix {
+  display: none;
+}
+
+/* ─── Zones sûres sur grand écran (iPad en paysage, encoche à gauche ou à droite) ─────────────────────────────── */
+@media (min-width: 861px) {
+  .platform-web .sidebar {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+  }
+
+  .platform-web .topbar {
+    height: calc(52px + env(safe-area-inset-top));
+    padding-top: env(safe-area-inset-top);
+    padding-right: calc(24px + env(safe-area-inset-right));
+  }
+
+  .platform-web .scroller {
+    padding-right: calc(32px + env(safe-area-inset-right));
+  }
+
+  .platform-web .playerbar {
+    bottom: calc(20px + env(safe-area-inset-bottom));
+  }
+
+  .platform-web .np-top {
+    height: calc(52px + env(safe-area-inset-top));
+    padding: env(safe-area-inset-top) calc(18px + env(safe-area-inset-right)) 0 calc(18px + env(safe-area-inset-left));
+  }
+
+  .platform-web .np-body {
+    padding-bottom: calc(34px + env(safe-area-inset-bottom));
+  }
+}
+
+/* ─── Zones sûres sur petit écran : encoche à gauche ou à droite (téléphone en paysage) ────────────────────────── */
+@media (max-width: 860px) {
+  .platform-web .topbar {
+    padding-left: calc(10px + env(safe-area-inset-left));
+    padding-right: calc(10px + env(safe-area-inset-right));
+  }
+
+  .platform-web .scroller {
+    padding-left: calc(14px + env(safe-area-inset-left));
+    padding-right: calc(14px + env(safe-area-inset-right));
+  }
+
+  .platform-web .playerbar {
+    left: calc(8px + env(safe-area-inset-left));
+    right: calc(8px + env(safe-area-inset-right));
+  }
+
+  .platform-web .np-top {
+    padding-left: calc(18px + env(safe-area-inset-left));
+    padding-right: calc(18px + env(safe-area-inset-right));
+  }
+
+  .platform-web .np-body {
+    padding-left: calc(22px + env(safe-area-inset-left));
+    padding-right: calc(22px + env(safe-area-inset-right));
+  }
+
+  .platform-web .sidebar {
+    padding-left: env(safe-area-inset-left);
+  }
+
+  .platform-web .toasts {
+    left: calc(10px + env(safe-area-inset-left));
+    right: calc(10px + env(safe-area-inset-right));
+    top: calc(10px + env(safe-area-inset-top));
+  }
+
+  /* Mini-lecteur : toucher le titre ou l'artiste ouvre « À l'écoute » (comme ailleurs sur mobile). */
+  .platform-web .pb-sub {
+    pointer-events: none;
+  }
+
+  /* Statistiques : le choix de période prend toute la largeur au lieu d'être écrasé. */
+  .platform-web .toolbar-inline {
+    flex-wrap: wrap;
+  }
+
+  .platform-web .toolbar-inline > .seg {
+    flex: 1 1 100%;
+  }
+}
+
+/* ─── Au doigt : des cibles d'au moins 36 à 44 px (recommandations d'Apple et de Google) ─────────────────────────── */
+@media (pointer: coarse) {
+  .platform-web .btn {
+    height: 36px;
+    padding: 0 15px;
+    font-size: 14px;
+  }
+
+  .platform-web .btn-small {
+    height: 32px;
+  }
+
+  .platform-web .popup {
+    height: 34px;
+    font-size: 14px;
+  }
+
+  .platform-web .seg .seg-btn,
+  .platform-web .seg.compact .seg-btn {
+    height: 32px;
+  }
+
+  .platform-web .vchip {
+    height: 36px;
+    min-width: 42px;
+  }
+
+  .platform-web .tab {
+    height: 34px;
+  }
+
+  .platform-web .icon-btn {
+    min-width: 34px;
+    min-height: 34px;
+  }
+
+  .platform-web .menu-item {
+    height: 40px;
+    font-size: 15px;
+  }
+
+  .platform-web .menu-header {
+    font-size: 12.5px;
+  }
+
+  .platform-web .link-btn,
+  .platform-web .hero-artist.link,
+  .platform-web .np-artist {
+    padding-top: 6px;
+    padding-bottom: 6px;
+  }
+
+  .platform-web .sb-item {
+    min-height: 40px;
+  }
+
+  .platform-web .np-close,
+  .platform-web .np-icon-btn {
+    width: 40px;
+    height: 40px;
+  }
+
+  .platform-web .vbtn {
+    width: 40px;
+    height: 40px;
+  }
+
+  .platform-web .sb-add {
+    width: 34px;
+    height: 34px;
+  }
+}
+
+/* ─── Téléphone : feuilles et menus arrivent par le bas ────────────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .platform-web .sheet-backdrop {
+    place-items: end stretch;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .platform-web .sheet {
+    width: 100% !important;
+    max-width: 100%;
+    min-width: 0;
+    max-height: calc(100% - env(safe-area-inset-top) - 8px);
+    padding-bottom: env(safe-area-inset-bottom);
+    border-radius: calc(22px * var(--rk, 1)) calc(22px * var(--rk, 1)) 0 0;
+    border-bottom: 0;
+    transform: translateY(100%);
+    transition: opacity 0.2s var(--out), transform 0.42s var(--spring);
+  }
+
+  .platform-web .sheet::before {
+    content: '';
+    flex: none;
+    align-self: center;
+    width: 38px;
+    height: 5px;
+    margin-top: 7px;
+    border-radius: 3px;
+    background: var(--text-3);
+    opacity: 0.55;
+  }
+
+  .platform-web .sheet-backdrop.open .sheet {
+    transform: none;
+  }
+
+  .platform-web .sheet-backdrop.closing .sheet {
+    opacity: 1;
+    transform: translateY(100%);
+    transition: transform 0.25s var(--out);
+  }
+
+  .platform-web .sheet-head {
+    padding-top: 8px;
+    touch-action: none;
+  }
+
+  .platform-web .sheet-body {
+    padding-left: calc(18px + env(safe-area-inset-left));
+    padding-right: calc(18px + env(safe-area-inset-right));
+  }
+
+  .platform-web .sheet-foot {
+    padding-left: calc(18px + env(safe-area-inset-left));
+    padding-right: calc(18px + env(safe-area-inset-right));
+  }
+
+  .platform-web .settings-sheet {
+    height: calc(100% - env(safe-area-inset-top) - 8px);
+  }
+
+  .platform-web .settings-tab {
+    min-width: 72px;
+  }
+
+}
+
+/* ─── Téléphone (portrait ou paysage) : menus en feuille d'actions, sur un voile (classe posée par menu.js) ─── */
+.menu-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 99;
+  background: rgb(0 0 0 / 0);
+  transition: background-color 0.25s var(--out);
+}
+
+.menu-scrim.open {
+  background: rgb(0 0 0 / 0.4);
+}
+
+.menu.menu-sheet {
+  left: calc(8px + env(safe-area-inset-left)) !important;
+  right: calc(8px + env(safe-area-inset-right)) !important;
+  top: auto !important;
+  bottom: calc(8px + env(safe-area-inset-bottom) + var(--kb, 0px)) !important;
+  min-width: 0 !important;
+  max-height: min(72vh, calc(100% - env(safe-area-inset-top) - 24px));
+  padding: 8px;
+  border-radius: calc(18px * var(--rk, 1));
+  transform: translateY(110%);
+  opacity: 1;
+  transition: transform 0.38s var(--spring);
+}
+
+.menu.menu-sheet.open {
+  transform: none;
+}
+
+.menu.menu-sheet.closing {
+  transform: translateY(110%);
+  transition: transform 0.22s var(--out);
+}
+
+.menu.menu-sheet .menu-item {
+  height: 46px;
+  padding: 0 14px;
+  gap: 12px;
+  font-size: 16px;
+  border-radius: calc(10px * var(--rk, 1));
+}
+
+.menu.menu-sheet .menu-kbd {
+  display: none;
+}
+
+@media (min-width: 641px) {
+  .menu.menu-sheet {
+    left: 50% !important;
+    right: auto !important;
+    width: min(440px, calc(100% - 2 * (16px + env(safe-area-inset-left))));
+    transform: translate(-50%, 110%);
+  }
+
+  .menu.menu-sheet.open {
+    transform: translate(-50%, 0);
+  }
+
+  .menu.menu-sheet.closing {
+    transform: translate(-50%, 110%);
+  }
+}
+
+/* ─── Téléphone : vidéo en haut, commandes en dessous (pas par-dessus une image de 200 px) ─────────────────────── */
+@media (max-width: 640px) and (orientation: portrait) {
+  /* La pochette se réduit pour tout faire tenir ; titre, progression et commandes gardent toute la largeur. */
+  .platform-web .np-info,
+  .platform-web .np-seek,
+  .platform-web .np-controls {
+    width: 100%;
+  }
+
+  .platform-web .np.has-video:not(.fullscreen-mode) .np-stage {
+    width: 100%;
+    aspect-ratio: auto;
+    min-width: 0;
+  }
+
+  .platform-web .np.has-video:not(.fullscreen-mode) .np-video {
+    position: relative;
+    height: auto;
+    aspect-ratio: 16 / 9;
+    border-radius: calc(12px * var(--rk, 1));
+  }
+
+  .platform-web .np.has-video:not(.fullscreen-mode) .vtop {
+    display: none;
+  }
+
+  .platform-web .np.has-video:not(.fullscreen-mode) .vbar {
+    position: static;
+    margin-top: 14px;
+    padding: 0;
+    background: none;
+    border: 0;
+    box-shadow: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  /* Pas de masquage automatique : les commandes ne cachent rien. */
+  .platform-web .np.has-video.idle:not(.fullscreen-mode) .vbar {
+    opacity: 1;
+    transform: none;
+    pointer-events: auto;
+  }
+
+  .platform-web .np.has-video.idle:not(.fullscreen-mode) .np-top,
+  .platform-web .np.has-video.idle:not(.fullscreen-mode) .np-info {
+    opacity: 1;
+  }
+
+  .platform-web .np.has-video.idle:not(.fullscreen-mode) {
+    cursor: auto;
+  }
+
+  .platform-web .np.has-video:not(.fullscreen-mode) .vbar-row {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas: 'main main' 'side end';
+    row-gap: 10px;
+  }
+
+  .platform-web .np.has-video:not(.fullscreen-mode) .vbar-main {
+    grid-area: main;
+    justify-content: space-between;
+  }
+
+  .platform-web .np.has-video:not(.fullscreen-mode) .vbar-side {
+    grid-area: side;
+  }
+
+  .platform-web .np.has-video:not(.fullscreen-mode) .vbar-side.end {
+    grid-area: end;
+  }
+
+  .platform-web .np.has-video:not(.fullscreen-mode) .np-info {
+    order: -1;
+    margin-bottom: 6px;
+  }
+}
+
+/* ─── Téléphone en paysage ─────────────────────────────────────────────────────────────────────────────────────── */
+@media (max-height: 500px) and (orientation: landscape) {
+  .platform-web .np-top {
+    height: calc(44px + env(safe-area-inset-top));
+  }
+
+  .platform-web .np-body {
+    padding-bottom: calc(8px + env(safe-area-inset-bottom));
+  }
+
+  /* Musique : pochette à gauche, titre, progression et commandes à droite. */
+  .platform-web .np:not(.has-video) .np-main {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-rows: 1fr auto auto auto 1fr;
+    column-gap: 32px;
+    row-gap: 8px;
+    align-items: center;
+  }
+
+  .platform-web .np:not(.has-video) .np-stage {
+    grid-column: 1;
+    grid-row: 1 / -1;
+    width: auto;
+    height: min(calc(100dvh - 76px - env(safe-area-inset-bottom)), 320px);
+    min-width: 0;
+  }
+
+  .platform-web .np:not(.has-video) .np-info,
+  .platform-web .np:not(.has-video) .np-seek,
+  .platform-web .np:not(.has-video) .np-controls {
+    grid-column: 2;
+    width: 100%;
+  }
+
+  .platform-web .np:not(.has-video) .np-info { grid-row: 2; }
+  .platform-web .np:not(.has-video) .np-seek { grid-row: 3; }
+  .platform-web .np:not(.has-video) .np-controls { grid-row: 4; }
+
+  /* Vidéo : l'image occupe tout l'espace (bandes noires si besoin) ; la barre de commandes, toute la largeur. */
+  .platform-web .np.has-video .np-main {
+    align-items: stretch;
+  }
+
+  .platform-web .np.has-video .np-stage {
+    width: 100%;
+    flex: 1;
+    min-height: 0;
+    aspect-ratio: auto;
+  }
+
+  .platform-web .np.has-video .vvolume {
+    display: none;
+  }
+
+  .platform-web .np.has-video .np-info {
+    display: none;
+  }
+}

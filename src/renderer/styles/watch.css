@@ -1102,6 +1102,22 @@
   background: #000;
 }
 
+/* iPhone : plein écran émulé (pas d'API pour un élément) — le lecteur couvre l'écran, hors des zones de l'encoche. */
+.theater.emulated-fs {
+  position: fixed;
+  z-index: 200;
+  inset: 0;
+  width: auto;
+  aspect-ratio: auto;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.theater.emulated-fs .player-frame {
+  position: static;
+}
+
 .theater:fullscreen {
   width: 100vw;
   height: 100vh;

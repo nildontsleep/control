@@ -26,7 +26,7 @@ export function createPlayerBar(root, { openNowPlaying, openQueue, openLyrics })
   const playBtn = h('button.pb-play', { type: 'button', 'data-tip': t('player.play'), 'data-kbd': 'Espace', onclick: (e) => { player.toggle(); e.currentTarget.blur(); } });
   const next = btn('next', 'skip-forward', t('player.next'), () => player.next(), '.skip');
   const repeat = btn('repeat', 'repeat', t('player.repeat'), () => player.cycleRepeat(), '.toggle');
-  const automix = btn('automix', 'blend', t('player.automixTip'), () => player.toggleAutomix(), '.toggle');
+  const automix = btn('automix', 'blend', t('player.automixTip'), () => player.toggleAutomix(), '.toggle.pb-automix');
   automix.dataset.kbd = 'A';
 
   const cur = h('span.pb-time', { text: '0:00' });

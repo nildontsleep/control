@@ -5,6 +5,7 @@ import { icon } from '../icons.js';
 import { t } from '../i18n.js';
 
 let openCount = 0;
+const stack = []; // feuilles ouvertes, la plus récente en dernier (bouton retour d'Android)
 
 export function openSheet({ title, width = 460, body, footer, onClose, canClose, className = '' }) {
   const backdrop = h('div.sheet-backdrop');
@@ -16,13 +17,17 @@ export function openSheet({ title, width = 460, body, footer, onClose, canClose,
   backdrop.append(sheet);
   document.getElementById('layer').append(backdrop);
   openCount++;
+  const entry = { request: () => request() };
+  stack.push(entry);
   const prevFocus = document.activeElement;
 
   // Échap, clic à côté et croix passent par canClose (une feuille avec des modifications peut demander confirmation).
   const request = () => { if (!canClose || canClose() !== false) close(); };
 
   function close(result) {
-    if (!backdrop.isConnected) return;
+    if (!backdrop.isConnected || backdrop.classList.contains('closing')) return;
+    const at = stack.indexOf(entry);
+    if (at >= 0) stack.splice(at, 1);
     backdrop.classList.remove('open');
     backdrop.classList.add('closing');
     document.removeEventListener('keydown', onKey, true);
@@ -41,11 +46,48 @@ export function openSheet({ title, width = 460, body, footer, onClose, canClose,
   document.addEventListener('keydown', onKey, true);
   backdrop.addEventListener('pointerdown', (e) => { if (e.target === backdrop) request(); });
   closeBtn.addEventListener('click', () => request());
+  dragToClose(sheet, backdrop, request);
   requestAnimationFrame(() => backdrop.classList.add('open'));
   return { close, el: sheet };
 }
 
 export const isSheetOpen = () => openCount > 0;
+
+/** Ferme la feuille du dessus (comme sa croix) ; false s'il n'y en a pas. */
+export function closeTopSheet() {
+  const top = stack[stack.length - 1];
+  if (!top) return false;
+  top.request();
+  return true;
+}
+
+// Téléphone : la feuille arrive par le bas ; on la referme en la tirant vers le bas depuis son en-tête.
+function dragToClose(sheet, backdrop, request) {
+  const head = sheet.querySelector('.sheet-head') || sheet;
+  let start = null;
+  head.addEventListener('pointerdown', (e) => {
+    if (e.pointerType !== 'touch' || e.target.closest('button, input, select, textarea')) return;
+    if (getComputedStyle(backdrop).alignItems !== 'end') return; // feuille centrée (grand écran) : rien à tirer
+    start = { y: e.clientY, t: performance.now() };
+    sheet.style.transition = 'none';
+  });
+  head.addEventListener('pointermove', (e) => {
+    if (!start) return;
+    const dy = Math.max(0, e.clientY - start.y);
+    sheet.style.transform = `translateY(${dy}px)`;
+  });
+  const end = (e) => {
+    if (!start) return;
+    const dy = Math.max(0, e.clientY - start.y);
+    const fast = dy > 40 && dy / (performance.now() - start.t) > 0.6;
+    start = null;
+    sheet.style.transition = '';
+    sheet.style.transform = '';
+    if (dy > 110 || fast) request();
+  };
+  head.addEventListener('pointerup', end);
+  head.addEventListener('pointercancel', end);
+}
 
 export function promptSheet({ title, message, value = '', placeholder = '', confirmLabel = t('common.ok'), secret = false }) {
   return new Promise((resolve) => {

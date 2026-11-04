@@ -131,7 +131,7 @@ L’exécutable Windows n’est pas signé : au premier lancement, SmartScreen p
 
 ## Version web
 
-Le même control, hébergé sur un serveur (ton PC, un NAS, un Raspberry Pi, un VPS) et utilisable depuis **n’importe quel navigateur, téléphone compris** : la musique reste chez toi, l’interface (lecteur, AutoMix, paroles, mode immersif, statistiques, récaps, playlists, films et séries) est la même. Sur un téléphone, la barre latérale devient un tiroir, la barre de lecture se compacte, et l’application peut être **installée sur l’écran d’accueil** (PWA) ; les touches multimédia et l’écran verrouillé fonctionnent comme sur le bureau.
+Le même control, hébergé sur un serveur (ton PC, un NAS, un Raspberry Pi, un VPS) et utilisable depuis **n’importe quel navigateur, téléphone compris** : la musique reste chez toi, l’interface (lecteur, AutoMix, paroles, mode immersif, statistiques, récaps, playlists, films et séries) est la même. Sur un téléphone, la barre latérale devient un tiroir, la barre de lecture se compacte, et l’application peut être **installée sur l’écran d’accueil** (PWA), avec lecture **écran éteint**, image dans l’image et écran verrouillé (voir *Sur téléphone et tablette*).
 
 **Comptes, à la manière de [vie](https://github.com/nildontsleep/vie)** : au premier lancement, un assistant crée le compte *administrateur* (nom du serveur, dossier de musique, mot de passe). Ensuite on se connecte (cookie de session `HttpOnly`, mots de passe hachés avec scrypt, essais limités). L’administrateur crée des comptes ou ouvre les inscriptions depuis `/admin` ; chaque compte a **sa propre bibliothèque** : ses dossiers de musique, ses téléchargements, ses réglages, ses statistiques, ses récaps, ses playlists, ses films et séries vus. Chacun peut **personnaliser son profil et ses playlists**, **parcourir la bibliothèque des autres** selon ce qu’ils partagent, et **comparer ses récaps** avec les leurs (voir *Bibliothèques, partage et profils*).
 
@@ -195,6 +195,16 @@ Dans `/admin` → *Mises à jour du serveur* (et dans *Réglages* → *À propos
 - Sans lanceur (`npm run web:direct`, ou `node server/index.js`), le serveur signale les nouvelles versions mais ne peut pas se redémarrer lui-même.
 - **Un serveur en 0.8.x ne peut pas encore se mettre à jour tout seul** : passe une fois à cette version (`docker pull`, ou `git pull` et `npm ci`), ensuite les suivantes sont automatiques.
 - Sécurité : seules les releases de ce dépôt sont acceptées, l’archive doit correspondre à l’empreinte calculée par GitHub, son contenu est lu strictement (ni lien, ni chemin hors du dossier d’installation, taille limitée), et le jeton GitHub éventuel ne quitte jamais le serveur.
+
+### Sur téléphone et tablette (iPhone, iPad, Android)
+
+Ouvre l’adresse du serveur, puis **installe l’application** : sur iPhone et iPad, Safari → *Partager* → *Sur l’écran d’accueil* ; sur Android, Chrome → *Installer l’application*. Elle s’ouvre alors en plein écran, sans barre d’adresse, avec sa propre icône.
+
+- **Écran éteint** : la musique continue quand l’écran s’éteint ou dans une autre appli, morceau suivant compris. L’écran verrouillé et la notification Android affichent la pochette, avec précédent / suivant (et ±10 s pour les vidéos). Pour y arriver, le téléphone lit les fichiers directement, sans passer par Web Audio : l’**égaliseur**, le **fondu enchaîné** et **AutoMix** y sont donc coupés par défaut, car iOS interromprait la lecture écran éteint. *Réglages* → *Général* → *Lecture écran éteint* les réactive, en renonçant à la lecture écran éteint.
+- **Vidéos** : quand l’écran s’éteint pendant une vidéo, son **son continue** et l’image revient à la même position au retour (*Son des vidéos écran éteint*, activé par défaut). Avec l’**image dans l’image** (bouton dans la barre de la vidéo, ou automatiquement en quittant l’appli depuis le plein écran sur iPhone), la vidéo continue à l’écran par-dessus les autres applis. Sur iPhone, le bouton plein écran ouvre le lecteur vidéo du système (rotation, image dans l’image, AirPlay) ; sur Android, la vidéo passe en paysage. Les films et séries (lecteur vidrift) ont aussi leur plein écran sur iPhone.
+- **Diffusion** : un bouton AirPlay (iPhone, iPad) ou Chromecast (Android) apparaît dans « À l’écoute » quand un appareil est à portée.
+- **Au doigt** : boutons et lignes de menu à la taille du pouce, menus en feuille d’actions et réglages en feuille qui monte du bas (à refermer en la tirant vers le bas), « À l’écoute » qui se referme en glissant vers le bas, appui long pour le menu d’un morceau, encoche et barre d’accueil respectées en portrait comme en paysage, clavier qui ne masque plus les champs. Le **bouton retour d’Android** ferme ce qui est ouvert (menu, feuille, « À l’écoute », tiroir) puis revient à la page précédente avant de quitter l’appli.
+- **Limites** : sur iPhone, le volume se règle avec les boutons de l’appareil (le curseur n’y est pas proposé) et la normalisation du volume ne peut qu’atténuer quand Web Audio est coupé. Une vidéo que le navigateur ne sait pas lire (MKV, codecs exotiques) ne se lit pas non plus sur le téléphone.
 
 ### Envoyer de la musique depuis le navigateur
 
