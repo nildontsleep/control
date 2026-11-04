@@ -222,6 +222,7 @@ Le serveur parle l’API **Subsonic 1.16.1** (avec les extensions OpenSubsonic c
 - **Géré** : artistes, albums, morceaux, genres, dossiers, recherche (`search2` / `search3`), listes d’albums (aléatoire, récents, fréquents, par année ou genre, alphabétiques), morceaux aléatoires, playlists (création, modification, suppression), flux avec `Range` (lecture et déplacement dans le morceau), téléchargement, pochettes (taille demandée), paroles, favoris, « en écoute », comptage des écoutes (qui alimente tes statistiques et ton scrobbling Last.fm / ListenBrainz).
 - **Favoris** : le « ♥ » des applications range les morceaux dans une playlist manuelle nommée **Favoris**.
 - **Seulement ta bibliothèque** : un identifiant qui n’en fait pas partie est refusé, jamais servi.
+- **Une application dit « identifiants incorrects »** : `/admin` → *Connexions Subsonic* donne la raison exacte de chaque tentative (compte introuvable, pas encore de mot de passe d’application, mauvais jeton, mot de passe du *compte* saisi à la place de celui de l’application…). Derrière un proxy, pense à `CONTROL_TRUST_PROXY=1` pour que le limiteur d’essais compte par adresse réelle et non par adresse du proxy.
 - **Pas géré** : transcodage (les fichiers sont servis tels quels, ce qui suffit à la plupart des applications), podcasts, radios, partages, signets, jukebox, gestion d’utilisateurs. Ces appels répondent proprement (listes vides ou refus), sans faire échouer le client.
 
 ### Sauvegardes (webhook Discord)

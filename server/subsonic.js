@@ -117,6 +117,17 @@ class Subsonic {
     this.secrets = new Secrets(hub.config.dataDir);
     this.failures = hub.subsonicThrottle;
     this.small = new Map(); // pochettes réduites déjà demandées
+    this.journal = []; // dernières tentatives de connexion, pour l'administrateur (en mémoire seulement)
+  }
+
+  /** Les dernières connexions (réussies : seulement le « ping » de l'application ; refusées : toutes), la plus récente d'abord. */
+  recent() {
+    return [...this.journal].reverse();
+  }
+
+  note(entry) {
+    this.journal.push({ at: Date.now(), ...entry });
+    if (this.journal.length > 40) this.journal.shift();
   }
 
   // ─── Mot de passe d'application ────────────────────────────────────────────
@@ -141,52 +152,73 @@ class Subsonic {
 
   // ─── Authentification ──────────────────────────────────────────────────────
   authenticate(params) {
-    if (!this.hub.settings.subsonicEnabled) throw new SubsonicError(ERR.forbidden, 'L’API Subsonic est désactivée sur ce serveur.');
+    const refuse = (code, message, reason) => Object.assign(new SubsonicError(code, message), { reason });
+    if (!this.hub.settings.subsonicEnabled) throw refuse(ERR.forbidden, 'L’API Subsonic est désactivée sur ce serveur.', 'API désactivée dans /admin');
     const apiKey = params.get('apiKey');
     const name = params.get('u');
-    if (apiKey && name) throw new SubsonicError(ERR.conflict, 'Plusieurs méthodes d’authentification fournies.');
+    if (apiKey && name) throw refuse(ERR.conflict, 'Plusieurs méthodes d’authentification fournies.', 'apiKey et identifiant envoyés ensemble');
     let user = null;
     if (apiKey) {
       const row = this.hub.db.prepare('SELECT * FROM users WHERE subsonic_key_hash = ? AND disabled = 0').get(crypto.createHash('sha256').update(String(apiKey)).digest('hex'));
-      if (!row) throw new SubsonicError(ERR.badKey, 'Clé d’API invalide.');
+      if (!row) throw refuse(ERR.badKey, 'Clé d’API invalide.', 'clé d’API inconnue');
       user = row;
     } else {
-      if (!name) throw new SubsonicError(ERR.missing, 'Paramètre manquant : u.');
+      if (!name) throw refuse(ERR.missing, 'Paramètre manquant : u.', 'identifiant absent');
       const row = this.hub.db.prepare('SELECT * FROM users WHERE username = ? COLLATE NOCASE AND disabled = 0').get(name);
       const secret = row ? this.secretOf(row.id) : null;
+      const given = params.get('p');
       let ok = false;
       if (secret) {
         if (params.get('t') && params.get('s')) ok = safeEqual(md5(secret + params.get('s')), String(params.get('t')).toLowerCase());
-        else if (params.get('p') !== null) {
-          const p = String(params.get('p'));
-          const given = p.startsWith('enc:') ? Buffer.from(p.slice(4), 'hex').toString('utf8') : p;
-          ok = safeEqual(given, secret);
-        } else throw new SubsonicError(ERR.missing, 'Authentification manquante (p, ou t et s).');
+        else if (given !== null) {
+          const p = String(given);
+          ok = safeEqual(p.startsWith('enc:') ? Buffer.from(p.slice(4), 'hex').toString('utf8') : p, secret);
+        } else throw refuse(ERR.missing, 'Authentification manquante (p, ou t et s).', 'ni mot de passe ni jeton envoyé');
       }
-      if (!ok) throw new SubsonicError(ERR.wrongCreds, 'Nom d’utilisateur ou mot de passe d’application incorrect.');
+      if (!ok) {
+        const reason = !row ? `compte « ${String(name).slice(0, 40)} » introuvable ou désactivé`
+          : !secret ? 'ce compte n’a pas encore de mot de passe d’application (Mon profil → Applications compatibles Subsonic)'
+            : params.get('t') ? 'jeton incorrect : ce n’est pas le mot de passe d’application' : 'mot de passe incorrect : ce n’est pas le mot de passe d’application';
+        throw refuse(ERR.wrongCreds, 'Nom d’utilisateur ou mot de passe d’application incorrect.', reason);
+      }
       user = row;
     }
     return user;
   }
 
   // ─── Requête ───────────────────────────────────────────────────────────────
-  async handle(req, res, url) {
+  async handle(req, res, url, clientIp) {
     let method = decodeURIComponent(url.pathname.slice('/rest/'.length)).replace(/\.view$/i, '').toLowerCase();
     let params = url.searchParams;
     if (req.method === 'POST' && /application\/x-www-form-urlencoded/i.test(req.headers['content-type'] || '')) {
       const body = await readText(req).catch(() => '');
       params = new URLSearchParams([...url.searchParams, ...new URLSearchParams(String(body))]);
     }
-    const ip = (req.socket.remoteAddress || '').replace(/^::ffff:/, '');
+    // Derrière un proxy (Caddy, nginx…), l'adresse du socket est celle du proxy : sans l'adresse réelle, tout le monde
+    // partagerait le même compteur d'essais ratés.
+    const ip = String(clientIp || req.socket.remoteAddress || '').replace(/^::ffff:/, '');
+    const mode = params.get('apiKey') ? 'clé d’API' : params.get('t') ? 'jeton' : params.get('p') !== null ? 'mot de passe' : 'aucun';
+    const who = { ip, method, mode, user: String(params.get('u') || '').slice(0, 40), client: String(params.get('c') || '').slice(0, 40), version: String(params.get('v') || '').slice(0, 12), agent: String(req.headers['user-agent'] || '').slice(0, 80) };
     try {
-      if (this.failures.wait(ip)) throw new SubsonicError(ERR.wrongCreds, 'Trop d’essais : patientez quelques minutes.');
+      if (this.failures.wait(ip)) {
+        this.note({ ...who, ok: false, reason: 'trop d’essais ratés depuis cette adresse (limiteur)' });
+        throw new SubsonicError(ERR.wrongCreds, 'Trop d’essais : patientez quelques minutes.');
+      }
       let user;
       try {
         user = this.authenticate(params);
       } catch (err) {
         if (err.code === ERR.wrongCreds || err.code === ERR.badKey) this.failures.fail(ip);
+        let reason = err.reason || err.message;
+        // Le plus fréquent : le mot de passe du compte saisi à la place du mot de passe d'application (noté ici seulement, jamais dit au client).
+        if (err.code === ERR.wrongCreds && who.mode === 'mot de passe' && who.user && !String(params.get('p')).startsWith('enc:')) {
+          const account = await this.hub.accounts.check(who.user, String(params.get('p'))).catch(() => null);
+          if (account) reason = 'c’est le mot de passe du COMPTE qui a été saisi : il faut le mot de passe d’application (Mon profil → Applications compatibles Subsonic)';
+        }
+        this.note({ ...who, ok: false, reason });
         throw err;
       }
+      if (method === 'ping') this.note({ ...who, user: user.username, ok: true, reason: 'connexion acceptée' });
       if (!params.get('c') && !['ping'].includes(method)) throw new SubsonicError(ERR.missing, 'Paramètre manquant : c.');
       const handler = this.methods[method];
       if (!handler) throw new SubsonicError(ERR.generic, `Méthode inconnue : ${method}`);

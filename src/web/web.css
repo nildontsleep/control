@@ -469,3 +469,32 @@ body.admin {
   font-size: 12.5px;
   color: var(--text-2);
 }
+
+/* Journal des connexions Subsonic (administration) */
+.sub-log {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 8px;
+}
+
+.sub-log-row {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 8px 0;
+  border-top: 0.5px solid var(--separator);
+  overflow-wrap: anywhere;
+}
+
+.sub-log-row:first-child {
+  border-top: 0;
+}
+
+.sub-log-row strong {
+  color: var(--danger, #ff453a);
+}
+
+.sub-log-row.ok strong {
+  color: var(--success, #30d158);
+}

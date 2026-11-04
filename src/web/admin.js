@@ -301,6 +301,29 @@
           s.hasBackupPassphrase ? h('button', { class: 'btn btn-secondary', text: 'Effacer', onclick: guard(async () => { await rpc('srv:settings', { backupPassphrase: '' }); flash('Chiffrement désactivé.', false); reload(); }) }) : null)));
   }
 
+  // ─── Connexions des applications Subsonic ─────────────────────────────────
+  function subsonicGroup() {
+    const list = h('div', { class: 'sub-log' });
+    async function refresh() {
+      const rows = await rpc('srv:subsonic:log');
+      if (!rows.length) {
+        list.replaceChildren(h('p', { class: 'hint', text: 'Aucune tentative depuis le dernier démarrage du serveur. Essayez de vous connecter depuis l’application, puis actualisez.' }));
+        return;
+      }
+      list.replaceChildren(...rows.map((r) => h('div', { class: `sub-log-row${r.ok ? ' ok' : ''}` },
+        h('strong', { text: `${r.ok ? '✓' : '✗'} ${new Date(r.at).toLocaleTimeString()} · ${r.user || '(sans identifiant)'} · ${r.client || '?'}` }),
+        h('span', { class: 'hint', text: r.reason }),
+        h('span', { class: 'hint', text: `${r.method} · authentification : ${r.mode} · v${r.version || '?'} · ${r.ip} · ${r.agent || ''}` }))));
+    }
+    refresh().catch((err) => flash(err.message));
+    return h('section', { class: 'group', id: 'subsonic' },
+      h('h2', { text: 'Connexions Subsonic' }),
+      h('p', { text: 'Les dernières tentatives de connexion des applications Subsonic (gardées en mémoire, effacées au redémarrage). Pratique quand une application affiche « identifiants incorrects » : la raison exacte est ici.' }),
+      h('div', { class: 'inline-form' },
+        h('button', { class: 'btn btn-secondary', text: 'Actualiser', onclick: guard(refresh) })),
+      list);
+  }
+
   // ─── Application Last.fm (scrobbling des comptes) ──────────────────────────
   function lastfmGroup(s, reload) {
     const key = h('input', { class: 'text-input', placeholder: 'Clé d’API', value: s.lastfmKey || '', autocomplete: 'off', spellcheck: 'false' });
@@ -470,6 +493,7 @@
         h('a', { class: 'btn btn-secondary', href: '/', text: 'Retour à l’application' })),
       notice,
       settingsGroup(s, reload),
+      subsonicGroup(),
       updates ? updatesGroup(updates, s) : null,
       backups ? backupsGroup(backups, s, reload) : null,
       lastfmGroup(s, reload),

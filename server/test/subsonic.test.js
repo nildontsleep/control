@@ -231,3 +231,51 @@ test('playlists, favoris et écoutes comptées', async (t) => {
   assert.deepEqual([lyrics.synced, lyrics.line], [true, [{ start: 1500, value: 'Bonjour' }, { start: 63000, value: 'Monde' }]]);
   assert.equal(s.hub.subsonic.methods.getnowplaying() !== undefined, true);
 });
+
+test('journal des connexions : la raison exacte de chaque refus, visible de l’administrateur seulement', async (t) => {
+  const s = await boot({ noCommon: true });
+  t.after(s.close);
+  const nil = client(s.base);
+  await nil.json('POST', '/api/setup/init', { username: 'nil', password: PASSWORD, libraryFolders: [s.music] });
+  const ping = (query, init) => fetch(`${s.base}/rest/ping.view?${query}&v=1.13.0&c=Amperfy&f=json`, init).then((r) => r.json());
+
+  // Compte sans mot de passe d'application, puis avec : ce que fait une application qui essaie le jeton puis le mot de passe simple.
+  await ping('u=nil&p=n-importe-quoi');
+  const secret = (await nil.rpc('srv:me:subsonic-reveal', PASSWORD)).secret;
+  await ping(`u=nil&p=${encodeURIComponent(PASSWORD)}`); // le mot de passe du COMPTE : classique
+  await ping('u=nil&t=00000000000000000000000000000000&s=abc'); // jeton faux
+  await ping('u=inconnu&p=x');
+  await ping(`u=NIL&p=${secret}`, { headers: { 'user-agent': 'Amperfy/1.0' } }); // casse de l'identifiant ignorée : accepté
+
+  const log = await nil.rpc('srv:subsonic:log');
+  const reasons = log.map((e) => e.reason);
+  assert.match(reasons[0], /connexion acceptée/, 'la plus récente d’abord');
+  assert.ok(log[0].ok && log[0].client === 'Amperfy' && log[0].user === 'nil' && log[0].agent.startsWith('Amperfy'));
+  assert.ok(reasons.some((r) => /pas encore de mot de passe d’application/.test(r)), 'avant la création du secret');
+  assert.ok(reasons.some((r) => /mot de passe du COMPTE/.test(r)), 'mot de passe du compte reconnu');
+  assert.ok(reasons.some((r) => /jeton incorrect/.test(r)));
+  assert.ok(reasons.some((r) => /introuvable/.test(r)));
+  // Rien de secret dans le journal.
+  assert.ok(!JSON.stringify(log).includes(secret) && !JSON.stringify(log).includes(PASSWORD));
+  // Et le client, lui, ne reçoit que le message générique (jamais « c'est le mot de passe du compte »).
+  const generic = await ping(`u=nil&p=${encodeURIComponent(PASSWORD)}`);
+  assert.equal(generic['subsonic-response'].error.message, 'Nom d’utilisateur ou mot de passe d’application incorrect.');
+
+  // Réservé à l'administrateur.
+  await nil.rpc('srv:users:create', { username: 'ami', password: PASSWORD });
+  const ami = client(s.base);
+  await ami.json('POST', '/api/auth/login', { username: 'ami', password: PASSWORD });
+  await assert.rejects(ami.rpc('srv:subsonic:log'), (err) => err.status === 403);
+});
+
+test('limiteur d’essais : par adresse réelle derrière un proxy, pas par adresse du proxy', async (t) => {
+  const s = await boot({ noCommon: true, trustProxy: true });
+  t.after(s.close);
+  const nil = client(s.base);
+  await nil.json('POST', '/api/setup/init', { username: 'nil', password: PASSWORD, libraryFolders: [s.music] });
+  const secret = (await nil.rpc('srv:me:subsonic-reveal', PASSWORD)).secret;
+  const call = (ip, pass) => fetch(`${s.base}/rest/ping?u=nil&p=${pass}&v=1.16.1&c=x&f=json`, { headers: { 'x-forwarded-for': ip } }).then((r) => r.json()).then((j) => j['subsonic-response']);
+  for (let i = 0; i < 30; i++) await call('203.0.113.7', 'non');
+  assert.match((await call('203.0.113.7', secret)).error.message, /Trop d’essais/, 'l’attaquant est bloqué');
+  assert.equal((await call('198.51.100.20', secret)).status, 'ok', 'un autre client derrière le même proxy ne l’est pas');
+});

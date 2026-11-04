@@ -275,7 +275,7 @@ function createApp(hub, config) {
     for (const [k, v] of Object.entries(headers)) res.setHeader(k, v);
 
     // API compatible Subsonic : elle a sa propre authentification (mot de passe d'application ou clé d'API), pas de cookie.
-    if (pathname.startsWith('/rest/') && (method === 'GET' || method === 'POST' || method === 'HEAD')) return hub.subsonic.handle(req, res, url);
+    if (pathname.startsWith('/rest/') && (method === 'GET' || method === 'POST' || method === 'HEAD')) return hub.subsonic.handle(req, res, url, clientIp(req));
     if (pathname === '/api/health') return json(req, res, 200, { ok: true, name: 'control', version: pkg.version });
 
     // Premier lancement : tant qu'aucun compte n'existe, tout mène à l'assistant.

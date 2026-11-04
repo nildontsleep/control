@@ -15,7 +15,7 @@ const ADMIN_ONLY = new Set([
   'srv:users:update', 'srv:users:password', 'srv:users:delete', 'srv:rescan', 'srv:me:add-folder',
   'srv:users:detail', 'srv:users:add-folder', 'srv:users:remove-folder', 'srv:users:personal-folder', 'srv:users:set-grants',
   'srv:update:status', 'srv:update:check', 'srv:update:download', 'srv:update:install',
-  'srv:backup:status', 'srv:backup:run', 'srv:backup:test',
+  'srv:backup:status', 'srv:backup:run', 'srv:backup:test', 'srv:subsonic:log',
 ]);
 const DOWNLOADS = new Set(['dl:add', 'dl:info', 'dl:search', 'dl:cancel', 'dl:retry', 'dl:remove', 'dl:clear', 'dl:cookies-status', 'dl:set-cookies', 'dl:clear-cookies']);
 const DENIED = new Set(['lib:add-paths']); // des chemins du poste de l'utilisateur ne veulent rien dire pour un serveur
@@ -238,6 +238,7 @@ function install(hub, entry, registry) {
   handlers.set('srv:me:subsonic', (e) => ({ enabled: !!hub.settings.subsonicEnabled, hasSecret: !!hub.subsonic.secretOf(e.user.id), username: e.user.username }));
   handlers.set('srv:me:subsonic-reveal', async (e, password) => { await confirmPassword(e, password); return { secret: hub.subsonic.ensureSecret(e.user.id) }; });
   handlers.set('srv:me:subsonic-renew', async (e, password) => { await confirmPassword(e, password); return { secret: hub.subsonic.ensureSecret(e.user.id, { renew: true }) }; });
+  handlers.set('srv:subsonic:log', () => hub.subsonic.recent());
   handlers.set('srv:me:subsonic-revoke', (e) => { hub.subsonic.revokeSecret(e.user.id); return true; });
   handlers.set('srv:me:password', async (e, current, next) => {
     const user = await hub.accounts.check(e.user.username, current);
