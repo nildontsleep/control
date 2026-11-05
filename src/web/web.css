@@ -498,3 +498,9 @@ body.admin {
 .sub-log-row.ok strong {
   color: var(--success, #30d158);
 }
+
+/* Pages hors application (connexion, installation, administration) : même couleur d'accent que l'application. */
+:root {
+  --accent: #ff375f;
+  --accent-rgb: 255 55 95;
+}

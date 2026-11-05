@@ -64,7 +64,7 @@ export function albumView(root, key, { scroller }) {
     return {};
   }
   const meta = [album.genre || album.tracks[0]?.genre, album.year].filter(Boolean).join(' · ');
-  const artistEntry = album.various ? null : lib.artists.find((a) => a.name === (album.albumArtist || album.artist));
+  const artistEntry = album.various ? null : lib.artistByKey.get(album.artistKey);
   const items = album.tracks.map((track) => ({ track }));
   const list = createTrackList({ items, layout: 'album', scroller });
   const discs = new Set(album.tracks.map((x) => x.discNo || 1));

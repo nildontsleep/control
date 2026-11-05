@@ -95,4 +95,32 @@ export function installTooltips() {
   document.addEventListener('pointerdown', hideTip, true);
   document.addEventListener('keydown', hideTip, true);
   window.addEventListener('blur', hideTip);
+  labelIconButtons();
+}
+
+/** Un bouton qui n'a qu'une icône prend son infobulle comme nom accessible (lecteurs d'écran), et inversement. */
+function labelIconButtons() {
+  const label = (root) => {
+    const buttons = root.matches?.('button') ? [root, ...root.querySelectorAll('button')] : root.querySelectorAll?.('button') || [];
+    for (const b of buttons) {
+      if (b.hasAttribute('aria-label') || b.hasAttribute('aria-labelledby')) continue;
+      const tip = b.dataset?.tip || b.getAttribute('title');
+      if (tip && !b.textContent.trim()) b.setAttribute('aria-label', tip);
+    }
+  };
+  const pending = new Set();
+  let scheduled = false;
+  const flush = () => {
+    scheduled = false;
+    for (const n of pending) if (n.isConnected) label(n);
+    pending.clear();
+  };
+  new MutationObserver((records) => {
+    for (const r of records) {
+      if (r.type === 'attributes') pending.add(r.target);
+      else for (const n of r.addedNodes) if (n.nodeType === 1) pending.add(n);
+    }
+    if (!scheduled) { scheduled = true; requestAnimationFrame(flush); }
+  }).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-tip'] });
+  label(document.body);
 }

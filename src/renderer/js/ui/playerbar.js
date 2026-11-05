@@ -76,7 +76,7 @@ export function createPlayerBar(root, { openNowPlaying, openQueue, openLyrics })
     root.classList.toggle('no-track', !track);
     art.replaceChildren(track ? coverEl(track, { small: true }) : h('div.cover.placeholder', {}, h('span.cover-icon', { html: icon('music-2', 20, 1.6) })));
     title.textContent = track ? track.title : t('player.nothing');
-    sub.textContent = track ? [track.artist, track.album].filter(Boolean).join(' — ') : t('player.nothingSub');
+    sub.textContent = track ? [track.artistLabel || track.artist, track.album].filter(Boolean).join(' — ') : t('player.nothingSub');
     total.textContent = fmtTime(player.duration);
     seek.max = String(player.duration || 1);
   }

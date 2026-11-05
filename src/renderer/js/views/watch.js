@@ -127,7 +127,10 @@ function homeView(root, { tab, provider }) {
   async function load() {
     content.replaceChildren(skeletonShelf(), skeletonShelf(), skeletonShelf());
     try {
-      const [home, continuing] = await Promise.all([media.home(isAnime ? 'anime' : tab), watch.continue().catch(() => [])]);
+      // Jamais de cases grises indéfiniment : au bout de 20 s la page affiche l'erreur (et « Réessayer »).
+      let timer;
+      const limit = new Promise((_, reject) => { timer = setTimeout(() => reject(new MediaFail('timeout', 'timeout')), 20000); });
+      const [home, continuing] = await Promise.race([Promise.all([media.home(isAnime ? 'anime' : tab), watch.continue().catch(() => [])]), limit]).finally(() => clearTimeout(timer));
       if (!destroyed) render(home, continuing);
     } catch (err) {
       if (destroyed) return;

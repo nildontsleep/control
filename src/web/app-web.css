@@ -874,3 +874,21 @@ html {
     display: none;
   }
 }
+
+/* Grand écran : l'artiste a sa colonne, inutile de le répéter sous le titre (réservé aux lignes à deux lignes du téléphone). */
+.tl .title-text .ms {
+  display: none;
+}
+
+@media (max-width: 860px) {
+  .tl:not(.tl-queue) .title-text .ms {
+    display: block;
+  }
+
+  /* Mini-lecteur : fond presque opaque et flou fort, le texte des lignes dessous ne doit pas se lire à travers. */
+  .platform-web .playerbar {
+    background: color-mix(in srgb, var(--panel-solid, #1c1c20) 94%, transparent);
+    -webkit-backdrop-filter: blur(40px) saturate(1.6);
+    backdrop-filter: blur(40px) saturate(1.6);
+  }
+}

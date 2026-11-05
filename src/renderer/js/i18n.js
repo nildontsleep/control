@@ -30,7 +30,7 @@ const fr = {
 
   'menu.play': 'Lecture', 'menu.playSelection': 'Lire la sélection ({n})', 'menu.playNext': 'Lire ensuite', 'menu.addQueue': 'Ajouter à la file d’attente',
   'menu.addToPlaylist': 'Ajouter à une playlist', 'menu.newPlaylist': 'Nouvelle playlist…', 'menu.removeFromPlaylist': 'Retirer de la playlist',
-  'menu.goArtist': 'Aller à l’artiste', 'menu.goAlbum': 'Aller à l’album', 'menu.openSource': 'Ouvrir la page d’origine',
+  'menu.goArtistNamed': 'Aller à l’artiste : {name}', 'menu.goArtist': 'Aller à l’artiste', 'menu.goAlbum': 'Aller à l’album', 'menu.openSource': 'Ouvrir la page d’origine',
   'menu.reveal': 'Afficher dans le dossier', 'menu.removeLibrary': 'Supprimer de la bibliothèque…',
 
   'del.title': 'Supprimer ce morceau ?', 'del.titleMany': 'Supprimer {n} morceaux ?',
@@ -183,7 +183,7 @@ const fr = {
 
   'kb.playPause': 'Lecture / pause', 'kb.next': 'Morceau suivant', 'kb.prev': 'Morceau précédent', 'kb.seekForward': 'Avancer de 10 s', 'kb.seekBack': 'Reculer de 10 s',
   'kb.volUp': 'Volume +', 'kb.volDown': 'Volume −', 'kb.shuffle': 'Aléatoire', 'kb.repeat': 'Répéter', 'kb.mute': 'Muet', 'kb.queue': 'File d’attente', 'kb.lyrics': 'Paroles', 'kb.tags': 'Modifier les tags',
-  'kb.eq': 'Égaliseur', 'kb.nowPlaying': 'Ouvrir « À l’écoute »', 'kb.search': 'Rechercher', 'kb.back': 'Page précédente', 'kb.settings': 'Réglages',
+  'kb.eq': 'Égaliseur', 'kb.nowPlaying': 'Ouvrir « À l’écoute »', 'kb.search': 'Rechercher', 'kb.back': 'Page précédente', 'kb.forward': 'Page suivante', 'kb.settings': 'Réglages',
   'kb.fullscreen': 'Plein écran', 'kb.automix': 'AutoMix', 'kb.immersive': 'Mode immersif', 'kb.escape': 'Fermer',
 
   'toast.added_one': 'Ajouté à « {name} »', 'toast.added_other': '{n} morceaux ajoutés à « {name} »', 'toast.playNext': 'Sera lu ensuite', 'toast.queued': 'Ajouté à la file d’attente',
@@ -287,7 +287,7 @@ const fr = {
   'stats.emptyTitle': 'Pas encore de statistiques', 'stats.emptyText': 'Elles apparaîtront dès que vous aurez écouté de la musique ou regardé un film.',
   'stats.music': 'Musique', 'stats.listened': 'Temps d’écoute', 'stats.playsLabel': 'Lectures', 'stats.tracksLabel': 'Morceaux différents', 'stats.artistsLabel': 'Artistes',
   'stats.completed': '{n} écoutées en entier', 'stats.albumsOf': 'dans {n} albums', 'stats.streak': 'Série en cours',
-  'stats.days_one': '{n} jour', 'stats.days_other': '{n} jours', 'stats.bestStreak': 'Record : {n} j',
+  'stats.days_one': '{n} jour', 'stats.days_other': '{n} jours', 'stats.bestStreak': 'Record : {n}',
   'stats.activity': 'Activité', 'stats.nothing': 'Rien écouté', 'stats.less': 'Moins', 'stats.more': 'Plus', 'stats.lessMinute': '< 1 min',
   'stats.byHour': 'Heures d’écoute', 'stats.byWeekday': 'Jours de la semaine', 'stats.peakHour': 'Vous écoutez surtout vers {h} h.', 'stats.peakDay': 'Votre jour préféré : {d}.',
   'stats.topTracks': 'Morceaux les plus écoutés', 'stats.topArtists': 'Artistes les plus écoutés', 'stats.topAlbums': 'Albums les plus écoutés', 'stats.genres': 'Genres',
@@ -426,7 +426,7 @@ const en = {
 
   'menu.play': 'Play', 'menu.playSelection': 'Play selection ({n})', 'menu.playNext': 'Play next', 'menu.addQueue': 'Add to queue',
   'menu.addToPlaylist': 'Add to a playlist', 'menu.newPlaylist': 'New playlist…', 'menu.removeFromPlaylist': 'Remove from playlist',
-  'menu.goArtist': 'Go to artist', 'menu.goAlbum': 'Go to album', 'menu.openSource': 'Open original page',
+  'menu.goArtistNamed': 'Go to artist: {name}', 'menu.goArtist': 'Go to artist', 'menu.goAlbum': 'Go to album', 'menu.openSource': 'Open original page',
   'menu.reveal': 'Show in folder', 'menu.removeLibrary': 'Delete from library…',
 
   'del.title': 'Delete this song?', 'del.titleMany': 'Delete {n} songs?',
@@ -579,7 +579,7 @@ const en = {
 
   'kb.playPause': 'Play / pause', 'kb.next': 'Next song', 'kb.prev': 'Previous song', 'kb.seekForward': 'Forward 10 s', 'kb.seekBack': 'Back 10 s',
   'kb.volUp': 'Volume up', 'kb.volDown': 'Volume down', 'kb.shuffle': 'Shuffle', 'kb.repeat': 'Repeat', 'kb.mute': 'Mute', 'kb.queue': 'Queue', 'kb.lyrics': 'Lyrics', 'kb.tags': 'Edit tags',
-  'kb.eq': 'Equalizer', 'kb.nowPlaying': 'Open Now Playing', 'kb.search': 'Search', 'kb.back': 'Go back', 'kb.settings': 'Settings',
+  'kb.eq': 'Equalizer', 'kb.nowPlaying': 'Open Now Playing', 'kb.search': 'Search', 'kb.back': 'Go back', 'kb.forward': 'Forward', 'kb.settings': 'Settings',
   'kb.fullscreen': 'Full screen', 'kb.automix': 'AutoMix', 'kb.immersive': 'Immersive mode', 'kb.escape': 'Close',
 
   'toast.added_one': 'Added to “{name}”', 'toast.added_other': '{n} songs added to “{name}”', 'toast.playNext': 'Will play next', 'toast.queued': 'Added to the queue',
@@ -683,7 +683,7 @@ const en = {
   'stats.emptyTitle': 'No statistics yet', 'stats.emptyText': 'They show up as soon as you listen to some music or watch a movie.',
   'stats.music': 'Music', 'stats.listened': 'Listening time', 'stats.playsLabel': 'Plays', 'stats.tracksLabel': 'Different songs', 'stats.artistsLabel': 'Artists',
   'stats.completed': '{n} played to the end', 'stats.albumsOf': 'across {n} albums', 'stats.streak': 'Current streak',
-  'stats.days_one': '{n} day', 'stats.days_other': '{n} days', 'stats.bestStreak': 'Best: {n} d',
+  'stats.days_one': '{n} day', 'stats.days_other': '{n} days', 'stats.bestStreak': 'Best: {n}',
   'stats.activity': 'Activity', 'stats.nothing': 'Nothing played', 'stats.less': 'Less', 'stats.more': 'More', 'stats.lessMinute': '< 1 min',
   'stats.byHour': 'Listening hours', 'stats.byWeekday': 'Days of the week', 'stats.peakHour': 'You mostly listen around {h}:00.', 'stats.peakDay': 'Your favorite day: {d}.',
   'stats.topTracks': 'Top songs', 'stats.topArtists': 'Top artists', 'stats.topAlbums': 'Top albums', 'stats.genres': 'Genres',

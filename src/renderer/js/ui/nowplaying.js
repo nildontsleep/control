@@ -272,7 +272,7 @@ export function createNowPlaying(root) {
   function paintTrack() {
     const track = player.track;
     titleEl.textContent = track ? track.title : t('player.nothing');
-    artistEl.textContent = track?.artist || '';
+    artistEl.textContent = track?.artistLabel || track?.artist || '';
     albumEl.textContent = track ? [track.album, track.year].filter(Boolean).join(' · ') : '';
     art.replaceChildren(track ? coverEl(track, { className: 'np-cover' }) : h('div.cover.np-cover', {}, h('span.cover-icon', { html: icon('music-2', 60, 1.2) })));
     const url = track?.cover ? coverUrl(track.cover) : null;

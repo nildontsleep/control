@@ -265,7 +265,7 @@ export function statsView(root) {
         kpi(t('stats.playsLabel'), count(music.plays), music.completed ? t('stats.completed', { n: count(music.completed) }) : null, 'play'),
         kpi(t('stats.tracksLabel'), count(music.tracks), t('stats.albumsOf', { n: count(music.albums) }), 'music'),
         kpi(t('stats.artistsLabel'), count(music.artists), null, 'users'),
-        kpi(t('stats.streak'), t('stats.days', { n: data.streak.current }), t('stats.bestStreak', { n: data.streak.longest }), 'flame'))));
+        kpi(t('stats.streak'), t('stats.days', { n: data.streak.current }), t('stats.bestStreak', { n: t('stats.days', { n: data.streak.longest }) }), 'flame'))));
 
     // Activité
     const byDay = new Map(music.byDay.map((d) => [d.day, d.seconds]));

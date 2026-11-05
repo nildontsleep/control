@@ -18,9 +18,11 @@
   $('toggle').addEventListener('click', (e) => {
     e.preventDefault();
     mode = mode === 'login' ? 'register' : 'login';
-    $('submit').textContent = mode === 'login' ? 'Se connecter' : 'Créer le compte';
-    $('sub').textContent = mode === 'login' ? 'Connexion' : 'Nouveau compte';
-    $('toggle').textContent = mode === 'login' ? 'Créer un compte' : 'J’ai déjà un compte';
+    const T = window.webT;
+    $('submit').textContent = mode === 'login' ? T('Se connecter', 'Sign in') : T('Créer le compte', 'Create account');
+    $('sub').textContent = mode === 'login' ? T('Connexion', 'Sign in') : T('Nouveau compte', 'New account');
+    $('toggle').textContent = mode === 'login' ? T('Créer un compte', 'Create an account') : T('J’ai déjà un compte', 'I already have an account');
+    $('altText').textContent = mode === 'login' ? T('Pas encore de compte ?', 'No account yet?') : '';
     $('password').autocomplete = mode === 'login' ? 'current-password' : 'new-password';
     error.textContent = '';
   });
@@ -37,7 +39,7 @@
         body: JSON.stringify({ username: $('username').value.trim(), password: $('password').value }),
       });
       const body = await res.json().catch(() => ({}));
-      if (!res.ok || !body.ok) throw new Error(body?.error?.message || 'Connexion impossible.');
+      if (!res.ok || !body.ok) throw new Error(body?.error?.message || window.webT('Connexion impossible.', 'Could not sign in.'));
       location.replace(next());
     } catch (err) {
       error.textContent = err.message;

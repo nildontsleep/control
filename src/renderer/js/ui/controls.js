@@ -205,7 +205,8 @@ export function sliderRow(label, b, opts = {}) {
   const { input, value } = slider(b, opts);
   return h('div.row.row-slider', {},
     h('div.row-head', {}, h('span.row-title', { text: label }), value),
-    input);
+    input,
+    opts.hint ? h('span.row-hint', { text: opts.hint }) : null);
 }
 
 export function group(title, children, { footer, action } = {}) {

@@ -1,5 +1,6 @@
 // Actions partagées : menus contextuels, ajout aux playlists, suppression, glisser-déposer de morceaux.
 
+import { artistKey as artistKeyOf } from '../artists.js';
 import { h } from '../dom.js';
 import { t } from '../i18n.js';
 import { player } from '../player.js';
@@ -61,11 +62,9 @@ export async function removeFromLibrary(tracks) {
   return true;
 }
 
-export function artistKey(track) {
-  const name = track.albumArtist || track.artist;
-  if (!name) return null;
-  for (const a of lib.artists) if (a.name === name) return a.key;
-  return null;
+/** Les fiches d'artiste d'un morceau (il peut en nommer plusieurs : « A, B feat. C »). */
+export function artistKeys(track) {
+  return (track.artistNames || []).filter((k) => lib.artistByKey.has(artistKeyOf(k))).map((k) => artistKeyOf(k));
 }
 
 /** Éléments de menu pour un ou plusieurs morceaux. ctx : { playlistId, removeFromPlaylist, play } */
@@ -88,8 +87,8 @@ export function trackMenuItems(tracks, ctx = {}) {
   ];
   if (ctx.removeFromPlaylist) items.push({ label: ctx.removeLabel || t('menu.removeFromPlaylist'), icon: 'x', action: ctx.removeFromPlaylist });
   if (n === 1) {
-    const key = first.kind === 'audio' ? artistKey(first) : null;
-    if (key) items.push({ label: t('menu.goArtist'), icon: 'user', action: () => navigate('artist', key) });
+    const keys = first.kind === 'audio' ? artistKeys(first) : [];
+    for (const key of keys) items.push({ label: keys.length > 1 ? t('menu.goArtistNamed', { name: lib.artistByKey.get(key).name }) : t('menu.goArtist'), icon: 'user', action: () => navigate('artist', key) });
     if (first.albumKey) items.push({ label: t('menu.goAlbum'), icon: 'disc-3', action: () => navigate('album', first.albumKey) });
     if (first.sourceUrl) items.push({ label: t('menu.openSource'), icon: 'link', action: () => window.control.app.openExternal(first.sourceUrl) });
   }

@@ -238,7 +238,7 @@ export function openSettings(initial = 'general') {
 
   // Lecture. Sur téléphone et tablette : lecture écran éteint (par défaut) ou effets audio, qui la rendraient impossible.
   function playbackGroup() {
-    const crossfade = sliderRow(t('set.crossfade'), 'crossfade', { min: 0, max: 12, step: 1, format: (v) => (v ? t('set.seconds', { n: v }) : t('set.off')) });
+    const crossfade = sliderRow(t('set.crossfade'), 'crossfade', { min: 0, max: 12, step: 1, hint: t('set.crossfadeHint'), format: (v) => (v ? t('set.seconds', { n: v }) : t('set.off')) });
     const mobileRows = isMobile ? [
       row(t('set.bgPlayback'), toggle({
         get: () => settings.backgroundPlayback !== false,
@@ -250,13 +250,21 @@ export function openSettings(initial = 'general') {
       row(t('set.bgVideo'), toggle('backgroundVideo'), { hint: t('set.bgVideoHint'), badge: badge('film', B.orange) }),
     ] : [];
     live(() => { crossfade.hidden = !effectsAvailable(); });
+    // Le niveau visé ne sert à rien tant que la normalisation est coupée : grisé.
+    const targetRow = row(t('set.normalizeTarget'), popup('normalizeTarget', [-18, -16, -14].map((v) => ({ value: v, label: t(`set.normalizeTarget.${-v}`) }))), { badge: badge('gauge', B.teal) });
+    live(() => {
+      const off = !settings.normalize;
+      targetRow.classList.toggle('disabled', off);
+      targetRow.setAttribute('aria-disabled', off ? 'true' : 'false');
+      for (const el of targetRow.querySelectorAll('button, input, select')) el.disabled = off;
+    });
     return group(t('set.playback'), [
       ...mobileRows,
       crossfade,
       row(t('set.normalize'), toggle('normalize'), { hint: t('set.normalizeHint'), badge: badge('volume-2', B.green) }),
-      row(t('set.normalizeTarget'), popup('normalizeTarget', [-18, -16, -14].map((v) => ({ value: v, label: t(`set.normalizeTarget.${-v}`) }))), { badge: badge('gauge', B.teal) }),
+      targetRow,
       normalizeStatus(),
-    ], { footer: effectsAvailable() ? t('set.crossfadeHint') : t('set.effectsOffHint') });
+    ], { footer: effectsAvailable() ? null : t('set.effectsOffHint') });
   }
 
   const builders = {

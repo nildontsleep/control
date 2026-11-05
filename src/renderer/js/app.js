@@ -22,6 +22,7 @@ import { compareView } from './views/compare.js';
 import { viewing, isWeb } from './web.js';
 import { uploadFiles, filesFromDrop } from './ui/upload.js';
 import { mountReadOnlyBanner } from './ui/library-switch.js';
+import { routeToHash, hashToRoute } from './route-url.js';
 import { isSheetOpen, closeTopSheet } from './ui/sheet.js';
 import { isMenuOpen, closeMenu } from './ui/menu.js';
 import { toast, installTooltips } from './ui/feedback.js';
@@ -96,7 +97,7 @@ function paintNav() {
     el.onclick = fn;
   };
   mkBtn($('#navBack'), 'chevron-left', canBack(), t('kb.back'), back);
-  mkBtn($('#navForward'), 'chevron-right', canForward(), '', forward);
+  mkBtn($('#navForward'), 'chevron-right', canForward(), t('kb.forward'), forward);
 }
 
 function buildShell() {
@@ -282,6 +283,7 @@ function wireKeys() {
 // ouvert (menu, feuille, « À l'écoute », tiroir), sinon on revient à la page précédente de l'application. Une seule
 // entrée d'historique « de garde » suffit : elle est remise en place tant qu'il reste quelque chose où revenir, et
 // quand il n'y a plus rien, le retour suivant quitte l'application comme partout ailleurs.
+let suppressHash = false; // un retour du navigateur change aussi l'adresse : wireUrl ne doit pas l'interpréter comme un lien
 function wireBackButton() {
   const npRoot = $('#nowPlaying');
   const closeOne = () => {
@@ -310,10 +312,15 @@ function wireBackButton() {
       return;
     }
     if (armed || !backable()) return;
+    history.replaceState({ controlRoot: true }, ''); // l'entrée courante est « la racine » vers laquelle le retour revient
     history.pushState({ controlBack: true }, '');
     armed = true;
   };
-  window.addEventListener('popstate', () => {
+  window.addEventListener('popstate', (e) => {
+    // Seul un retour sur notre entrée racine est un geste « retour » ; ailleurs (adresse modifiée à la main, lien), ce n'est pas à nous.
+    if (!e.state?.controlRoot) { if (!e.state?.controlBack) armed = false; return; }
+    suppressHash = true;
+    setTimeout(() => { suppressHash = false; }, 150);
     armed = false;
     if (consuming) { consuming = false; setTimeout(arm, 50); return; }
     if (!closeOne() && canBack()) back();
@@ -324,6 +331,24 @@ function wireBackButton() {
   watch.observe(document.body, { childList: true, attributes: true, attributeFilter: ['class'] }); // menus, « À l'écoute »
   watch.observe($('#layer'), { childList: true }); // feuilles
   watch.observe(app, { attributes: true, attributeFilter: ['class'] }); // tiroir
+}
+
+// L'adresse suit la vue affichée (replaceState : l'historique reste celui du bouton retour de wireBackButton), et un
+// changement manuel de l'adresse (#/album/…) ouvre la vue.
+function wireUrl() {
+  const sync = (route) => {
+    const hash = routeToHash(route);
+    if (hash === null || hash === location.hash || /^#play\//.test(location.hash)) return;
+    history.replaceState(history.state, '', location.pathname + location.search + hash);
+  };
+  onRoute(sync);
+  sync(currentRoute());
+  window.addEventListener('hashchange', () => {
+    if (suppressHash) return;
+    const route = hashToRoute(location.hash);
+    const cur = currentRoute();
+    if (route && (!cur || routeToHash(cur) !== routeToHash(route))) navigate(route.name, route.param);
+  });
 }
 
 // ─── Initialisation ──────────────────────────────────────────────────────────
@@ -380,9 +405,12 @@ async function init() {
   const valid = new Set(['songs', 'albums', 'artists', 'videos', 'album', 'artist', 'playlist', 'watch', 'anime', 'mylist', 'stats', 'people']);
   const go = /^#playlist\/(\d+)$/.exec(location.hash); // lien vers une playlist d'une bibliothèque partagée
   const goPlay = /^#play\/(\d+)$/.exec(location.hash); // « écouter ce morceau » depuis le profil d'un compte
+  const fromUrl = control.platform === 'web' && !viewing ? hashToRoute(location.hash) : null; // lien vers une vue (#/album/…)
   if (go) navigate('playlist', Number(go[1]));
+  else if (fromUrl) navigate(fromUrl.name, fromUrl.param);
   else if (last && valid.has(last.name)) navigate(last.name, last.param);
   else navigate('songs');
+  if (control.platform === 'web') wireUrl();
   if (goPlay) {
     const track = lib.tracks.find((x) => x.id === Number(goPlay[1]));
     if (track) player.playQueue([track], 0);

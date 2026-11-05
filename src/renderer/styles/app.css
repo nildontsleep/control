@@ -83,6 +83,12 @@
   opacity: 1;
 }
 
+/* Scènes à traits (météores, hyperespace) : derrière des listes translucides elles se lisent comme une rayure à l'écran. */
+.scene.on[data-scene='meteors'],
+.scene.on[data-scene='hyperspace'] {
+  opacity: 0.4;
+}
+
 :root[data-theme='light'] .scene.on {
   opacity: 0.8;
 }

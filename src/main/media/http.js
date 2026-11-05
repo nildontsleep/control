@@ -19,7 +19,7 @@ function codeForStatus(status) {
   return 'http';
 }
 
-async function fetchJson(url, { method = 'GET', headers = {}, body, timeout = 15000 } = {}) {
+async function fetchJson(url, { method = 'GET', headers = {}, body, timeout = 10000 } = {}) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeout);
   try {

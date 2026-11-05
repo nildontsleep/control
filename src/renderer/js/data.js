@@ -1,6 +1,7 @@
 // Bibliothèque côté interface : morceaux, albums et artistes dérivés, playlists (dont intelligentes).
 
 import { fold } from './format.js';
+import { splitArtists, artistKey as keyOfName } from './artists.js';
 
 const api = window.control?.library;
 const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
@@ -36,14 +37,16 @@ function albumKeyOf(t) {
   return `${fold(t.album)}\u0000${t.albumArtist ? fold(t.albumArtist) : dirOf(t.path).toLowerCase()}`;
 }
 
-const artistKeyOf = (t) => fold(t.albumArtist || t.artist);
 
 function derive() {
   const audio = [];
   const videos = [];
   lib.byId = new Map();
   for (const t of lib.tracks) {
-    t.search = fold(`${t.title} ${t.artist} ${t.album} ${t.albumArtist} ${t.genre}`);
+    // Une étiquette d'artiste peut en nommer plusieurs : on garde la liste, et une étiquette sans doublon ni pseudo pour l'affichage.
+    t.artistNames = splitArtists(t.albumArtist || t.artist);
+    t.artistLabel = splitArtists(t.artist).join(', ') || t.artist || '';
+    t.search = fold(`${t.title} ${t.artistLabel} ${t.artist} ${t.album} ${t.albumArtist} ${t.genre}`);
     lib.byId.set(t.id, t);
     (t.kind === 'video' ? videos : audio).push(t);
   }
@@ -61,7 +64,8 @@ function derive() {
       albums.set(key, a);
     }
     a.tracks.push(t);
-    a.artists.add(t.artist);
+    a.artists.add(keyOfName(t.artistNames[0] || ''));
+    if (!a.mainName && t.artistNames[0]) a.mainName = t.artistNames[0];
     a.duration += t.duration;
     a.playCount += t.playCount;
     a.addedAt = Math.max(a.addedAt, t.addedAt);
@@ -71,29 +75,34 @@ function derive() {
   for (const a of albums.values()) {
     a.tracks.sort((x, y) => (x.discNo || 1) - (y.discNo || 1) || (x.trackNo || 0) - (y.trackNo || 0) || cmp(x.title, y.title));
     a.various = !a.albumArtist && a.artists.size > 1;
-    a.artist = a.albumArtist || (a.artists.size === 1 ? [...a.artists][0] : '');
-    a.artistKey = a.various ? VARIOUS : fold(a.artist);
+    a.artist = splitArtists(a.albumArtist).join(', ') || (a.artists.size === 1 ? a.mainName || '' : '');
+    a.artistKey = a.various ? VARIOUS : keyOfName(splitArtists(a.albumArtist || a.artist)[0] || '');
     a.search = fold(`${a.title} ${a.artist}`);
   }
   lib.albums = [...albums.values()];
   lib.albumByKey = albums;
 
   const artists = new Map();
+  const spellings = new Map(); // clé → { orthographe → nombre } : on affiche la plus courante
   for (const t of audio) {
-    const name = t.albumArtist || t.artist;
-    if (!name) continue;
-    const key = artistKeyOf(t);
-    let a = artists.get(key);
-    if (!a) {
-      a = { key, name, tracks: [], albumKeys: new Set(), cover: null, duration: 0, playCount: 0 };
-      artists.set(key, a);
+    for (const name of t.artistNames) {
+      const key = keyOfName(name);
+      let a = artists.get(key);
+      if (!a) {
+        a = { key, name, tracks: [], albumKeys: new Set(), cover: null, duration: 0, playCount: 0 };
+        artists.set(key, a);
+        spellings.set(key, new Map());
+      }
+      const sp = spellings.get(key);
+      sp.set(name, (sp.get(name) || 0) + 1);
+      a.tracks.push(t);
+      a.duration += t.duration;
+      a.playCount += t.playCount;
+      if (t.albumKey) a.albumKeys.add(t.albumKey);
+      if (!a.cover && t.cover) a.cover = t.cover;
     }
-    a.tracks.push(t);
-    a.duration += t.duration;
-    a.playCount += t.playCount;
-    if (t.albumKey) a.albumKeys.add(t.albumKey);
-    if (!a.cover && t.cover) a.cover = t.cover;
   }
+  for (const [key, a] of artists) a.name = [...spellings.get(key)].sort((x, y) => y[1] - x[1])[0][0];
   for (const a of artists.values()) {
     a.albums = [...a.albumKeys].map((k) => albums.get(k)).filter(Boolean).sort((x, y) => (y.year || 0) - (x.year || 0) || cmp(x.title, y.title));
     a.tracks.sort((x, y) => y.playCount - x.playCount || cmp(x.title, y.title));

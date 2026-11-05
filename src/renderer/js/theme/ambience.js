@@ -45,6 +45,7 @@ export function applyAmbience({ dark, rgb, active = true }) {
   scene.setStill(!settings.animations);
   scene.setSlow(!active);
   if (scene.id !== settings.scene) scene.set(settings.scene);
+  canvas.dataset.scene = settings.scene;
 }
 
 export const setSceneActive = (active) => scene?.setSlow(!active);

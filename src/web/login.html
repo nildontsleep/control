@@ -17,16 +17,17 @@
   <main class="card">
     <div class="brand">
       <img src="/assets/icon.png" alt="">
-      <div><h1>{{SERVER_NAME}}</h1><span id="sub">Connexion</span></div>
+      <div><h1>{{SERVER_NAME}}</h1><span id="sub" data-en="Sign in">Connexion</span></div>
     </div>
     <form id="form" autocomplete="on">
-      <label class="field"><span>Nom</span><input class="text-input" id="username" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" required autofocus></label>
-      <label class="field"><span>Mot de passe</span><input class="text-input" id="password" name="password" type="password" autocomplete="current-password" required></label>
+      <label class="field"><span data-en="Name">Nom</span><input class="text-input" id="username" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" required autofocus></label>
+      <label class="field"><span data-en="Password">Mot de passe</span><input class="text-input" id="password" name="password" type="password" autocomplete="current-password" required></label>
       <p class="error" id="error" role="alert"></p>
-      <button class="btn btn-primary" id="submit" type="submit">Se connecter</button>
+      <button class="btn btn-primary" id="submit" type="submit" data-en="Sign in">Se connecter</button>
     </form>
-    <p class="alt" id="register" hidden>Pas encore de compte ? <a href="#" id="toggle">Créer un compte</a></p>
+    <p class="alt" id="register" hidden><span id="altText" data-en="No account yet?">Pas encore de compte ?</span> <a href="#" id="toggle" data-en="Create an account">Créer un compte</a></p>
   </main>
+  <script src="/web/lang.js"></script>
   <script src="/web/login.js"></script>
 </body>
 </html>

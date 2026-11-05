@@ -374,7 +374,7 @@ class Downloads {
         error: skipped ? (errors.pop() || null) : null,
       });
     } else {
-      this.#update(job, { status: 'error', speed: null, eta: null, error: errors.pop() || `yt-dlp s’est arrêté (code ${code}).` });
+      this.#update(job, { status: 'error', speed: null, eta: null, error: errors.pop() || (code === 0 ? 'yt-dlp:NOFILES' : `yt-dlp:EXIT:${code}`) });
     }
     this.#pump();
   }

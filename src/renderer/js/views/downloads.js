@@ -38,6 +38,10 @@ const dlBinding = (key) => ({
 /** Traduit les erreurs courantes de yt-dlp en conseils compréhensibles. */
 export function friendlyError(raw) {
   const text = String(raw || '');
+  // Codes posés par le processus principal : le texte est traduit ici, dans la langue de l'interface.
+  if (text === 'yt-dlp:NOFILES') return t('dl.errNoFiles');
+  const exit = /^yt-dlp:EXIT:(-?\d+)$/.exec(text);
+  if (exit) return t('dl.errExit', { code: exit[1] });
   if (/could not copy .*cookie database|failed to decrypt|dpapi|cookie database/i.test(text)) return t('dl.errCookies');
   if (/confirm you.?re not a bot|sign in to confirm|HTTP Error 429/i.test(text)) return t(isWeb ? 'dl.errBotWeb' : 'dl.errBot');
   if (/confirm your age|age.restricted|inappropriate for some users/i.test(text)) return t('dl.errAge');

@@ -595,6 +595,17 @@
   animation: eq 0.9s ease-in-out infinite;
 }
 
+/* En pause : le morceau reste repéré, mais l'indicateur devient un symbole « pause » gris, pas des barres qui semblent jouer. */
+.tl-row.current:not(.playing) .idx-eq i {
+  height: 11px;
+  opacity: 0.7;
+  background: var(--text-2);
+}
+
+.tl-row.current:not(.playing) .idx-eq i:nth-child(n + 3) {
+  display: none;
+}
+
 .tl-row.playing .idx-eq i:nth-child(2) { animation-delay: -0.3s; }
 .tl-row.playing .idx-eq i:nth-child(3) { animation-delay: -0.6s; }
 .tl-row.playing .idx-eq i:nth-child(4) { animation-delay: -0.15s; }

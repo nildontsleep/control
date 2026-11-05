@@ -58,6 +58,7 @@ L’exécutable Windows n’est pas signé : au premier lancement, SmartScreen p
 - **Vraie barre de contrôle pour les vidéos** : barre de progression, ±10 s, précédent / suivant, volume, vitesse, image dans l’image et **plein écran** (`F`, `Échap` pour en sortir).
 
 **Bibliothèque**
+- **Artistes séparés** : une étiquette « A, B feat. C » (virgules, « ， », « ; », feat./ft.) donne une fiche par artiste, sans doublon ni pseudo `@…` ; un morceau apparaît chez chacun de ses artistes, et la liste des morceaux n’affiche plus l’étiquette en double. Le menu d’un morceau propose « Aller à l’artiste » pour chacun.
 - Analyse incrémentale (rescan quasi instantané), tags et pochettes lus dans les fichiers, ou `cover.jpg` / `folder.jpg` du dossier.
 - Vues *Morceaux* (liste virtualisée, tri par colonne), *Albums* (taille réglable), *Artistes*, *Vidéos*.
 - Recherche instantanée dans les morceaux, albums, artistes, vidéos et playlists.
@@ -195,6 +196,10 @@ Dans `/admin` → *Mises à jour du serveur* (et dans *Réglages* → *À propos
 - Sans lanceur (`npm run web:direct`, ou `node server/index.js`), le serveur signale les nouvelles versions mais ne peut pas se redémarrer lui-même.
 - **Un serveur en 0.8.x ne peut pas encore se mettre à jour tout seul** : passe une fois à cette version (`docker pull`, ou `git pull` et `npm ci`), ensuite les suivantes sont automatiques.
 - Sécurité : seules les releases de ce dépôt sont acceptées, l’archive doit correspondre à l’empreinte calculée par GitHub, son contenu est lu strictement (ni lien, ni chemin hors du dossier d’installation, taille limitée), et le jeton GitHub éventuel ne quitte jamais le serveur.
+
+### Adresses des vues
+
+Chaque vue a son adresse (`/#/album/…`, `#/artist/…`, `#/playlist/12`, `#/stats`…) : on peut la partager, la mettre en favori ou recharger la page sans perdre sa place, et le bouton retour du navigateur (ou le geste retour d’un téléphone) revient à la vue précédente au lieu de quitter l’application. L’adresse d’un album est un identifiant court, sans le chemin du dossier sur le serveur.
 
 ### Sur téléphone et tablette (iPhone, iPad, Android)
 

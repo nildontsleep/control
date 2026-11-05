@@ -76,18 +76,18 @@ export function createTrackList(options) {
     out.push(h('div.tl-cell.idx', {},
       h('span.idx-num', { text: layoutName === 'queue' ? '' : String(num) }),
       h('span.idx-eq', { html: '<i></i><i></i><i></i><i></i>' }),
-      h('button.idx-play', { type: 'button', tabindex: '-1', html: icon('play', 15, 0), onclick: (e) => { e.stopPropagation(); play(i); } })));
+      h('button.idx-play', { type: 'button', tabindex: '-1', 'aria-label': t('menu.play'), html: icon('play', 15, 0), onclick: (e) => { e.stopPropagation(); play(i); } })));
     for (const cell of layout.cells) {
       if (cell === 'title') {
         out.push(h('div.tl-cell.title', {},
           layout.cover ? coverEl(track, { small: true, className: 'row-cover' }) : null,
-          h('div.title-text', {}, h('span.t', { text: track.title }), layoutName === 'queue' ? h('span.s', { text: track.artist || '' }) : isWeb ? h('span.ms', { text: track.artist || '' }) : null)));
+          h('div.title-text', {}, h('span.t', { text: track.title }), layoutName === 'queue' ? h('span.s', { text: track.artistLabel ?? track.artist ?? '' }) : isWeb ? h('span.ms', { text: track.artistLabel ?? track.artist ?? '' }) : null)));
       } else if (cell === 'artist') {
-        out.push(h('div.tl-cell.artist', {}, h('span', { text: track.artist || '—' })));
+        out.push(h('div.tl-cell.artist', {}, h('span', { text: track.artistLabel || track.artist || '—' })));
       } else if (cell === 'album') {
         out.push(h('div.tl-cell.album', {}, h('span', { text: track.album || '—' })));
       } else if (cell === 'plays') {
-        out.push(h('div.tl-cell.plays.right', {}, h('span', { text: track.playCount ? String(track.playCount) : '' })));
+        out.push(h('div.tl-cell.plays.right', {}, h('span', { text: String(track.playCount || 0) })));
       } else if (cell === 'time') {
         out.push(h('div.tl-cell.time.right', {}, h('span', { text: fmtTime(track.duration) }),
           isWeb ? h('button.tl-more', { type: 'button', 'aria-label': t('common.more'), html: icon('ellipsis', 18, 2), onclick: (e) => { e.stopPropagation(); rowMenu(e, i); } }) : null));
