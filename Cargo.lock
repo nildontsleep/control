@@ -743,11 +743,13 @@ dependencies = [
  "log",
  "notify",
  "parking_lot",
+ "rand",
  "rune",
  "rune-kit",
  "serde",
  "serde_json",
  "time",
+ "url",
  "winresource",
  "zbus",
 ]

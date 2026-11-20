@@ -134,8 +134,7 @@ pub fn view(ui: &Ui, cx: &mut Cx<Ui>) -> El {
                 .justify_end()
                 .pl(sidebar::WIDTH)
                 .child(playerbar::player_bar(ui, &p, cx))
-        )
-        .child(toasts(ui, &p));
+        );
 
     if ui.now_playing {
         layer.push(nowplaying::view(ui, &p, &k, cx));
@@ -147,6 +146,8 @@ pub fn view(ui: &Ui, cx: &mut Cx<Ui>) -> El {
     if let Some(m) = &ui.menu {
         layer.push(menu::context_menu(ui, &p, &k, m));
     }
+    // Les notifications passent par-dessus tout (feuilles, « À l'écoute », récap).
+    layer.push(toasts(ui, &p));
     rune_kit::root(base, layer)
 }
 
