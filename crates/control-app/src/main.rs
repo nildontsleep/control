@@ -108,6 +108,23 @@ const SCENES: &[Scene] = &[
         s.sheet = Some(state::Sheet::Settings(state::SettingsTab::Downloads));
         s.downloads.popup = Some("set-cookies");
     }),
+    ("stats-7d", |s| {
+        s.route = state::Route::Stats;
+        s.settings.stats_range = "7d".into();
+    }),
+    ("stats-year", |s| {
+        s.route = state::Route::Stats;
+        s.settings.stats_range = "year".into();
+    }),
+    ("recap", |s| views::recap::scene(s, false, 0)),
+    ("recap-time", |s| views::recap::scene(s, false, 1)),
+    ("recap-artist", |s| views::recap::scene(s, false, 2)),
+    ("recap-tracks", |s| views::recap::scene(s, false, 3)),
+    ("recap-sound", |s| views::recap::scene(s, false, 4)),
+    ("recap-habits", |s| views::recap::scene(s, false, 5)),
+    ("recap-summary", |s| views::recap::scene(s, false, 99)),
+    ("recap-offer", |s| views::recap::scene(s, true, 0)),
+    ("downloads", |s| s.route = state::Route::Downloads),
     ("settings", |s| s.sheet = Some(state::Sheet::Settings(state::SettingsTab::General))),
     ("appearance", |s| s.sheet = Some(state::Sheet::Settings(state::SettingsTab::Appearance))),
     ("equalizer", |s| s.sheet = Some(state::Sheet::Equalizer)),

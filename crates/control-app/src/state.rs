@@ -380,6 +380,7 @@ impl Ui {
                 let backend = self.backend.clone();
                 self.player.play_list(&ids, start, Some(false), &cat, &backend);
             }
+            crate::views::recap::maybe_prompt(self);
         }
         self.selection.ids.retain(|id| cat.by_id.contains_key(id));
         if !self.pending_play.is_empty() && self.pending_play.iter().all(|id| cat.by_id.contains_key(id)) {
