@@ -18,6 +18,7 @@ pub mod media;
 pub mod model;
 pub mod probe;
 pub mod process;
+pub mod queue;
 pub mod scrobble;
 pub mod settings;
 pub mod smart;
