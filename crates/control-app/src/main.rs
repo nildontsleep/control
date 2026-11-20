@@ -48,6 +48,15 @@ fn setup(s: &mut Ui, waker: Waker) {
     s.reload_library();
     s.rescan();
     s.watch_folders();
+    // Mises à jour : au lancement puis toutes les 6 heures, si le réglage le permet.
+    let store = s.backend.store.clone();
+    s.backend.updater.spawn_checks(move || store.settings().update.auto);
+    s.backend.updater.cleanup();
+    // Outils : mise à jour quotidienne de yt-dlp (en arrière-plan).
+    s.spawn_quiet(|b| {
+        b.tools.announce();
+        b.tools.auto_update(&b.store);
+    });
     #[cfg(target_os = "linux")]
     if let Some(h) = s.handle.clone() {
         s.mpris = mpris::Mpris::start(h);

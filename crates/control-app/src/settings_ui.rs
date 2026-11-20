@@ -389,17 +389,94 @@ fn downloads(ui: &Ui, p: &Palette, k: &Kit) -> Vec<El> {
     )]
 }
 
-fn about(ui: &Ui, p: &Palette, _k: &Kit) -> Vec<El> {
-    let _ = ui;
-    vec![group(
-        p,
-        t("set.tab.about"),
-        vec![
-            line(p, "control".into(), Some(crate::i18n::tv("about.version", &[("v", &env!("CARGO_PKG_VERSION"))])), el()),
-            line(p, t("about.license"), Some("MIT · Rune (MIT) · Inter (OFL) · Lucide (ISC)".into()), el()),
-        ],
-        None,
-    )]
+/// État des mises à jour (`update:state`, forme d'origine) en une ligne et un bouton.
+fn update_row(ui: &Ui, p: &Palette, k: &Kit) -> El {
+    let st = if ui.update_state.is_null() { ui.backend.updater.status() } else { ui.update_state.clone() };
+    let phase = st["phase"].as_str().unwrap_or("idle").to_string();
+    let version = st["version"].as_str().unwrap_or("").to_string();
+    let v = version.clone();
+    let tv = |key: &str| crate::i18n::tv(key, &[("v", &v)]);
+    let (label, hint) = match phase.as_str() {
+        "checking" => (t("upd.title"), Some(t("common.loading"))),
+        "available" if st["manual"].as_bool() == Some(true) => (tv("upd.available"), Some(t("upd.manual"))),
+        "available" => (tv("upd.available"), None),
+        "downloading" => {
+            let pct = match (st["received"].as_f64(), st["size"].as_f64()) {
+                (Some(r), Some(sz)) if sz > 0.0 => format!(" {} %", (r / sz * 100.0).round()),
+                _ => String::new(),
+            };
+            (format!("{}{pct}", tv("upd.downloading")), None)
+        }
+        "ready" => (tv("upd.ready"), Some(t("upd.verified"))),
+        "installing" => (t("upd.installing"), None),
+        "none" => (t("upd.upToDate"), None),
+        "error" => {
+            let code = st["code"].as_str().unwrap_or("network");
+            (t("upd.failed"), Some(t(&format!("upd.err.{code}"))))
+        }
+        _ => (t("upd.title"), Some(t("upd.idle"))),
+    };
+    let button = match phase.as_str() {
+        "available" if st["manual"].as_bool() == Some(true) => {
+            let page = st["page"].as_str().unwrap_or("https://github.com/nildontsleep/control/releases").to_string();
+            rune_kit::Button::new(t("upd.view")).on_press(move |_s: &mut Ui| crate::os::open_url(&page)).build(k)
+        }
+        "available" => rune_kit::Button::new(t("upd.download"))
+            .on_press(|s: &mut Ui| s.spawn(|b| b.updater.download(), |s, v, _| s.update_state = v))
+            .build(k),
+        "ready" => rune_kit::Button::new(t("upd.restart"))
+            .on_press(|s: &mut Ui| {
+                s.player.save_session(&s.backend);
+                s.backend.store.flush();
+                s.spawn(
+                    |b| matches!(b.updater.install(), control_core::updater::InstallOutcome::Quit),
+                    |_s, quit, tx| {
+                        if quit {
+                            tx.quit();
+                        }
+                    },
+                );
+            })
+            .build(k),
+        "downloading" | "installing" | "checking" => el(),
+        _ => rune_kit::Button::new(t("upd.check"))
+            .on_press(|s: &mut Ui| s.spawn(|b| b.updater.check(true), |s, v, _| s.update_state = v))
+            .build(k),
+    };
+    line(p, label, hint, button)
+}
+
+fn about(ui: &Ui, p: &Palette, k: &Kit) -> Vec<El> {
+    let edition = match control_core::updater::Edition::detect(&std::env::current_exe().unwrap_or_default()) {
+        control_core::updater::Edition::Portable => t("about.portable"),
+        control_core::updater::Edition::AppImage => t("about.appimage"),
+        _ => t("about.installed"),
+    };
+    vec![
+        group(
+            p,
+            t("set.tab.about"),
+            vec![
+                line(
+                    p,
+                    "control".into(),
+                    Some(format!("{} · {}", crate::i18n::tv("about.version", &[("v", &env!("CARGO_PKG_VERSION"))]), edition)),
+                    el(),
+                ),
+                line(p, t("about.tagline"), Some("Rust · Rune · symphonia · yt-dlp · ffmpeg · Lucide · Inter".into()), el()),
+            ],
+            None,
+        ),
+        group(
+            p,
+            t("upd.title"),
+            vec![
+                update_row(ui, p, k),
+                line(p, t("upd.auto"), Some(t("upd.autoHint")), toggle(k, ui.settings.update.auto, |v| json!({ "update": { "auto": v } }))),
+            ],
+            None,
+        ),
+    ]
 }
 
 pub fn equalizer(ui: &Ui, p: &Palette, k: &Kit) -> El {

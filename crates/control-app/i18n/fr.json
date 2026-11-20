@@ -1079,5 +1079,6 @@
  "eq.enable": "Activer l’égaliseur",
  "set.downloadDir": "Dossier des téléchargements",
  "about.license": "Licences",
- "set.tmdbKey": "Clé API TMDB"
+ "set.tmdbKey": "Clé API TMDB",
+ "common.loading": "Recherche…"
 }

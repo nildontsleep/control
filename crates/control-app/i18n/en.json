@@ -1079,5 +1079,6 @@
  "eq.enable": "Enable equalizer",
  "set.downloadDir": "Downloads folder",
  "about.license": "Licenses",
- "set.tmdbKey": "TMDB API key"
+ "set.tmdbKey": "TMDB API key",
+ "common.loading": "Checking…"
 }
