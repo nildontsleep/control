@@ -200,6 +200,9 @@ pub struct Ui {
     /// Mode immersif (plein écran : pochette et paroles).
     pub immersive: bool,
     pub video: crate::video::VideoView,
+    folder_watch: Option<crate::watch::FolderWatch>,
+    #[cfg(target_os = "linux")]
+    pub mpris: Option<crate::mpris::Mpris>,
     /// ffmpeg (relu de temps en temps : il peut être installé pendant que l'application tourne).
     ffmpeg: Option<std::path::PathBuf>,
     ffmpeg_checked: f64,
@@ -276,6 +279,9 @@ impl Ui {
             lyrics_edit: TextEdit::new(""),
             immersive: false,
             video: Default::default(),
+            folder_watch: None,
+            #[cfg(target_os = "linux")]
+            mpris: None,
             ffmpeg: None,
             ffmpeg_checked: f64::NEG_INFINITY,
             presence: Default::default(),
@@ -407,6 +413,27 @@ impl Ui {
         });
     }
 
+    /// (Re)lance la surveillance des dossiers de la bibliothèque.
+    pub fn watch_folders(&mut self) {
+        self.folder_watch = None;
+        self.folder_watch = crate::watch::FolderWatch::start(self.backend.clone());
+    }
+
+    /// Fichiers ou dossiers glissés dans la fenêtre : ajoutés à la bibliothèque.
+    pub fn drop_files(&mut self, files: &[std::path::PathBuf]) {
+        let paths: Vec<String> = files.iter().map(|p| p.to_string_lossy().into_owned()).collect();
+        self.spawn(
+            move |b| b.library.add_paths(&paths, None).len(),
+            |s, n, _| {
+                if n == 0 {
+                    s.toast(crate::i18n::t("toast.droppedNone"), "triangle-alert");
+                } else {
+                    s.toast(crate::i18n::tn("toast.scanDone", n), "check");
+                }
+            },
+        );
+    }
+
     /// Autres événements des services (scrobbling, Discord, mises à jour, normalisation).
     fn on_service_event(&mut self, channel: &str, payload: &Value) {
         match channel {
@@ -438,6 +465,9 @@ impl Ui {
         self.player.apply_settings(&self.settings);
         if patch.get("libraryFolders").is_some() || patch.get("downloadDir").is_some() {
             self.rescan();
+            if self.folder_watch.is_some() {
+                self.watch_folders();
+            }
         }
     }
 
@@ -648,7 +678,32 @@ impl Ui {
             tx.wake_after(std::time::Duration::from_millis(if showing_video { 16 } else { 100 }));
         }
         self.feed_presence(clock, now);
+        #[cfg(target_os = "linux")]
+        self.feed_mpris(position);
         changed || was != now
+    }
+
+    /// Bus de session (Linux) : l'état du lecteur pour les touches multimédia et le panneau du bureau.
+    #[cfg(target_os = "linux")]
+    fn feed_mpris(&self, position: f64) {
+        let Some(m) = &self.mpris else { return };
+        let tr = self.player.track.as_ref();
+        let art_url = tr
+            .and_then(|t| t.cover.as_deref())
+            .and_then(|h| self.backend.covers.path(h, false))
+            .map(|p| format!("file://{}", p.to_string_lossy()));
+        m.update(crate::mpris::MprisState {
+            playing: self.player.is_playing(),
+            has_track: tr.is_some(),
+            track_id: tr.map(|t| t.id).unwrap_or(0),
+            title: tr.map(|t| t.title.clone()).unwrap_or_default(),
+            artist: tr.map(|t| t.artist.clone()).unwrap_or_default(),
+            album: tr.map(|t| t.album.clone()).unwrap_or_default(),
+            art_url,
+            duration: self.player.duration(),
+            position,
+            volume: if self.settings.muted { 0.0 } else { self.settings.volume },
+        });
     }
 
     /// Présence Discord : environ toutes les 1,5 s pendant la lecture, chaque minute en pause, et à chaque changement.

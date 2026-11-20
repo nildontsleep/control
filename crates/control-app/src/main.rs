@@ -6,6 +6,8 @@ mod format;
 mod i18n;
 mod icons;
 mod os;
+#[cfg(target_os = "linux")]
+mod mpris;
 mod paths;
 mod player;
 mod settings_ui;
@@ -15,6 +17,8 @@ mod theme;
 mod ui;
 mod video;
 mod views;
+mod watch;
+mod window;
 
 use std::sync::Arc;
 
@@ -43,6 +47,11 @@ fn setup(s: &mut Ui, waker: Waker) {
     }
     s.reload_library();
     s.rescan();
+    s.watch_folders();
+    #[cfg(target_os = "linux")]
+    if let Some(h) = s.handle.clone() {
+        s.mpris = mpris::Mpris::start(h);
+    }
 }
 
 fn poll(s: &mut Ui, clock: f64, tx: &mut Tx) -> bool {
@@ -102,8 +111,13 @@ fn main() {
         }
     };
     let close_backend = backend.clone();
-    app.init(move || Ui::new(backend, Some(handle)))
+    let (options, maximized) = window::restore(&backend.store);
+    app.window_options(options)
+        .maximized(maximized)
+        .on_window(window::remember)
+        .init(move || Ui::new(backend, Some(handle)))
         .on_close(|s: &mut Ui, _tx| {
+            window::save(&s.backend.store);
             s.player.save_session(&s.backend);
             s.backend.store.flush();
         })

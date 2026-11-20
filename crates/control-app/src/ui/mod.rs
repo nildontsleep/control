@@ -121,6 +121,7 @@ pub fn view(ui: &Ui, cx: &mut Cx<Ui>) -> El {
 
     let base = el()
         .key("window")
+        .on_drop_files(|s: &mut Ui, files, _tx| s.drop_files(files))
         .w_full()
         .h_full()
         .child(backdrop(ui, &p))
@@ -149,29 +150,57 @@ pub fn view(ui: &Ui, cx: &mut Cx<Ui>) -> El {
     rune_kit::root(base, layer)
 }
 
-/// Raccourcis clavier de la fenêtre (quand aucun champ ne les prend).
+/// Raccourcis clavier de la fenêtre (ceux de l'original), quand aucun champ ne prend la touche.
 pub fn on_key(s: &mut Ui, ev: &KeyEvent, tx: &mut Tx) -> bool {
-    if tx.focused().is_some() && !matches!(ev.key, Key::Escape) {
+    let typing = tx.focused().is_some();
+    let ctrl = ev.mods.cmd;
+    let (cat, b) = (s.cat.clone(), s.backend.clone());
+    // Avec une feuille ou un menu ouverts, seul Échap compte (ils gèrent le reste).
+    if (s.sheet.is_some() || s.menu.is_some()) && !matches!(ev.key, Key::Escape) {
         return false;
     }
-    let (cat, b) = (s.cat.clone(), s.backend.clone());
     match &ev.key {
-        Key::Text(t) if t == " " => s.player.toggle(),
+        Key::Command(',') => s.sheet = Some(crate::state::Sheet::Settings(crate::state::SettingsTab::General)),
+        Key::Command('f') | Key::Command('F') => tx.focus("sb-search", true),
+        Key::Command('i') | Key::Command('I') => {
+            let ids: Vec<_> = if s.selection.ids.is_empty() {
+                s.player.current_id().into_iter().collect()
+            } else {
+                s.selection.ids.iter().copied().collect()
+            };
+            if ids.is_empty() {
+                return false;
+            }
+            crate::sheets::tag_editor::open(s, ids);
+        }
+        Key::Left if ev.mods.alt => s.go_back(),
+        Key::Right if ev.mods.alt => s.go_forward(),
         Key::Escape => {
             if s.menu.is_some() {
                 s.menu = None;
-            } else if s.immersive {
-                s.immersive = false;
             } else if s.sheet.is_some() {
                 s.sheet = None;
+            } else if s.immersive {
+                s.immersive = false;
             } else if s.now_playing {
                 s.now_playing = false;
             } else {
                 return false;
             }
         }
-        Key::Right if ev.mods.cmd => s.player.next(&cat, &b),
-        Key::Left if ev.mods.cmd => s.player.prev(&cat, &b),
+        _ if typing => return false,
+        Key::Right if ctrl => s.player.next(&cat, &b),
+        Key::Left if ctrl => s.player.prev(&cat, &b),
+        Key::Up if ctrl => {
+            let v = (s.settings.volume + 0.05).min(1.0);
+            s.set(serde_json::json!({ "volume": v, "muted": false }));
+        }
+        Key::Down if ctrl => {
+            let v = (s.settings.volume - 0.05).max(0.0);
+            s.set(serde_json::json!({ "volume": v, "muted": false }));
+        }
+        _ if ctrl || ev.mods.alt => return false,
+        Key::Text(t) if t == " " => s.player.toggle(),
         Key::Right => {
             let pos = s.player.position();
             s.player.seek(pos + 10.0);
@@ -180,26 +209,58 @@ pub fn on_key(s: &mut Ui, ev: &KeyEvent, tx: &mut Tx) -> bool {
             let pos = s.player.position();
             s.player.seek(pos - 10.0);
         }
-        Key::Text(t) if t == "i" || t == "I" => {
-            s.immersive = !s.immersive;
-            if s.immersive {
-                crate::ui::lyrics::ensure(s, false);
+        Key::Enter => s.now_playing = !s.now_playing,
+        Key::Text(t) => match t.to_lowercase().as_str() {
+            "s" => {
+                let on = !s.settings.shuffle;
+                s.set(serde_json::json!({ "shuffle": on }));
             }
-        }
-        Key::Text(t) if t == "l" || t == "L" => {
-            if s.immersive {
-                let on = !s.settings.immersive_lyrics;
-                s.set(serde_json::json!({ "immersiveLyrics": on }));
-            } else {
+            "r" => {
+                let next = s.player.repeat.cycle();
+                s.set(serde_json::json!({ "repeat": next.as_str() }));
+            }
+            "a" => {
+                let on = !s.settings.automix;
+                s.set(serde_json::json!({ "automix": on }));
+            }
+            "m" => {
+                let on = !s.settings.muted;
+                s.set(serde_json::json!({ "muted": on }));
+            }
+            "q" => {
+                if s.now_playing {
+                    s.now_playing = false;
+                } else {
+                    s.now_playing = true;
+                    s.set(serde_json::json!({ "npTab": "queue" }));
+                }
+            }
+            "e" => {
                 s.now_playing = true;
-                s.set(serde_json::json!({ "npTab": "lyrics" }));
-                crate::ui::lyrics::ensure(s, false);
+                s.set(serde_json::json!({ "npTab": "eq" }));
             }
-        }
-        Key::Text(t) if t == "a" || t == "A" => {
-            let on = !s.settings.automix;
-            s.set(serde_json::json!({ "automix": on }));
-        }
+            "l" => {
+                if s.immersive {
+                    let on = !s.settings.immersive_lyrics;
+                    s.set(serde_json::json!({ "immersiveLyrics": on }));
+                } else {
+                    s.now_playing = true;
+                    s.set(serde_json::json!({ "npTab": "lyrics" }));
+                    crate::ui::lyrics::ensure(s, false);
+                }
+            }
+            "i" => {
+                if s.player.track.is_none() {
+                    return false;
+                }
+                s.immersive = !s.immersive;
+                if s.immersive {
+                    crate::ui::lyrics::ensure(s, false);
+                }
+            }
+            "/" => tx.focus("sb-search", true),
+            _ => return false,
+        },
         _ => return false,
     }
     true
