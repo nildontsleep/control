@@ -1084,5 +1084,12 @@
  "common.loading": "Recherche…",
  "dl.errNoFiles": "yt-dlp n’a produit aucun fichier.",
  "dl.errExit": "yt-dlp s’est arrêté (code {code}).",
- "set.allFiles": "Tous les fichiers"
+ "set.allFiles": "Tous les fichiers",
+ "watch.searchPlaceholder": "Films, séries, animés…",
+ "watch.opened": "Lecture ouverte dans le navigateur",
+ "watch.openedIn": "Ouvert dans votre navigateur",
+ "watch.markSeen": "Marquer comme vu",
+ "watch.reopen": "Rouvrir",
+ "watch.browserNote": "Le lecteur vidrift s’ouvre dans votre navigateur : control n’héberge aucune vidéo et ne reçoit pas la position de lecture. Marquez l’épisode comme vu pour que la fiche propose le suivant.",
+ "key.settings": "Réglages Streaming"
 }

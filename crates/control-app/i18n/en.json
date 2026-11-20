@@ -1084,5 +1084,12 @@
  "common.loading": "Checking…",
  "dl.errNoFiles": "yt-dlp produced no file.",
  "dl.errExit": "yt-dlp stopped (code {code}).",
- "set.allFiles": "All files"
+ "set.allFiles": "All files",
+ "watch.searchPlaceholder": "Movies, shows, anime…",
+ "watch.opened": "Opened in your browser",
+ "watch.openedIn": "Open in your browser",
+ "watch.markSeen": "Mark as watched",
+ "watch.reopen": "Open again",
+ "watch.browserNote": "The vidrift player opens in your browser: control hosts no video and does not receive the playback position. Mark the episode as watched so this page offers the next one.",
+ "key.settings": "Streaming settings"
 }

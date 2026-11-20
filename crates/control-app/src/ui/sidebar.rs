@@ -73,9 +73,7 @@ pub fn sidebar(ui: &Ui, p: &Palette, k: &Kit) -> El {
             Route::Videos => "videos",
             Route::Stats => "stats",
             Route::Downloads => "downloads",
-            Route::Watch(crate::views::watch::WatchRoute::Movies) => "watch",
-            Route::Watch(crate::views::watch::WatchRoute::Anime) => "anime",
-            Route::Watch(crate::views::watch::WatchRoute::MyList) => "mylist",
+            Route::Watch(w) => w.section(),
             Route::Playlist(_) | Route::Search => "",
         };
         names.contains(&name)

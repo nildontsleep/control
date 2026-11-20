@@ -142,6 +142,24 @@ const SCENES: &[Scene] = &[
     ("smart", |s| smart_scene(s, sheets::smart::SmartScene::New)),
     ("smart-edit", |s| smart_scene(s, sheets::smart::SmartScene::EditFirst)),
     ("pl-edit", |s| smart_scene(s, sheets::smart::SmartScene::CustomizeFirst)),
+    ("movies", |s| views::watch::open_scene(s, views::watch::WatchRoute::Movies)),
+    ("movies-tab", |s| {
+        s.watch.tab = views::watch::Tab::Movie;
+        views::watch::open_scene(s, views::watch::WatchRoute::Movies);
+    }),
+    ("anime", |s| views::watch::open_scene(s, views::watch::WatchRoute::Anime)),
+    ("mylist", |s| views::watch::open_scene(s, views::watch::WatchRoute::MyList)),
+    ("title", |s| views::watch::open_scene(s, views::watch::WatchRoute::Title { kind: "tv".into(), id: "101".into() })),
+    ("title-opened", |s| {
+        s.watch.opened = Some(views::watch::Opened { kind: "tv".into(), id: "101".into(), season: Some(1), episode: Some(2) });
+        views::watch::open_scene(s, views::watch::WatchRoute::Title { kind: "tv".into(), id: "101".into() });
+    }),
+    ("title-anime", |s| views::watch::open_scene(s, views::watch::WatchRoute::Title { kind: "anime".into(), id: "500".into() })),
+    ("shelf", |s| {
+        let route = views::watch::WatchRoute::Shelf { source: "tmdb:movie/popular".into(), title: "Films populaires".into() };
+        views::watch::open_scene(s, route);
+    }),
+    ("watch-search", |s| views::watch::open_scene(s, views::watch::WatchRoute::Search("lune".into()))),
 ];
 
 /// Scène : l'éditeur de tags s'ouvre sur les premiers morceaux dès que la bibliothèque est chargée.
