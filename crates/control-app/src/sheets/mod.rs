@@ -1,4 +1,7 @@
-//! Feuilles modales : nouvelle playlist, renommage, suppression, réglages.
+//! Feuilles modales : nouvelle playlist, renommage, suppression, réglages, tags, playlists intelligentes, récap.
+
+pub mod smart;
+pub mod tag_editor;
 
 use rune::{El, Tx, col, row, text};
 use rune_kit::{Button, ButtonVariant, Checkbox, Dialog, Kit, TextInput};
@@ -123,6 +126,9 @@ pub fn sheet(ui: &Ui, p: &Palette, k: &Kit, layer: &mut Vec<El>) {
                 .build(k, layer);
         }
         Sheet::Settings(_) | Sheet::Equalizer => crate::settings_ui::sheet(ui, p, k, layer),
+        Sheet::TagEditor => tag_editor::sheet(ui, p, k, layer),
+        Sheet::Smart | Sheet::PlaylistEdit => smart::sheet(ui, p, k, layer),
+        Sheet::Recap => crate::views::recap::sheet(ui, p, k, layer),
     }
     let _ = col();
 }

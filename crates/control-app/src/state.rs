@@ -27,6 +27,7 @@ pub enum Route {
     Search,
     Downloads,
     Stats,
+    Watch(crate::views::watch::WatchRoute),
 }
 
 impl Route {
@@ -43,6 +44,11 @@ impl Route {
             Route::Search => ("songs", Value::Null),
             Route::Downloads => ("downloads", Value::Null),
             Route::Stats => ("stats", Value::Null),
+            Route::Watch(w) => match w {
+                crate::views::watch::WatchRoute::Anime => ("anime", Value::Null),
+                crate::views::watch::WatchRoute::MyList => ("mylist", Value::Null),
+                _ => ("watch", Value::Null),
+            },
         };
         json!({ "name": name, "param": param })
     }
@@ -61,6 +67,9 @@ impl Route {
                 .unwrap_or(Route::Songs),
             "downloads" => Route::Downloads,
             "stats" => Route::Stats,
+            "watch" => Route::Watch(crate::views::watch::WatchRoute::Movies),
+            "anime" => Route::Watch(crate::views::watch::WatchRoute::Anime),
+            "mylist" => Route::Watch(crate::views::watch::WatchRoute::MyList),
             _ => Route::Songs,
         }
     }
@@ -94,6 +103,14 @@ pub enum Sheet {
     RenamePlaylist(PlaylistId),
     ConfirmDelete { tracks: Vec<TrackId> },
     Equalizer,
+    /// Éditeur de tags (son état : `Ui::tag_editor`).
+    TagEditor,
+    /// Règles d'une playlist intelligente (état : `Ui::smart`).
+    Smart,
+    /// Nom, description et pochette d'une playlist (état : `Ui::smart`).
+    PlaylistEdit,
+    /// Récap (état : `Ui::recap`).
+    Recap,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -166,6 +183,12 @@ pub struct Ui {
     pub now_playing: bool,
 
     pub player: Player,
+    pub stats: crate::views::stats::StatsState,
+    pub recap: crate::views::recap::RecapState,
+    pub downloads: crate::views::downloads::DownloadsState,
+    pub watch: crate::views::watch::WatchState,
+    pub tag_editor: crate::sheets::tag_editor::TagEditorState,
+    pub smart: crate::sheets::smart::SmartState,
     pub live: crate::ui::playerbar::LiveBits,
     /// Vignettes de vidéos : chemin une fois extraite, `None` si l'extraction a échoué.
     thumbs: RefCell<HashMap<TrackId, Option<std::path::PathBuf>>>,
@@ -174,6 +197,11 @@ pub struct Ui {
     images: Option<ImageCache>,
     covers: RefCell<CoverCache>,
     pub scale: f32,
+    /// Derniers états publiés par les services (forme JSON d'origine).
+    pub update_state: Value,
+    pub discord_status: Value,
+    pub scrobble_status: Value,
+    pub loudness_progress: Value,
     /// Place du bouton « Plus » d'une playlist dans la fenêtre (pour y ouvrir son menu).
     pub more_rect: std::cell::Cell<[f32; 4]>,
     pub clock: f64,
@@ -218,6 +246,12 @@ impl Ui {
             toast_seq: 0,
             now_playing: false,
             player,
+            stats: Default::default(),
+            recap: Default::default(),
+            downloads: Default::default(),
+            watch: Default::default(),
+            tag_editor: Default::default(),
+            smart: Default::default(),
             live: crate::ui::playerbar::LiveBits::new(),
             thumbs: RefCell::new(HashMap::new()),
             thumbs_wanted: RefCell::new(Vec::new()),
@@ -225,6 +259,10 @@ impl Ui {
             images: None,
             covers: RefCell::new(CoverCache::new()),
             scale: 2.0,
+            update_state: Value::Null,
+            discord_status: Value::Null,
+            scrobble_status: Value::Null,
+            loudness_progress: Value::Null,
             more_rect: std::cell::Cell::new([400.0, 200.0, 0.0, 0.0]),
             clock: 0.0,
         }
@@ -313,7 +351,15 @@ impl Ui {
                 let done = p.phase == "done";
                 self.scan = if done { None } else { Some(p) };
             }
-            Event::Json(_, _) => {}
+            Event::Json(channel, payload) => {
+                if channel.starts_with("dl:") || channel.starts_with("tools:") {
+                    crate::views::downloads::on_event(self, channel, &payload);
+                } else if channel.starts_with("watch:") {
+                    crate::views::watch::on_event(self, channel, &payload);
+                } else {
+                    self.on_service_event(channel, &payload);
+                }
+            }
         }
     }
 
@@ -323,6 +369,17 @@ impl Ui {
             let roots = b.scan_roots();
             b.library.scan(&roots);
         });
+    }
+
+    /// Autres événements des services (scrobbling, Discord, mises à jour, normalisation).
+    fn on_service_event(&mut self, channel: &str, payload: &Value) {
+        match channel {
+            "update:state" => self.update_state = payload.clone(),
+            "discord:status" => self.discord_status = payload.clone(),
+            "scrobble:changed" => self.scrobble_status = payload.clone(),
+            "loudness:progress" => self.loudness_progress = payload.clone(),
+            _ => {}
+        }
     }
 
     // ─── Réglages ────────────────────────────────────────────────────────────
@@ -375,6 +432,12 @@ impl Ui {
         self.selection = Selection::default();
         self.menu = None;
         self.now_playing = false;
+        match self.route.clone() {
+            Route::Stats => crate::views::stats::on_open(self),
+            Route::Downloads => crate::views::downloads::on_open(self),
+            Route::Watch(w) => crate::views::watch::on_open(self, &w),
+            _ => {}
+        }
         if self.route != Route::Search {
             let v = self.route.to_value();
             self.backend.store.patch(&json!({ "lastView": v }));
@@ -474,7 +537,7 @@ impl Ui {
         }
         self.spawn(
             move |b| {
-                let ffmpeg = control_core::process::which("ffmpeg");
+                let ffmpeg = b.ffmpeg();
                 wanted.into_iter().map(|id| (id, b.library.video_thumb(id, ffmpeg.as_deref()))).collect::<Vec<_>>()
             },
             |s, out, _| {

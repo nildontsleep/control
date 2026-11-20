@@ -2,10 +2,14 @@
 
 pub mod albums;
 pub mod artists;
+pub mod downloads;
 pub mod playlist;
+pub mod recap;
 pub mod search;
 pub mod songs;
+pub mod stats;
 pub mod videos;
+pub mod watch;
 
 use rune::{Cursor, El, col, row, text};
 use serde_json::json;

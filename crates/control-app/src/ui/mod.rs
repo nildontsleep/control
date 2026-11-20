@@ -48,7 +48,9 @@ fn current_view(ui: &Ui, p: &Palette, cx: &mut Cx<Ui>) -> El {
         Route::Videos => views::videos::view(ui, p, cx),
         Route::Playlist(id) => views::playlist::view(ui, p, *id),
         Route::Search => views::search::view(ui, p, cx),
-        Route::Downloads | Route::Stats => views::not_found(p),
+        Route::Downloads => views::downloads::view(ui, p, cx),
+        Route::Stats => views::stats::view(ui, p, cx),
+        Route::Watch(w) => views::watch::view(ui, p, cx, w),
     }
 }
 

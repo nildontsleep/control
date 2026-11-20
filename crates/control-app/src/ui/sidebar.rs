@@ -73,6 +73,9 @@ pub fn sidebar(ui: &Ui, p: &Palette, k: &Kit) -> El {
             Route::Videos => "videos",
             Route::Stats => "stats",
             Route::Downloads => "downloads",
+            Route::Watch(crate::views::watch::WatchRoute::Movies) => "watch",
+            Route::Watch(crate::views::watch::WatchRoute::Anime) => "anime",
+            Route::Watch(crate::views::watch::WatchRoute::MyList) => "mylist",
             Route::Playlist(_) | Route::Search => "",
         };
         names.contains(&name)
@@ -97,8 +100,16 @@ pub fn sidebar(ui: &Ui, p: &Palette, k: &Kit) -> El {
     ] {
         list = list.child(nav(p, ui, route, glyph, key, in_section(&[sec])));
     }
+    list = list.child(heading(p, t("nav.watch")));
+    for (route, glyph, key, sec) in [
+        (Route::Watch(crate::views::watch::WatchRoute::Movies), &icons::CLAPPERBOARD, "nav.movies", "watch"),
+        (Route::Watch(crate::views::watch::WatchRoute::Anime), &icons::TV_MINIMAL, "nav.anime", "anime"),
+        (Route::Watch(crate::views::watch::WatchRoute::MyList), &icons::BOOKMARK, "nav.mylist", "mylist"),
+    ] {
+        list = list.child(nav(p, ui, route, glyph, key, in_section(&[sec])));
+    }
     list = list.child(heading(p, t("nav.get")));
-    let active_downloads = 0usize;
+    let active_downloads = ui.downloads.active();
     list = list.child(
         item(
             p,
