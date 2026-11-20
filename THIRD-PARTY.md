@@ -4,7 +4,7 @@ control embarque les ressources suivantes.
 
 ## Lucide (icônes)
 
-https://lucide.dev — utilisées dans `src/renderer/js/icons.js`.
+https://lucide.dev — utilisées dans `crates/control-app/src/icons.rs` et `src/renderer/js/icons.js` (interface web).
 
 ```
 ISC License
@@ -54,19 +54,26 @@ SOFTWARE.
 
 ## Inter (police)
 
-https://rsms.me/inter — fichiers dans `src/renderer/assets/fonts/`, sous licence SIL Open Font License 1.1 (voir `src/renderer/assets/fonts/OFL.txt`).
+https://rsms.me/inter — embarquée par Rune dans l'application de bureau, et fichiers dans `src/renderer/assets/fonts/` pour l'interface web, sous licence SIL Open Font License 1.1 (voir `src/renderer/assets/fonts/OFL.txt`).
 
-## node-taglib-sharp (écriture des tags)
+## Bibliothèques Rust
 
-https://github.com/benrr101/node-taglib-sharp — licence **GNU LGPL 2.1 ou ultérieure** (texte complet dans `node_modules/node-taglib-sharp/LICENSE`, embarqué dans l'application). Portage JavaScript de TagLib#, utilisé tel quel et chargé comme module séparé : il se trouve dans `node_modules/node-taglib-sharp` à l'intérieur de `resources/app.asar` et peut être remplacé par une autre version compatible. Ses dépendances (`iconv-lite`, `os-locale`, `uuid`) sont sous licence MIT.
+control est construit avec des bibliothèques libres, compilées dans l'exécutable. Les principales :
+
+- **Rune** (interface, rendu GPU, texte) — licence MIT, © Anomaly (https://github.com/anomalyco/rune), avec wgpu, winit, Parley, Taffy, AccessKit (MIT ou Apache-2.0).
+- **symphonia** (décodage audio) et **opuscule** — licence **MPL-2.0** : leur code source est disponible sur crates.io et dans leurs dépôts (https://github.com/pdeljanov/Symphonia) ; control les utilise sans les modifier.
+- **cpal** (sortie audio) — Apache-2.0 ; **rubato** (rééchantillonnage) — MIT.
+- **lofty** (lecture et écriture des tags) — MIT ou Apache-2.0.
+- **rusqlite** et **SQLite** (base de données) — MIT ; SQLite est dans le domaine public.
+- **image** (pochettes), **ebur128** (niveau sonore), **ureq** et **rustls** (réseau), **notify** (surveillance des dossiers), **zbus** (MPRIS), **trash** (corbeille) — MIT, Apache-2.0 ou MIT/Apache-2.0 ; **ring**/**rustls-webpki** — ISC et apparentées.
+- Serveur web : **tokio**, **axum** (MIT), **scrypt**, **aes-gcm** (MIT ou Apache-2.0), **ed25519-dalek** (BSD-3-Clause).
+
+La liste complète, avec la licence de chaque bibliothèque, s'obtient avec `cargo metadata` (ou `cargo about`, `cargo deny list`). Aucune bibliothèque sous GPL n'est utilisée.
+
+## Outils téléchargés à la demande
+
+**yt-dlp** (Unlicense), **ffmpeg** (LGPL ou GPL selon la version téléchargée) et **deno** (MIT) ne sont pas embarqués : l'application les télécharge depuis leurs pages officielles quand tu installes les outils de téléchargement, et les lance comme des programmes séparés.
 
 ## Services en ligne
 
 control interroge, à ta demande, des services publics : [LRCLIB](https://lrclib.net) (paroles), Apple Music et Deezer (recherche de pochettes), [TMDB](https://www.themoviedb.org) et [AniList](https://anilist.co) (catalogues). Aucune donnée personnelle n'est envoyée en dehors du titre, de l'artiste ou de la recherche demandés.
-
-## Version web : jpeg-js et pngjs
-
-Utilisés par le serveur web (`src/main/image-lite.js`) pour réduire les pochettes sans Electron.
-
-- **jpeg-js** — licence BSD à 3 clauses, © 2014 Eugene Ware (https://github.com/jpeg-js/jpeg-js).
-- **pngjs** — licence MIT, © 2015 Luke Page et contributeurs, © 2012 Kuba Niegowski (https://github.com/pngjs/pngjs).

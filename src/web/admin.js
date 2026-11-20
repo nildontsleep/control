@@ -295,7 +295,7 @@
       h('div', { class: 'toggle-row' }, h('span', { text: 'À partir de' }), hour),
       h('details', { class: 'upd-token', open: !s.hasBackupPassphrase },
         h('summary', { text: 'Phrase secrète (chiffrement AES-256 de l’archive)' }),
-        h('p', { class: 'hint', text: 'Gardez-la ailleurs que sur le serveur : sans elle, une sauvegarde chiffrée est illisible. Pour déchiffrer : CONTROL_BACKUP_PASSPHRASE=… node server/backup.js decrypt <fichier>.' }),
+        h('p', { class: 'hint', text: 'Gardez-la ailleurs que sur le serveur : sans elle, une sauvegarde chiffrée est illisible. Pour déchiffrer : CONTROL_BACKUP_PASSPHRASE=… control-server --backup decrypt <fichier>.' }),
         h('div', { class: 'inline-form' }, passphrase,
           h('button', { class: 'btn btn-secondary', text: 'Enregistrer', onclick: guard(async () => { if (!passphrase.value) return; await rpc('srv:settings', { backupPassphrase: passphrase.value }); passphrase.value = ''; flash('Phrase secrète enregistrée.', false); reload(); }) }),
           s.hasBackupPassphrase ? h('button', { class: 'btn btn-secondary', text: 'Effacer', onclick: guard(async () => { await rpc('srv:settings', { backupPassphrase: '' }); flash('Chiffrement désactivé.', false); reload(); }) }) : null)));

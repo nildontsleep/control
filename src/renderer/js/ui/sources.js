@@ -1,6 +1,6 @@
 // Sources : « cet ordinateur » et des serveurs control (la version web hébergée ailleurs).
 // Ici : le sélecteur de la barre latérale, la barre de fenêtre affichée au-dessus d'un serveur, et la liste des réglages.
-// Le serveur lui-même est une vue web posée par le processus principal sous cette barre (voir src/main/sources.js).
+// Le serveur lui-même est une vue web posée par le processus principal sous cette barre (version Electron ; absente de la version web).
 
 import { h } from '../dom.js';
 import { icon } from '../icons.js';
