@@ -623,6 +623,8 @@ impl Library {
         }
         self.upsert_rows(std::slice::from_ref(&row));
         self.folder_covers.lock().clear();
+        // Le morceau a changé : les index gardés en cache doivent le savoir (l'appelant prévient l'interface).
+        self.rev.fetch_add(1, Ordering::SeqCst);
         self.track(id)
     }
 
