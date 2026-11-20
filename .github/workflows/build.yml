@@ -140,10 +140,84 @@ jobs:
           path: dist/*.deb
           if-no-files-found: error
 
+  # Serveur web : l'archive que la mise à jour automatique des serveurs télécharge (une par plateforme), signée si le
+  # secret WEB_SIGNING_KEY existe (voir « Signer les mises à jour » dans le README).
+  server:
+    name: Serveur web — ${{ matrix.arch }}
+    strategy:
+      matrix:
+        include:
+          - arch: x86_64
+            runner: ubuntu-latest
+          - arch: aarch64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Chaîne Rust (rust-toolchain.toml)
+        run: rustup show active-toolchain || rustup toolchain install
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Construire
+        run: cargo build --release --locked -p control-server
+
+      - name: Archive de mise à jour
+        run: |
+          target/release/control-server --bundle dist
+          for f in dist/control-server-*.tgz; do
+            if [ -n "$WEB_SIGNING_KEY" ]; then target/release/control-server --sign sign "$f"; else echo "Pas de clé de signature : $f non signée."; fi
+          done
+        env:
+          WEB_SIGNING_KEY: ${{ secrets.WEB_SIGNING_KEY }}
+
+      - name: Envoyer l’archive
+        uses: actions/upload-artifact@v6
+        with:
+          name: control-server-${{ matrix.arch }}
+          path: dist/control-server-*
+          if-no-files-found: error
+
+  # Image Docker du serveur (ghcr.io), publiée depuis la branche par défaut.
+  docker:
+    name: Image Docker
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    if: github.event_name == 'push' && github.ref_name == github.event.repository.default_branch
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Lire la version
+        id: version
+        run: echo "version=$(cargo metadata --no-deps --format-version 1 | jq -r '.packages[] | select(.name=="control-server") | .version')" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Construire et publier
+        uses: docker/build-push-action@v6
+        env:
+          DOCKER_BUILD_RECORD_UPLOAD: 'false'
+        with:
+          context: .
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/control:latest
+            ghcr.io/${{ github.repository_owner }}/control:${{ steps.version.outputs.version }}
+
   # Une release est publiée pour chaque tag v*, et sur la branche par défaut dès que la version n’a pas encore de release.
   release:
     name: Publier la release
-    needs: [test, windows, linux]
+    needs: [test, windows, linux, server]
     runs-on: ubuntu-latest
     if: >-
       startsWith(github.ref, 'refs/tags/v') ||
@@ -185,6 +259,8 @@ jobs:
             dist/*-setup.exe
             dist/*.AppImage
             dist/*.deb
+            dist/control-server-*.tgz
+            dist/control-server-*.tgz.sig
           body: |
             ## Télécharger
 
@@ -195,5 +271,7 @@ jobs:
             **Linux (64 bits)**
             - **`control-${{ steps.version.outputs.version }}-x86_64.AppImage`** : un seul fichier, à rendre exécutable (`chmod +x`) puis à lancer ; il se met à jour tout seul.
             - **`control-${{ steps.version.outputs.version }}-amd64.deb`** : paquet pour Debian, Ubuntu et dérivés (`sudo apt install ./control-….deb`) ; une nouvelle version est signalée dans l’application.
+
+            **Serveur web** : image Docker `ghcr.io/nildontsleep/control`. Les archives **`control-server-${{ steps.version.outputs.version }}-linux-*.tgz`** sont celles que la mise à jour automatique du serveur télécharge : il n’y a rien à en faire à la main.
 
             L’application n’est pas signée : au premier lancement, Windows SmartScreen peut afficher « Windows a protégé votre ordinateur ». Cliquez sur **Informations complémentaires**, puis **Exécuter quand même**.

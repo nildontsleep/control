@@ -33,7 +33,7 @@ Chaque build est produit par GitHub Actions et publié dans **Releases** :
 
 L’exécutable Windows n’est pas signé : au premier lancement, SmartScreen peut afficher « Windows a protégé votre ordinateur ». Clique sur **Informations complémentaires** → **Exécuter quand même**.
 
-**Linux** : 64 bits (x86_64) uniquement. L’AppImage demande FUSE 2 sur Ubuntu 22.04 et plus récent (`sudo apt install libfuse2t64`, ou `libfuse2` avant 24.04) ; sans FUSE : `./control-*.AppImage --appimage-extract-and-run`. Sur les distributions qui interdisent l’espace utilisateur isolé (Ubuntu 24.04…), l’AppImage ne peut pas installer le bac à sable de Chromium et démarre sans lui ; le paquet .deb, lui, installe ce qu’il faut. Les outils de téléchargement (yt-dlp, ffmpeg, deno) sont téléchargés au premier besoin ; l’extraction demande `tar` et `unzip` (`sudo apt install unzip xz-utils`), et un ffmpeg déjà installé sur le système est utilisé tel quel. Les touches multimédia et le panneau du bureau passent par MPRIS (non vérifié sur toutes les distributions).
+**Linux** : 64 bits (x86_64) uniquement. L’AppImage demande FUSE 2 sur Ubuntu 22.04 et plus récent (`sudo apt install libfuse2t64`, ou `libfuse2` avant 24.04) ; sans FUSE : `./control-*.AppImage --appimage-extract-and-run`. Les outils de téléchargement (yt-dlp, ffmpeg, deno) sont téléchargés au premier besoin ; l’extraction demande `tar` et `unzip` (`sudo apt install unzip xz-utils`), et un ffmpeg déjà installé sur le système est utilisé tel quel. Les touches multimédia et le panneau « en cours de lecture » du bureau passent par MPRIS. L’interface est dessinée par le GPU (Vulkan ou OpenGL) ; sur une machine sans pilote GPU, installe `mesa-vulkan-drivers` (rendu logiciel).
 
 ## Premiers pas
 
@@ -101,7 +101,7 @@ L’exécutable Windows n’est pas signé : au premier lancement, SmartScreen p
 **Films, séries et animés**
 - Accueil *Films & séries* (tendances, au cinéma, populaires, les mieux notés, séries en cours de diffusion, genres) et accueil *Animés* (tendances, saison en cours, populaires, films), avec un bandeau de mise en avant, des rangées à défilement et « Tout voir ».
 - Fiches détaillées : synopsis, note, genres, distribution, bande-annonce, liste des saisons et des épisodes, titres liés ou recommandés, date du prochain épisode pour les animés.
-- Lecture dans l’appli avec [vidrift](https://vidrift.net) (lecteur intégré, plein écran géré par la fenêtre) : **reprise automatique** là où tu t’es arrêté, épisode précédent / suivant, doublage anglais en option pour les animés.
+- Lecture avec [vidrift](https://vidrift.net) : dans la version web, le lecteur est intégré à la page (**reprise automatique** là où tu t’es arrêté) ; l’application de bureau, qui n’embarque pas de navigateur, l’ouvre dans ton navigateur et garde la fiche à côté (épisode précédent / suivant, *Marquer comme vu*). Doublage anglais en option pour les animés.
 - **Continuer à regarder**, historique, **Ma liste**, et recherche en ligne dans la barre de gauche (elle cherche aussi bien dans ta bibliothèque que dans les catalogues).
 - Métadonnées : [TMDB](https://www.themoviedb.org) pour les films et séries (clé gratuite à coller dans les réglages), [AniList](https://anilist.co) pour les animés (aucune clé). Les catalogues sont mis en cache et restent consultables quelques heures sans réseau.
 
@@ -138,13 +138,17 @@ Le même control, hébergé sur un serveur (ton PC, un NAS, un Raspberry Pi, un 
 
 ### Lancer
 
+Le serveur est un seul binaire Rust (`control-server`), sans Node ni dépendance à installer ; ffmpeg est utilisé s'il est présent (vignettes de vidéos, téléchargements).
+
 ```bash
-npm ci --omit=dev       # Node.js 22.13 ou plus
-CONTROL_LIBRARY=/chemin/vers/ma/musique npm run web
+cargo build --release -p control-server
+CONTROL_LIBRARY=/chemin/vers/ma/musique target/release/control-server --launcher
 # puis ouvrir http://localhost:5180
 ```
 
-`npm run web` passe par le lanceur (mise à jour automatique, voir plus bas) ; `npm run web:direct` lance le serveur seul.
+`--launcher` fait tourner le serveur sous un lanceur (mise à jour automatique, voir plus bas) ; sans lui, le serveur tourne seul. Les pages du navigateur (`src/renderer`, `src/web`) sont cherchées à côté du binaire, ou dans le dossier donné par `CONTROL_ASSETS`.
+
+**Depuis la version Node** : le même dossier de données (`server.db`, `secret.key`, `users/…`) se rouvre tel quel — comptes, mots de passe, sessions, réglages, bibliothèques, mot de passe d'application Subsonic.
 
 Avec Docker (image `ghcr.io/nildontsleep/control`, ou `docker compose up -d` après avoir adapté `docker-compose.yml`) :
 
@@ -167,7 +171,7 @@ docker run -d --name control -p 5180:5180 \
 | `CONTROL_TMDB_KEY` | Clé TMDB offerte à tous les comptes (films et séries) ; chacun peut aussi mettre la sienne. |
 | `CONTROL_SESSION_DAYS`, `CONTROL_RESCAN_MINUTES` | Durée d’une session (30 jours) ; période de la réanalyse complète des dossiers (30 min, en plus de la surveillance des fichiers). |
 | `CONTROL_UPDATE` | `off`, `notify` ou `auto` : impose le mode de mise à jour du serveur (sinon l’administrateur le choisit dans `/admin`, *Prévenir seulement* par défaut). `off` convient si tu mets à jour l’image toi-même (Watchtower…). |
-| `CONTROL_MAX_MEMORY` | Plafond du tas de Node, en Mo (par exemple `1024`) : il nettoie davantage au lieu de laisser le système tuer le processus. Voir *Mémoire* plus bas. |
+| `CONTROL_ASSETS` | Dossier qui contient `src/renderer` et `src/web` (par défaut : à côté du binaire, ou la racine du dépôt). |
 | `CONTROL_UPDATE_TOKEN` | Jeton GitHub en lecture, seulement si le dépôt des releases est privé (il peut aussi se saisir dans `/admin`). |
 
 ### YouTube bloque les téléchargements (« confirmer que vous n’êtes pas un robot »)
@@ -176,10 +180,10 @@ Sur un serveur, YouTube demande souvent une connexion. Le serveur ne peut pas li
 
 ### Mises à jour du serveur
 
-Le serveur sait **se mettre à jour tout seul** à partir des releases GitHub, sans toucher à Docker ni à un terminal. `npm run web` et l’image Docker lancent un petit **lanceur** (`server/launcher.js`) qui fait tourner le serveur ; la mise à jour passe par lui :
+Le serveur sait **se mettre à jour tout seul** à partir des releases GitHub, sans toucher à Docker ni à un terminal. `control-server --launcher` et l’image Docker lancent un petit **lanceur** qui fait tourner le serveur ; la mise à jour passe par lui :
 
 1. toutes les 6 heures (et au lancement), le serveur cherche une release plus récente ;
-2. il télécharge l’archive du serveur jointe à la release (`control-web-<version>.tgz`, environ 700 Ko), **vérifie son empreinte SHA-256**, puis l’installe dans `<données>/app/versions/<version>` à côté de la version en cours (une copie de `server.db` est faite avant) ;
+2. il télécharge l’archive du serveur jointe à la release pour sa plateforme (`control-server-<version>-linux-x86_64.tgz` ou `-linux-aarch64.tgz` : le binaire et les pages), **vérifie son empreinte SHA-256**, puis l’installe dans `<données>/app/versions/<version>` à côté de la version en cours (une copie de `server.db` est faite avant) ;
 3. il demande au lanceur de redémarrer le serveur sur cette version (quelques secondes de coupure : les pages se reconnectent toutes seules, et celle de l’administrateur se recharge) ;
 4. **si la nouvelle version ne démarre pas**, le lanceur revient seul à la précédente, ne la réessaie plus et l’administrateur en est informé.
 
@@ -191,10 +195,10 @@ Dans `/admin` → *Mises à jour du serveur* (et dans *Réglages* → *À propos
 
 À savoir :
 
-- Seul le code de l’application change. Les dépendances de l’installation d’origine servent tant qu’elles ne changent pas ; si une version en change, le serveur lance `npm ci` pour elle (réseau et npm requis), et renonce proprement s’il échoue.
+- Une archive est propre à une plateforme : un serveur ne s'installe jamais une version construite pour une autre.
 - Une image Docker plus récente que la version téléchargée reprend la main (la version téléchargée est oubliée) : les deux voies se combinent.
-- Sans lanceur (`npm run web:direct`, ou `node server/index.js`), le serveur signale les nouvelles versions mais ne peut pas se redémarrer lui-même.
-- **Un serveur en 0.8.x ne peut pas encore se mettre à jour tout seul** : passe une fois à cette version (`docker pull`, ou `git pull` et `npm ci`), ensuite les suivantes sont automatiques.
+- Sans lanceur (`control-server` seul), le serveur signale les nouvelles versions mais ne peut pas se redémarrer lui-même.
+- **Un serveur Node (0.x) ne passe pas tout seul à la version Rust** : installe-la une fois (`docker pull`, ou le binaire), ensuite les suivantes sont automatiques.
 - Sécurité : seules les releases de ce dépôt sont acceptées, l’archive doit correspondre à l’empreinte calculée par GitHub, son contenu est lu strictement (ni lien, ni chemin hors du dossier d’installation, taille limitée), et le jeton GitHub éventuel ne quitte jamais le serveur.
 
 ### Adresses des vues
@@ -248,31 +252,25 @@ Le serveur parle l’API **Subsonic 1.16.1** (avec les extensions OpenSubsonic c
 - Sans phrase secrète, l’archive contient les **empreintes des mots de passe** (scrypt) : réserve-la à un salon privé.
 - Les bibliothèques musicales elles-mêmes (les fichiers) ne sont pas dans la sauvegarde : seulement ce qui ne se reconstruit pas en rescannant.
 
-Restauration : recolle les parties (`cat control-backup-*.part* > control-backup.tgz.enc`), déchiffre (`CONTROL_BACKUP_PASSPHRASE=… node server/backup.js decrypt control-backup.tgz.enc`), puis serveur arrêté, extrais l’archive (`tar xzf`) et copie `server.db` dans `<données>/` et `users/<id>/library.db` et `settings.json` dans `<données>/users/<id>/` (supprime les fichiers `*-wal` et `*-shm` voisins). Au redémarrage, tout le monde doit se reconnecter et les clés (TMDB, GitHub, Last.fm…) sont à saisir de nouveau.
+Restauration : recolle les parties (`cat control-backup-*.part* > control-backup.tgz.enc`), déchiffre (`CONTROL_BACKUP_PASSPHRASE=… control-server --backup decrypt control-backup.tgz.enc`), puis serveur arrêté, extrais l’archive (`tar xzf`) et copie `server.db` dans `<données>/` et `users/<id>/library.db` et `settings.json` dans `<données>/users/<id>/` (supprime les fichiers `*-wal` et `*-shm` voisins). Au redémarrage, tout le monde doit se reconnecter et les clés (TMDB, GitHub, Last.fm…) sont à saisir de nouveau.
 
 ### Signer les mises à jour (recommandé)
 
 L’empreinte SHA-256 publiée par GitHub protège d’un fichier abîmé, pas d’un dépôt ou d’un compte GitHub compromis. En mode *Automatiques*, un tel compromis reviendrait à exécuter du code sur tous les serveurs : la **signature Ed25519** l’empêche, car seule la clé gardée dans les secrets de la CI peut signer.
 
-1. Génère une paire de clés : `node server/sign.js keygen` (ou `docker run --rm ghcr.io/nildontsleep/control node server/sign.js keygen`).
-2. Ajoute la **clé privée** dans les secrets du dépôt GitHub sous le nom `WEB_SIGNING_KEY` (*Settings* → *Secrets and variables* → *Actions*). La CI signe alors chaque archive (`control-web-<version>.tgz.sig`).
-3. Mets la **clé publique** dans `server/update-key.json` (`{ "publicKeys": ["…"] }`) et publie une version : à partir de celle-ci, les serveurs **exigent** une signature valide (et une version non signée n’est plus installée toute seule). Ajouter une deuxième clé permet de la renouveler sans casser les serveurs existants.
+1. Génère une paire de clés : `control-server --sign keygen` (ou `docker run --rm ghcr.io/nildontsleep/control /app/control-server --sign keygen`). Les clés de la version Node restent valables.
+2. Ajoute la **clé privée** dans les secrets du dépôt GitHub sous le nom `WEB_SIGNING_KEY` (*Settings* → *Secrets and variables* → *Actions*). La CI signe alors chaque archive (`control-server-<version>-<plateforme>.tgz.sig`).
+3. Mets la **clé publique** dans `crates/control-server/update-key.json` (`{ "publicKeys": ["…"] }`) et publie une version : à partir de celle-ci, les serveurs **exigent** une signature valide (et une version non signée n’est plus installée toute seule). Ajouter une deuxième clé permet de la renouveler sans casser les serveurs existants.
 
 Tant que `publicKeys` est vide, rien n’est exigé (la page d’administration le rappelle).
 
 ### Mémoire
 
-Mesuré sur une bibliothèque de morceaux fictifs : la base d’un compte reste légère (environ 90 Mo pour 5 000 morceaux, 180 Mo pour 30 000, 390 Mo pour 100 000, en comptant Node) ; chaque compte chargé s’y ajoute, et se décharge après 30 minutes d’inactivité. Le calcul de la liste des morceaux se fait dans un fil séparé et reste prêt tant que la bibliothèque ne change pas : un serveur à 30 000 morceaux reste fluide pour les autres comptes pendant qu’un compte ouvre sa page. Sur une petite machine (1 Go), fixe par exemple `CONTROL_MAX_MEMORY=512`.
+Mesuré sur une bibliothèque de morceaux fictifs : chaque compte chargé occupe la mémoire de sa base et de son catalogue, et se décharge après 30 minutes d’inactivité. La liste des morceaux est calculée hors des fils qui répondent aux requêtes, puis gardée (compressée) tant que la bibliothèque ne change pas : un gros compte qui ouvre sa page ne ralentit pas les autres. Le serveur Rust n'a pas de ramasse-miettes : `CONTROL_MAX_MEMORY` de la version Node n'a plus lieu d'être.
 
 ### Se connecter à un serveur depuis l’application de bureau
 
-L’application de bureau peut afficher un ou plusieurs serveurs **à côté de cet ordinateur**. *Réglages* → *Serveurs* : colle l’adresse du serveur (`ma-maison.example`, `192.168.1.20:5180`, avec ou sans `http(s)://` : l’application essaie les deux et vérifie que c’est bien un serveur control). Dès qu’un serveur est ajouté, un sélecteur apparaît sous le logo de la barre latérale : *Cet ordinateur*, puis tes serveurs.
-
-- Un serveur s’affiche dans la fenêtre, sous une fine barre (feux tricolores, sélecteur, rechargement) : c’est sa propre interface, avec ses comptes et sa bibliothèque. Tu t’y connectes une fois, la connexion est gardée (et oubliée si tu retires le serveur).
-- Les deux côtés restent ouverts : passer de l’un à l’autre est instantané et ne coupe rien. **Une seule source joue à la fois** : quand l’une démarre, l’autre se met en pause.
-- Au lancement suivant, l’application reprend sur la dernière source affichée.
-- Le serveur n’a aucun accès à ton ordinateur : sa page tourne isolée, sans pont vers le système, et ses liens externes s’ouvrent dans ton navigateur.
-- Limites : la Rich Presence Discord ne suit que la lecture locale ; un film ou un épisode lancé depuis le serveur met la musique locale en pause, mais l’inverse ne l’arrête pas. Un certificat HTTPS auto-signé est refusé (utilise un vrai certificat, ou passe par Tailscale / un tunnel).
+*Réglages* → *Serveurs* de l’application de bureau garde la liste de tes serveurs : colle l’adresse (`ma-maison.example`, `192.168.1.20:5180`, avec ou sans `http(s)://` : l’application essaie les deux et vérifie que c’est bien un serveur control). L'interface Rune n'embarque pas de navigateur : un serveur s'ouvre dans ton navigateur (la version Electron l'affichait dans sa fenêtre).
 
 ### Bibliothèques, partage et profils
 
@@ -386,14 +384,13 @@ Le design (jetons de couleur, contrôles, menus, info-bulles) est repris de [nil
 ### À savoir
 
 - Télécharger depuis YouTube enfreint ses conditions d’utilisation : à utiliser pour un usage personnel, à tes propres risques.
-- control n’héberge ni ne stocke aucune vidéo de film, série ou animé : le lecteur [vidrift](https://vidrift.net) est affiché tel quel dans la fenêtre (publicités comprises), et c’est à toi de vérifier que son usage est légal chez toi. Si le lecteur ne charge pas, essaie l’autre serveur dans *Réglages* → *Streaming*.
+- control n’héberge ni ne stocke aucune vidéo de film, série ou animé : le lecteur [vidrift](https://vidrift.net) est affiché tel quel (dans la page web, ou dans ton navigateur depuis l’application de bureau ; publicités comprises), et c’est à toi de vérifier que son usage est légal chez toi. Si le lecteur ne charge pas, essaie l’autre serveur dans *Réglages* → *Streaming*.
 - La clé TMDB reste dans les réglages de ton ordinateur. Ce produit utilise l’API TMDB mais n’est ni approuvé ni certifié par TMDB.
 - Les captures d’écran du dépôt utilisent un catalogue fictif et une bibliothèque de test : aucune affiche ni pochette réelle n’y figure.
 - L’éditeur de tags modifie tes fichiers sur place. Il garde de quoi annuler le dernier lot, mais fais une copie de ta musique avant un gros travail par lot.
 - Les paroles sont cherchées avec le titre, l’artiste, l’album et la durée du morceau ; rien d’autre n’est envoyé. Les pochettes proposées dans l’éditeur de tags viennent des API publiques d’Apple Music et de Deezer.
 - Discord : control parle au Discord installé sur l’ordinateur, sans compte ni jeton. Discord n’affiche que des images accessibles par une adresse publique : avec l’option *Pochettes*, la pochette du fichier (celle des tags, ou l’image d’une vidéo) est envoyée à un hébergeur temporaire sans compte ([litterbox.catbox.moe](https://litterbox.catbox.moe), sinon [uguu.se](https://uguu.se) ; effacée au bout de quelques heures) ; les affiches de films, séries et animés viennent directement de TMDB / AniList. Désactivée, ou sans pochette, c’est le logo de control qui s’affiche ; la ligne « Pochette : … » des réglages indique ce qu’il en est advenu.
 - Mises à jour : le dépôt GitHub est interrogé pour connaître la dernière version, rien d’autre n’est envoyé. Si le dépôt est **privé**, GitHub refuse la requête sans identifiant : colle alors dans *Réglages* → *À propos* un jeton GitHub en lecture seule (*Contents : Read*), qui reste sur ton ordinateur — ou rends le dépôt public.
-- Certains lecteurs vidéo vérifient qu’ils peuvent ouvrir une fenêtre : control en autorise une, invisible, vide et sans accès au reste de l’application, pour que le lecteur vidrift démarre.
 - Les données (bibliothèque SQLite, réglages, pochettes, outils) sont dans `%APPDATA%\control` (installé), dans `control data` à côté de l’exe (portable) ou dans `~/.config/control` (Linux).
 
 Icônes [Lucide](https://lucide.dev) et police [Inter](https://rsms.me/inter) : voir [THIRD-PARTY.md](THIRD-PARTY.md).

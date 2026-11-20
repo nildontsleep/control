@@ -1,9 +1,10 @@
-node_modules
-dist
+target
+.claude
 data
 docs
 build
 .git
 .github
+packaging
 *.md
 !README.md
