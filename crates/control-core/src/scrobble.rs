@@ -45,8 +45,8 @@ mod data;
 mod protocol;
 
 pub use data::*;
-pub use protocol::*;
 use protocol::params;
+pub use protocol::*;
 
 // ─── Scrobbler ───────────────────────────────────────────────────────────────
 
@@ -253,7 +253,8 @@ impl Scrobbler {
         let status = res.status().as_u16();
         let body = res.body_mut().read_to_string().unwrap_or_default();
         let user = lb_validate(status, &body)?;
-        self.inner.state.lock().data.listenbrainz = Some(ListenBrainzAccount { token: clean.into(), user, url: base, error: None });
+        self.inner.state.lock().data.listenbrainz =
+            Some(ListenBrainzAccount { token: clean.into(), user, url: base, error: None });
         self.changed();
         self.schedule(Duration::from_secs(1));
         Ok(self.status())
@@ -302,7 +303,8 @@ impl Scrobbler {
     /// Seconde étape, une fois l'autorisation donnée sur le site de Last.fm. Bloquant.
     pub fn lastfm_finish(&self, token: &str) -> anyhow::Result<Status> {
         let app = self.keys();
-        let v = self.lastfm_call(app.as_ref(), &params(&[("method", "auth.getSession".into()), ("token", token.into())]))?;
+        let v =
+            self.lastfm_call(app.as_ref(), &params(&[("method", "auth.getSession".into()), ("token", token.into())]))?;
         let session = v.get("session").context("Réponse inattendue de Last.fm.")?;
         let key = session.get("key").and_then(Value::as_str).context("Réponse inattendue de Last.fm.")?;
         let user = session.get("name").and_then(Value::as_str).map(str::to_string);
@@ -475,10 +477,11 @@ impl Scrobbler {
                         .as_ref()
                         .filter(|a| !a.token.is_empty())
                         .map(|a| Creds::ListenBrainz { token: a.token.clone(), base: a.url.clone() }),
-                    Service::Lastfm => d.lastfm.as_ref().filter(|a| !a.session.is_empty()).map(|a| Creds::Lastfm {
-                        session: a.session.clone(),
-                        app: None,
-                    }),
+                    Service::Lastfm => d
+                        .lastfm
+                        .as_ref()
+                        .filter(|a| !a.session.is_empty())
+                        .map(|a| Creds::Lastfm { session: a.session.clone(), app: None }),
                 };
                 let items: Vec<Queued> = d.queue.iter().filter(|q| q.todo.iter().any(|s| s == name)).cloned().collect();
                 (items, creds)
@@ -527,20 +530,16 @@ impl Scrobbler {
 fn describe(db: &SharedDb, track: TrackId) -> Option<Play> {
     let db = db.lock();
     let row = db
-        .query_row(
-            "SELECT title, artist, album, track_no, duration, kind FROM tracks WHERE id = ?",
-            [track],
-            |r| {
-                Ok((
-                    r.get::<_, String>(0)?,
-                    r.get::<_, String>(1)?,
-                    r.get::<_, String>(2)?,
-                    r.get::<_, Option<i64>>(3)?,
-                    r.get::<_, f64>(4)?,
-                    r.get::<_, String>(5)?,
-                ))
-            },
-        )
+        .query_row("SELECT title, artist, album, track_no, duration, kind FROM tracks WHERE id = ?", [track], |r| {
+            Ok((
+                r.get::<_, String>(0)?,
+                r.get::<_, String>(1)?,
+                r.get::<_, String>(2)?,
+                r.get::<_, Option<i64>>(3)?,
+                r.get::<_, f64>(4)?,
+                r.get::<_, String>(5)?,
+            ))
+        })
         .optional()
         .ok()
         .flatten()?;

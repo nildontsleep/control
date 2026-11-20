@@ -9,7 +9,8 @@ use super::LyricsError;
 
 pub const DEFAULT_API: &str = "https://lrclib.net/api";
 /// LRCLIB demande un agent qui dise qui l'appelle.
-pub const USER_AGENT: &str = concat!("control/", env!("CARGO_PKG_VERSION"), " (https://github.com/nildontsleep/control)");
+pub const USER_AGENT: &str =
+    concat!("control/", env!("CARGO_PKG_VERSION"), " (https://github.com/nildontsleep/control)");
 const TIMEOUT: Duration = Duration::from_secs(10);
 
 /// Ce que l'on sait du morceau pour le chercher.
@@ -109,7 +110,10 @@ pub fn pick(list: Vec<Record>, seconds: i64) -> Option<Record> {
     let mut close: Vec<Record> = list.into_iter().filter(|r| seconds == 0 || (r.duration - s).abs() <= 4.0).collect();
     // Tri stable, comme `Array.prototype.sort` : à égalité, l'ordre de LRCLIB.
     close.sort_by(|a, b| {
-        b.synced.is_some().cmp(&a.synced.is_some()).then_with(|| (a.duration - s).abs().total_cmp(&(b.duration - s).abs()))
+        b.synced
+            .is_some()
+            .cmp(&a.synced.is_some())
+            .then_with(|| (a.duration - s).abs().total_cmp(&(b.duration - s).abs()))
     });
     close.into_iter().find(Record::has_lyrics)
 }

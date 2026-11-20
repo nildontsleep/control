@@ -110,7 +110,8 @@ pub struct DiscordClient {
 
 impl DiscordClient {
     pub fn new(o: DiscordOptions) -> DiscordClient {
-        let app_id = std::env::var("CONTROL_DISCORD_ID").ok().filter(|s| !s.is_empty()).unwrap_or_else(|| APP_ID.into());
+        let app_id =
+            std::env::var("CONTROL_DISCORD_ID").ok().filter(|s| !s.is_empty()).unwrap_or_else(|| APP_ID.into());
         let status = Arc::new(Mutex::new(Status {
             state: "off".into(),
             detail: String::new(),

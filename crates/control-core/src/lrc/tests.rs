@@ -70,7 +70,8 @@ fn offset_applies_everywhere_and_clamps_at_zero() {
 
 #[test]
 fn metadata_lines_are_skipped() {
-    let raw = "[ar:Artiste]\n[ti:Titre]\n[al:Album]\n[length: 03:20]\n[by:quelqu'un]\n[00:01.00]a\n[00:02.00]b\n[00:03.00]c";
+    let raw =
+        "[ar:Artiste]\n[ti:Titre]\n[al:Album]\n[length: 03:20]\n[by:quelqu'un]\n[00:01.00]a\n[00:02.00]b\n[00:03.00]c";
     let l = parse(raw);
     assert_eq!(texts(&l), ["a", "b", "c"]);
     // En texte brut aussi.

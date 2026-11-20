@@ -170,7 +170,10 @@ pub fn pick_asset(assets: &[Asset], edition: Edition) -> Option<&Asset> {
 
 /// Noms prévisibles des fichiers d'une version (pour la recherche sans l'API).
 pub fn asset_names(version: &str) -> Vec<String> {
-    ["setup.exe", "portable.exe", "x86_64.AppImage", "amd64.deb"].iter().map(|s| format!("control-{version}-{s}")).collect()
+    ["setup.exe", "portable.exe", "x86_64.AppImage", "amd64.deb"]
+        .iter()
+        .map(|s| format!("control-{version}-{s}"))
+        .collect()
 }
 
 /// Code d'erreur d'une réponse de l'API. Sans jeton, GitHub répond 404 pour un dépôt privé ; avec un jeton,
@@ -291,7 +294,8 @@ pub struct Updater {
 
 impl Updater {
     pub fn new(o: UpdaterOptions) -> Updater {
-        let agent: ureq::Agent = ureq::Agent::config_builder().http_status_as_error(false).user_agent(AGENT).build().into();
+        let agent: ureq::Agent =
+            ureq::Agent::config_builder().http_status_as_error(false).user_agent(AGENT).build().into();
         let manual: ureq::Agent = ureq::Agent::config_builder()
             .http_status_as_error(false)
             .user_agent(AGENT)
@@ -341,7 +345,13 @@ impl Updater {
         self.inner.o.token.as_ref().map(|f| f().trim().to_string()).unwrap_or_default()
     }
 
-    fn get(&self, agent: &ureq::Agent, url: &str, headers: &[(&str, String)], timeout: Option<Duration>) -> Result<ureq::http::Response<ureq::Body>, ureq::Error> {
+    fn get(
+        &self,
+        agent: &ureq::Agent,
+        url: &str,
+        headers: &[(&str, String)],
+        timeout: Option<Duration>,
+    ) -> Result<ureq::http::Response<ureq::Body>, ureq::Error> {
         let mut req = agent.get(url);
         for (k, v) in headers {
             req = req.header(*k, v.as_str());
@@ -387,7 +397,8 @@ impl Updater {
         let mut assets = Vec::new();
         for name in asset_names(&version) {
             let url = format!("https://github.com/{REPO}/releases/download/{tag}/{name}");
-            let head = self.inner.agent.head(&url).config().timeout_global(Some(Duration::from_secs(12))).build().call();
+            let head =
+                self.inner.agent.head(&url).config().timeout_global(Some(Duration::from_secs(12))).build().call();
             if let Ok(res) = head
                 && res.status().is_success()
             {
@@ -434,12 +445,13 @@ impl Updater {
     }
 
     fn check_inner(&self) -> Result<(), Fail> {
-        let rel = match if std::env::var_os("CONTROL_UPDATE_WEBONLY").is_some() { Err(Fail("busy")) } else { self.api() } {
-            Ok(r) => r,
-            // L'API GitHub limite les requêtes anonymes (60 par heure et par adresse) : on passe par les pages publiques.
-            Err(Fail("busy")) if !test_override() => self.web()?,
-            Err(e) => return Err(e),
-        };
+        let rel =
+            match if std::env::var_os("CONTROL_UPDATE_WEBONLY").is_some() { Err(Fail("busy")) } else { self.api() } {
+                Ok(r) => r,
+                // L'API GitHub limite les requêtes anonymes (60 par heure et par adresse) : on passe par les pages publiques.
+                Err(Fail("busy")) if !test_override() => self.web()?,
+                Err(e) => return Err(e),
+            };
         let (state, pending) = evaluate(&rel, &self.inner.o.version, self.inner.o.edition, !self.token().is_empty())?;
         *self.inner.release.lock() = pending;
         let mut state = state;
@@ -523,7 +535,9 @@ impl Updater {
             received += n as u64;
             if last.elapsed() > Duration::from_millis(200) {
                 last = Instant::now();
-                self.set(json!({ "phase": "downloading", "version": rel.version, "size": total, "received": received }));
+                self.set(
+                    json!({ "phase": "downloading", "version": rel.version, "size": total, "received": received }),
+                );
             }
         }
         out.sync_all()?;
@@ -592,7 +606,8 @@ impl Updater {
             && !dry.is_empty()
         {
             // Essais : on note la commande au lieu de l'exécuter.
-            let note = json!({ "command": plan.command, "args": plan.args, "script": plan.script.as_ref().map(|s| &s.1) });
+            let note =
+                json!({ "command": plan.command, "args": plan.args, "script": plan.script.as_ref().map(|s| &s.1) });
             let _ = std::fs::write(dry, serde_json::to_string_pretty(&note).unwrap_or_default());
             return InstallOutcome::Stay;
         }

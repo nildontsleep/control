@@ -49,10 +49,8 @@ pub struct Probe {
 /// Lit un fichier. Ne renvoie jamais d'erreur : un fichier illisible garde au moins son genre d'après l'extension.
 pub fn probe(path: &Path) -> Probe {
     let ext = ext_of(path);
-    let mut out = Probe {
-        kind: if VIDEO_EXT.contains(&ext.as_str()) { Kind::Video } else { Kind::Audio },
-        ..Probe::default()
-    };
+    let mut out =
+        Probe { kind: if VIDEO_EXT.contains(&ext.as_str()) { Kind::Video } else { Kind::Audio }, ..Probe::default() };
     let container = match ext.as_str() {
         "mp4" | "m4v" | "mov" | "m4a" | "m4b" => File::open(path).ok().and_then(|f| mp4::probe(BufReader::new(f))),
         "mkv" | "webm" => File::open(path).ok().and_then(|f| matroska::probe(BufReader::new(f))),
@@ -433,7 +431,9 @@ pub mod matroska {
                         for (eid, eb) in children(entry) {
                             match eid {
                                 TRACK_TYPE => kind = uint(eb),
-                                CODEC_ID => codec = Some(String::from_utf8_lossy(eb).trim_end_matches('\0').to_string()),
+                                CODEC_ID => {
+                                    codec = Some(String::from_utf8_lossy(eb).trim_end_matches('\0').to_string())
+                                }
                                 VIDEO => {
                                     let mut w = 0;
                                     let mut h = 0;

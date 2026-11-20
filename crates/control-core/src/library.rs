@@ -195,7 +195,9 @@ impl Library {
 
     pub fn track(&self, id: TrackId) -> Option<Track> {
         let db = self.db.lock();
-        db.query_row(&format!("SELECT {TRACK_COLUMNS} FROM tracks WHERE id = ?"), [id], Track::from_row).optional().ok()?
+        db.query_row(&format!("SELECT {TRACK_COLUMNS} FROM tracks WHERE id = ?"), [id], Track::from_row)
+            .optional()
+            .ok()?
     }
 
     pub fn track_path(&self, id: TrackId) -> Option<String> {
@@ -372,7 +374,8 @@ impl Library {
         let mut remove_ids = Vec::new();
         for root in &reachable {
             let prefix = root_prefix(root);
-            let rows: Vec<(&String, &(i64, i64, i64))> = existing.iter().filter(|(k, _)| k.starts_with(&prefix)).collect();
+            let rows: Vec<(&String, &(i64, i64, i64))> =
+                existing.iter().filter(|(k, _)| k.starts_with(&prefix)).collect();
             if per_root.get(root).copied().unwrap_or(0) == 0 && !rows.is_empty() {
                 continue;
             }
@@ -518,7 +521,8 @@ impl Library {
         }
         let mut hash = None;
         if let Ok(entries) = std::fs::read_dir(dir) {
-            let mut names: Vec<String> = entries.flatten().map(|e| e.file_name().to_string_lossy().into_owned()).collect();
+            let mut names: Vec<String> =
+                entries.flatten().map(|e| e.file_name().to_string_lossy().into_owned()).collect();
             names.sort();
             // Ordre de préférence : celui des noms, puis des extensions.
             'search: for n in COVER_NAMES {

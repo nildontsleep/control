@@ -314,7 +314,9 @@ pub fn get(db: &Connection, from: &str, to: &str, limit: usize, now_ms: i64) -> 
         }
     }
     let mut genres: Vec<Genre> = genre_order.into_iter().filter_map(|k| genres.remove(&k)).collect();
-    genres.sort_by(|a, b| b.plays.cmp(&a.plays).then(b.seconds.partial_cmp(&a.seconds).unwrap_or(std::cmp::Ordering::Equal)));
+    genres.sort_by(|a, b| {
+        b.plays.cmp(&a.plays).then(b.seconds.partial_cmp(&a.seconds).unwrap_or(std::cmp::Ordering::Equal))
+    });
     genres.truncate(8);
 
     let by_day = collect(

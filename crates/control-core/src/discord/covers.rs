@@ -110,10 +110,19 @@ pub fn hosts() -> Vec<Host> {
 }
 
 /// Corps `multipart/form-data` : champs texte puis le fichier.
-pub fn multipart(boundary: &str, fields: &[(&str, &str)], file_field: &str, ext: &str, mime: &str, data: &[u8]) -> Vec<u8> {
+pub fn multipart(
+    boundary: &str,
+    fields: &[(&str, &str)],
+    file_field: &str,
+    ext: &str,
+    mime: &str,
+    data: &[u8],
+) -> Vec<u8> {
     let mut body = Vec::with_capacity(data.len() + 512);
     for (k, v) in fields {
-        body.extend_from_slice(format!("--{boundary}\r\nContent-Disposition: form-data; name=\"{k}\"\r\n\r\n{v}\r\n").as_bytes());
+        body.extend_from_slice(
+            format!("--{boundary}\r\nContent-Disposition: form-data; name=\"{k}\"\r\n\r\n{v}\r\n").as_bytes(),
+        );
     }
     body.extend_from_slice(
         format!(
@@ -227,7 +236,12 @@ pub fn cover_url(
     match upload(cover_file, agent, r) {
         Ok((url, host, ttl)) => {
             let now = now_ms();
-            let entry = CoverEntry { url: url.clone(), at: now, exp: Some(now + ttl - 10 * 60 * 1000), host: Some(host.into()) };
+            let entry = CoverEntry {
+                url: url.clone(),
+                at: now,
+                exp: Some(now + ttl - 10 * 60 * 1000),
+                host: Some(host.into()),
+            };
             cache.lock().insert(&key, entry);
             Ok((url, host.to_string()))
         }
@@ -243,7 +257,11 @@ fn flat(s: &str, n: usize) -> String {
     s.split_whitespace().collect::<Vec<_>>().join(" ").chars().take(n).collect()
 }
 
-fn upload(cover_file: Option<&CoverFileFn>, agent: &ureq::Agent, r: &CoverRef) -> Result<(String, &'static str, i64), String> {
+fn upload(
+    cover_file: Option<&CoverFileFn>,
+    agent: &ureq::Agent,
+    r: &CoverRef,
+) -> Result<(String, &'static str, i64), String> {
     let file = cover_file.and_then(|f| f(r)).ok_or_else(|| "fichier de pochette introuvable".to_string())?;
     let data = read_cover(&file)?;
     let (ext, mime) = sniff_image(&data).ok_or_else(|| "format d’image non reconnu".to_string())?;

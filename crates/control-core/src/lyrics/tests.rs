@@ -1,12 +1,12 @@
 use std::collections::VecDeque;
 
+use lofty::TextEncoding;
 use lofty::config::WriteOptions;
 use lofty::id3::v2::{
     BinaryFrame, Frame, FrameId, Id3v2Tag, SyncTextContentType, SynchronizedTextFrame, TimestampFormat,
     UnsynchronizedTextFrame,
 };
 use lofty::prelude::TagExt;
-use lofty::TextEncoding;
 use parking_lot::Mutex;
 
 use super::*;
@@ -58,7 +58,8 @@ struct Env {
 impl Env {
     fn new() -> Env {
         let db: SharedDb = Arc::new(Mutex::new(db::open_in_memory().unwrap()));
-        let fake = Arc::new(Fake { db: db.clone(), replies: Mutex::new(VecDeque::new()), calls: Mutex::new(Vec::new()) });
+        let fake =
+            Arc::new(Fake { db: db.clone(), replies: Mutex::new(VecDeque::new()), calls: Mutex::new(Vec::new()) });
         let mut lyrics = Lyrics::with_http(db.clone(), fake.clone(), "https://lrclib.test/api/");
         lyrics.set_retry_delay(Duration::ZERO);
         Env { lyrics, fake, db, dir: tempfile::tempdir().unwrap() }
@@ -126,7 +127,10 @@ fn urls() {
         exact_url("https://x/api", &full).unwrap(),
         "https://x/api/get?track_name=%C3%87a+va+%26+toi%3F&artist_name=Aya+Nakamura&album_name=Nakamura"
     );
-    assert_eq!(search_url("https://x/api", &q), "https://x/api/search?track_name=%C3%87a+va+%26+toi%3F&artist_name=Aya+Nakamura");
+    assert_eq!(
+        search_url("https://x/api", &q),
+        "https://x/api/search?track_name=%C3%87a+va+%26+toi%3F&artist_name=Aya+Nakamura"
+    );
     let anon = Query { artist: String::new(), ..q.clone() };
     assert_eq!(exact_url("https://x/api", &anon), None);
     assert_eq!(search_url("https://x/api", &anon), "https://x/api/search?q=%C3%87a+va+%26+toi%3F");
@@ -141,7 +145,8 @@ fn parse_get_response() {
     assert!(!hit.instrumental && hit.has_lyrics());
     assert_eq!(hit.duration, 233.0);
 
-    let inst = parse_get(r#"{"id":9,"instrumental":true,"plainLyrics":null,"syncedLyrics":null,"duration":null}"#).unwrap();
+    let inst =
+        parse_get(r#"{"id":9,"instrumental":true,"plainLyrics":null,"syncedLyrics":null,"duration":null}"#).unwrap();
     assert_eq!(inst, Some(Record { synced: None, plain: None, instrumental: true, duration: 0.0 }));
     assert!(inst.unwrap().has_lyrics());
 
@@ -339,7 +344,8 @@ fn sidecar_always_wins() {
     let env = Env::new();
     let (id, path) = env.track("Morceau.v2.flac", "T", "A", 100.0);
     env.lyrics.set(id, "à la main").unwrap();
-    std::fs::write(env.dir.path().join("Morceau.v2.lrc"), "\u{feff}[00:01.00]a\r\n[00:02.00]b\r\n[00:03.00]c\r\n").unwrap();
+    std::fs::write(env.dir.path().join("Morceau.v2.lrc"), "\u{feff}[00:01.00]a\r\n[00:02.00]b\r\n[00:03.00]c\r\n")
+        .unwrap();
     let r = env.lyrics.get(id, false).unwrap();
     assert_eq!(r.source, Source::File);
     assert_eq!(r.synced.as_deref(), Some("[00:01.00]a\r\n[00:02.00]b\r\n[00:03.00]c"));

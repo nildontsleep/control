@@ -158,10 +158,7 @@ pub fn parse(raw: &str) -> Lrc {
                 let shift = s - first;
                 let words = words
                     .iter()
-                    .map(|(wt, w)| Word {
-                        t: wt.map_or(t, |wt| (wt + shift - offset).max(0.0)),
-                        text: w.clone(),
-                    })
+                    .map(|(wt, w)| Word { t: wt.map_or(t, |wt| (wt + shift - offset).max(0.0)), text: w.clone() })
                     .collect();
                 timed.push(Line { t: Some(t), text: body.clone(), words });
             }

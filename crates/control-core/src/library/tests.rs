@@ -111,7 +111,10 @@ fn playlists_and_m3u() {
     let entries: Vec<i64> = items.iter().rev().map(|i| i.id).collect();
     lib.reorder_playlist(pl, &entries);
     let (_, items) = lib.playlists();
-    assert_eq!(items.iter().map(|i| i.track_id).collect::<Vec<_>>(), vec![ids[2], ids[0], ids[2]].into_iter().rev().collect::<Vec<_>>());
+    assert_eq!(
+        items.iter().map(|i| i.track_id).collect::<Vec<_>>(),
+        vec![ids[2], ids[0], ids[2]].into_iter().rev().collect::<Vec<_>>()
+    );
 
     let m3u = dir.path().join("list.m3u8");
     assert_eq!(lib.export_m3u(&m3u, &ids).unwrap(), 3);

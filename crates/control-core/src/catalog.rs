@@ -329,14 +329,20 @@ impl Catalog {
     pub fn playlist_rows(&self, playlist: &Playlist, now_ms: i64) -> Vec<PlaylistRow> {
         if playlist.kind == PlaylistKind::Smart {
             let spec = playlist.rules.clone().unwrap_or_default();
-            return self.eval_smart(&spec, now_ms).into_iter().map(|entry| PlaylistRow { entry, item_id: None }).collect();
+            return self
+                .eval_smart(&spec, now_ms)
+                .into_iter()
+                .map(|entry| PlaylistRow { entry, item_id: None })
+                .collect();
         }
         self.playlist_items
             .get(&playlist.id)
             .map(|items| {
                 items
                     .iter()
-                    .filter_map(|it| self.by_id.get(&it.track_id).map(|&entry| PlaylistRow { entry, item_id: Some(it.id) }))
+                    .filter_map(|it| {
+                        self.by_id.get(&it.track_id).map(|&entry| PlaylistRow { entry, item_id: Some(it.id) })
+                    })
                     .collect()
             })
             .unwrap_or_default()

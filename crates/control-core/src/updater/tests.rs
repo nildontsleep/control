@@ -66,7 +66,10 @@ fn github_answers() {
     assert_eq!(asset_sha256(Some("sha256:abc")), None);
     assert_eq!(asset_sha256(Some(&format!("md5:{}", "a".repeat(64)))), None);
     assert_eq!(asset_sha256(None), None);
-    assert_eq!(tag_from_location("https://github.com/nildontsleep/control/releases/tag/v1.3.0?x"), Some("v1.3.0".into()));
+    assert_eq!(
+        tag_from_location("https://github.com/nildontsleep/control/releases/tag/v1.3.0?x"),
+        Some("v1.3.0".into())
+    );
     assert_eq!(tag_from_location("https://github.com/login"), None);
 }
 
@@ -161,7 +164,9 @@ fn install_plans() {
     assert_eq!(p.args[3], r#"""C:\Data\updates\apply-update.cmd"""#);
     let (_, script) = p.script.unwrap();
     assert!(script.starts_with("@echo off\r\n"));
-    assert!(script.contains(r#"move /Y "C:\Data\updates\control-1.2.0-portable.exe" "C:\Apps\control-1.2.0-portable.exe""#));
+    assert!(
+        script.contains(r#"move /Y "C:\Data\updates\control-1.2.0-portable.exe" "C:\Apps\control-1.2.0-portable.exe""#)
+    );
     assert!(script.contains(r#"if exist "C:\Apps\control.exe" goto wait"#));
 }
 
@@ -214,7 +219,12 @@ fn states_keep_current_version_and_cleanup() {
     assert_eq!(u.status()["current"], "1.0.0");
     assert_eq!(seen.lock().len(), 1);
 
-    for name in ["control-0.9.0-x86_64.AppImage", "control-2.0.0-x86_64.AppImage", "control-2.0.0-setup.exe.part", "apply-update.cmd"] {
+    for name in [
+        "control-0.9.0-x86_64.AppImage",
+        "control-2.0.0-x86_64.AppImage",
+        "control-2.0.0-setup.exe.part",
+        "apply-update.cmd",
+    ] {
         std::fs::write(dir.path().join(name), b"x").unwrap();
     }
     u.cleanup();

@@ -77,7 +77,13 @@ fn smart_playlist_rows() {
         sort: SmartSort { key: "title".into(), dir: "desc".into() },
         limit: 2,
     };
-    c.playlists.push(Playlist { id: 9, name: "S".into(), kind: PlaylistKind::Smart, rules: Some(spec), ..Playlist::default() });
+    c.playlists.push(Playlist {
+        id: 9,
+        name: "S".into(),
+        kind: PlaylistKind::Smart,
+        rules: Some(spec),
+        ..Playlist::default()
+    });
     let p = c.playlist(9).unwrap().clone();
     let rows = c.playlist_rows(&p, 0);
     let titles: Vec<&str> = rows.iter().map(|r| c.entries[r.entry].track.title.as_str()).collect();

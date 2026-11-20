@@ -232,7 +232,11 @@ fn image_types_and_multipart() {
     let body = multipart("B", &[("reqtype", "fileupload")], "fileToUpload", "png", "image/png", b"DATA");
     let text = String::from_utf8(body).unwrap();
     assert!(text.starts_with("--B\r\nContent-Disposition: form-data; name=\"reqtype\"\r\n\r\nfileupload\r\n"));
-    assert!(text.contains("name=\"fileToUpload\"; filename=\"cover.png\"\r\nContent-Type: image/png\r\n\r\nDATA\r\n--B--\r\n"));
+    assert!(
+        text.contains(
+            "name=\"fileToUpload\"; filename=\"cover.png\"\r\nContent-Type: image/png\r\n\r\nDATA\r\n--B--\r\n"
+        )
+    );
 }
 
 #[test]
@@ -272,7 +276,9 @@ fn close_frames_are_classified() {
         classify(OP_FRAME, Some(&json!({"cmd": "DISPATCH", "evt": "READY", "data": {"user": {"username": "u"}}}))),
         Incoming::Ready(u) if u == "u"
     ));
-    assert!(matches!(classify(OP_FRAME, Some(&json!({"evt": "ERROR", "data": {"code": 4002}}))), Incoming::Error(m) if m == "4002"));
+    assert!(
+        matches!(classify(OP_FRAME, Some(&json!({"evt": "ERROR", "data": {"code": 4002}}))), Incoming::Error(m) if m == "4002")
+    );
     assert!(valid_client_id(APP_ID));
     assert!(!valid_client_id("123"));
 }
