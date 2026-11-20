@@ -1,0 +1,26 @@
+[package]
+name = "control"
+description = "control : lecteur musique et vidéo natif, interface Rune."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "control"
+path = "src/main.rs"
+
+[dependencies]
+control-core.workspace = true
+control-audio.workspace = true
+rune = { workspace = true, features = ["native-file-dialog", "tooling"] }
+rune-kit = { workspace = true, default-features = false }
+anyhow.workspace = true
+crossbeam-channel.workspace = true
+log.workspace = true
+parking_lot.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+time.workspace = true
+
+[lints]
+workspace = true

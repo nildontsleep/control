@@ -1,0 +1,19 @@
+[package]
+name = "control-audio"
+description = "Moteur de lecture de control : décodage, file, fondu enchaîné, égaliseur, normalisation, AutoMix."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+control-core.workspace = true
+anyhow.workspace = true
+crossbeam-channel.workspace = true
+log.workspace = true
+parking_lot.workspace = true
+symphonia = { version = "0.5", default-features = false, features = ["mp3", "flac", "aac", "isomp4", "ogg", "vorbis", "wav", "pcm", "mkv", "alac"] }
+cpal = "0.16"
+rubato = "0.16"
+
+[lints]
+workspace = true

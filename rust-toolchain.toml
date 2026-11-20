@@ -1,0 +1,4 @@
+[toolchain]
+# Même version que Rune (crates/rune) : il en a besoin pour compiler.
+channel = "1.99.1"
+components = ["clippy", "rustfmt"]

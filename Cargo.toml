@@ -1,0 +1,80 @@
+[workspace]
+resolver = "3"
+members = [
+    "crates/control-core",
+    "crates/control-audio",
+    "crates/control-app",
+    "crates/control-server",
+]
+default-members = [
+    "crates/control-core",
+    "crates/control-audio",
+    "crates/control-app",
+    "crates/control-server",
+]
+
+[workspace.package]
+version = "1.0.0"
+edition = "2024"
+license = "MIT"
+authors = ["nildontsleep"]
+repository = "https://github.com/nildontsleep/control"
+
+[workspace.dependencies]
+control-core = { path = "crates/control-core" }
+control-audio = { path = "crates/control-audio" }
+
+# Rune : interface native rendue sur le GPU. Révision épinglée de la branche `dev` (jamais réécrite).
+rune = { git = "https://github.com/anomalyco/rune", rev = "eff95e80c328943deeeef0355485c06c3d71ecf0" }
+rune-kit = { git = "https://github.com/anomalyco/rune", rev = "eff95e80c328943deeeef0355485c06c3d71ecf0" }
+
+anyhow = "1"
+base64 = "0.22"
+crossbeam-channel = "0.5"
+dirs = "6"
+image = { version = "0.25", default-features = false, features = ["jpeg", "png", "webp", "gif", "bmp"] }
+log = "0.4"
+lofty = "0.22"
+parking_lot = "0.12"
+rand = "0.9"
+regex = "1"
+rusqlite = { version = "0.37", features = ["bundled"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha1 = "0.10"
+sha2 = "0.10"
+hex = "0.4"
+thiserror = "2"
+time = { version = "0.3", features = ["local-offset", "formatting", "macros"] }
+ureq = { version = "3", features = ["json"] }
+url = "2"
+unicode-normalization = "0.1"
+
+# Rune n'hérite pas des correctifs de ses dépendances : chaque application les reprend, à la même révision.
+[patch.crates-io]
+winit = { git = "https://github.com/anomalyco/rune", rev = "eff95e80c328943deeeef0355485c06c3d71ecf0" }
+sctk-adwaita = { git = "https://github.com/anomalyco/rune", rev = "eff95e80c328943deeeef0355485c06c3d71ecf0" }
+parley_engine = { git = "https://github.com/anomalyco/rune", rev = "eff95e80c328943deeeef0355485c06c3d71ecf0" }
+wgpu-hal = { git = "https://github.com/anomalyco/rune", rev = "eff95e80c328943deeeef0355485c06c3d71ecf0" }
+accesskit_windows = { git = "https://github.com/anomalyco/rune", rev = "eff95e80c328943deeeef0355485c06c3d71ecf0" }
+accesskit_macos = { git = "https://github.com/anomalyco/rune", rev = "eff95e80c328943deeeef0355485c06c3d71ecf0" }
+
+[profile.dev]
+debug = "line-tables-only"
+
+[profile.dev.package."*"]
+debug = false
+opt-level = 2
+
+[profile.release]
+codegen-units = 16
+lto = "thin"
+
+[workspace.lints.rust]
+unsafe_code = "deny"
+unused_must_use = "deny"
+
+[workspace.lints.clippy]
+dbg_macro = "deny"
+todo = "warn"
+unwrap_used = "warn"

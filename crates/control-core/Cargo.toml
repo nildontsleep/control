@@ -1,0 +1,44 @@
+[package]
+name = "control-core"
+description = "Noyau de control : réglages, base, bibliothèque, tags, paroles, statistiques, téléchargements, films et séries."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+base64.workspace = true
+crossbeam-channel.workspace = true
+dirs.workspace = true
+hex.workspace = true
+image.workspace = true
+lofty.workspace = true
+log.workspace = true
+parking_lot.workspace = true
+rand.workspace = true
+regex.workspace = true
+rusqlite.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sha1.workspace = true
+sha2.workspace = true
+thiserror.workspace = true
+time.workspace = true
+unicode-normalization.workspace = true
+ureq.workspace = true
+url.workspace = true
+md-5 = "0.10"
+notify = "8"
+trash = "5"
+zip = { version = "4", default-features = false, features = ["deflate"] }
+tar = "0.4"
+lzma-rs = "0.3"
+flate2 = "1"
+symphonia = { version = "0.5", default-features = false, features = ["mp3", "flac", "aac", "isomp4", "ogg", "vorbis", "wav", "pcm", "mkv"] }
+ebur128 = "0.1"
+
+[dev-dependencies]
+tempfile = "3"
+
+[lints]
+workspace = true
