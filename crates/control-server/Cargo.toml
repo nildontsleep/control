@@ -25,7 +25,8 @@ rand.workspace = true
 regex.workspace = true
 rusqlite.workspace = true
 serde.workspace = true
-serde_json.workspace = true
+# Ordre des clés conservé : les réponses JSON et XML suivent celui de l'original (attributs Subsonic, manifeste…).
+serde_json = { workspace = true, features = ["preserve_order"] }
 sha1.workspace = true
 sha2.workspace = true
 thiserror.workspace = true

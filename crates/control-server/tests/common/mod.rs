@@ -84,7 +84,9 @@ pub fn boot(opts: Boot) -> Server {
     if let Some(t) = opts.setup_token {
         config.setup_token = t;
     }
-    let bg = Background::start(config, HubOptions::default()).unwrap();
+    // Jamais GitHub pendant les essais : la vérification périodique vise une adresse locale fermée.
+    let options = HubOptions { update_url: Some("http://127.0.0.1:9/releases/latest".into()), ..HubOptions::default() };
+    let bg = Background::start(config, options).unwrap();
     if !opts.no_common {
         bg.hub.patch_settings(&json!({ "libraryFolders": [music.to_string_lossy()] })).unwrap();
     }
