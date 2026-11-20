@@ -124,8 +124,8 @@ mod tests {
         assert_eq!(t("nav.songs"), "Morceaux");
         assert_eq!(t("no.such.key"), "no.such.key");
         set_language("en");
-        assert_eq!(tn("count.tracks", 0), "0 tracks");
-        assert_eq!(tn("count.tracks", 1), "1 track");
+        assert_eq!(tn("count.tracks", 0), "0 songs");
+        assert_eq!(tn("count.tracks", 1), "1 song");
         set_language("fr");
     }
 }
