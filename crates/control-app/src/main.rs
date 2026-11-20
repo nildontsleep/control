@@ -91,7 +91,10 @@ fn poll(s: &mut Ui, clock: f64, tx: &mut Tx) -> bool {
 }
 
 /// Scènes des rendus sans fenêtre (`--scene`) : chaque vue principale.
-const SCENES: &[(&str, fn(&mut Ui))] = &[
+/// Une scène : son nom et la façon de mettre l'état dans cette situation.
+type Scene = (&'static str, fn(&mut Ui));
+
+const SCENES: &[Scene] = &[
     ("songs", |s| s.route = state::Route::Songs),
     ("albums", |s| s.route = state::Route::Albums),
     ("artists", |s| s.route = state::Route::Artists),

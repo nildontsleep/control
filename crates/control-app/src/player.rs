@@ -429,7 +429,7 @@ impl Player {
                         self.error = Some(message);
                         self.failures += 1;
                         // Un fichier illisible : on passe au suivant, sans boucler sur une file entière d'erreurs.
-                        if self.failures < 5 && self.queue.upcoming().len() > 0 {
+                        if self.failures < 5 && !self.queue.upcoming().is_empty() {
                             let step = self.queue.next(Repeat::Off);
                             self.step(step, cat, backend, 0.0);
                         }

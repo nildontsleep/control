@@ -1,6 +1,6 @@
 //! Éléments partagés : pochettes, boutons, en-têtes de page, kit de composants.
 
-use rune::{Color, Cursor, El, Icon, SurfaceFit, TextStyle, col, el, icon, row, text};
+use rune::{Color, Cursor, El, Icon, SurfaceFit, col, el, icon, row, text};
 use rune_kit::{Kit, PaletteSeed};
 
 use crate::state::Ui;
@@ -85,7 +85,7 @@ pub fn cover(ui: &Ui, hash: Option<&str>, seed: &str, size: f32, radius: f32, ki
         .size(size, size)
         .radius(radius)
         .clip_rounded(radius)
-        .linear_gradient(150f32.to_radians(), &[(0.0, hsl(h1, 0.64, 0.60)), (1.0, hsl(h2, 0.58, 0.32))]);
+        .linear_gradient(150f32.to_radians(), [(0.0, hsl(h1, 0.64, 0.60)), (1.0, hsl(h2, 0.58, 0.32))]);
     match ui.cover(hash, small) {
         Some(img) => base.child(el().w_full().h_full().pixels_fit(img.pixels(), SurfaceFit::Fill)),
         None => base.center().child(icon(glyph, (size * 0.32).clamp(12.0, 64.0)).color(Color::WHITE.alpha(0.85))),
@@ -160,4 +160,3 @@ pub fn empty_state(p: &Palette, glyph: &'static Icon, title: &str, body: &str, a
         .child(row().gap(8.0).mt(8.0).children(actions))
 }
 
-pub const TEXT_FAINT: TextStyle = ty::SMALL;

@@ -48,7 +48,7 @@ pub fn count(n: i64) -> String {
     let sep = if i18n::current() == Lang::Fr { '\u{202f}' } else { ',' };
     let mut out = String::new();
     for (i, c) in digits.chars().enumerate() {
-        if i > 0 && (digits.len() - i) % 3 == 0 {
+        if i > 0 && (digits.len() - i).is_multiple_of(3) {
             out.push(sep);
         }
         out.push(c);
