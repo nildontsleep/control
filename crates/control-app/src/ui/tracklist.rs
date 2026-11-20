@@ -252,7 +252,29 @@ fn track_row(
     let list_for_play = ids.clone();
     let list_for_menu = ids.clone();
     let entry = entries.and_then(|v| v.get(i).copied());
-    r.on_press_tx(move |st: &mut Ui, tx: &mut Tx| {
+    let list_for_drag = ids.clone();
+    r.on_drag(move |st: &mut Ui, d: &mut rune::Drag, _tx| match d.phase {
+        rune::Phase::Down => {
+            let ids = st.targets(id, &list_for_drag);
+            let origin = st.pointer.get();
+            st.track_drag = Some(crate::state::TrackDrag { ids, origin, at: origin, active: false });
+        }
+        rune::Phase::Move => {
+            if let Some(dr) = &mut st.track_drag {
+                dr.at = (dr.origin.0 + d.dx, dr.origin.1 + d.dy);
+                dr.active |= d.dx.abs() + d.dy.abs() > 6.0;
+            }
+        }
+        rune::Phase::Up => {
+            if let Some(dr) = st.track_drag.take()
+                && !d.cancelled()
+                && let Some(pl) = dr.target(st)
+            {
+                crate::ui::menu::add_to_playlist(st, pl, dr.ids);
+            }
+        }
+    })
+    .on_press_tx(move |st: &mut Ui, tx: &mut Tx| {
         let mods = tx.mods();
         st.select(id, &list_for_press, mods.cmd, mods.shift);
     })

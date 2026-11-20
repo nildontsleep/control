@@ -134,6 +134,39 @@ pub struct Toast {
     pub until: f64,
 }
 
+/// Un glisser de morceaux en cours.
+#[derive(Debug, Clone, PartialEq)]
+pub struct TrackDrag {
+    pub ids: Vec<TrackId>,
+    /// Point de départ dans la fenêtre.
+    pub origin: (f32, f32),
+    /// Point actuel dans la fenêtre.
+    pub at: (f32, f32),
+    /// Le pointeur s'est assez éloigné pour que ce soit un glisser (et pas un clic).
+    pub active: bool,
+}
+
+impl TrackDrag {
+    /// La playlist (classique) sous le pointeur.
+    pub fn target(&self, ui: &Ui) -> Option<PlaylistId> {
+        if !self.active {
+            return None;
+        }
+        let (x, y) = self.at;
+        let rects = ui.playlist_rects.borrow();
+        rects
+            .iter()
+            .find(|(id, r)| {
+                x >= r[0]
+                    && x <= r[0] + r[2]
+                    && y >= r[1]
+                    && y <= r[1] + r[3]
+                    && ui.cat.playlist(**id).is_some_and(|p| p.kind == control_core::model::PlaylistKind::Manual)
+            })
+            .map(|(id, _)| *id)
+    }
+}
+
 /// Sélection dans une liste de morceaux (identifiants), avec l'ancre des clics avec Maj.
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct Selection {
@@ -206,6 +239,12 @@ pub struct Ui {
     pub pending_play: Vec<TrackId>,
     /// Entrée de la file en cours de déplacement (indice, décalage vertical).
     pub queue_drag: Option<(usize, f32)>,
+    /// Morceaux glissés vers une playlist de la barre latérale.
+    pub track_drag: Option<TrackDrag>,
+    /// Dernière position connue du pointeur (points de la fenêtre).
+    pub pointer: std::cell::Cell<(f32, f32)>,
+    /// Place des playlists de la barre latérale dans la fenêtre (cibles du glisser-déposer).
+    pub playlist_rects: RefCell<HashMap<PlaylistId, [f32; 4]>>,
     #[cfg(target_os = "linux")]
     pub mpris: Option<crate::mpris::Mpris>,
     /// ffmpeg (relu de temps en temps : il peut être installé pendant que l'application tourne).
@@ -287,6 +326,9 @@ impl Ui {
             folder_watch: None,
             pending_play: Vec::new(),
             queue_drag: None,
+            track_drag: None,
+            pointer: std::cell::Cell::new((0.0, 0.0)),
+            playlist_rects: RefCell::new(HashMap::new()),
             #[cfg(target_os = "linux")]
             mpris: None,
             ffmpeg: None,

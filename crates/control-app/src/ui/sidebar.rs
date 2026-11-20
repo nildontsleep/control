@@ -169,11 +169,21 @@ pub fn sidebar(ui: &Ui, p: &Palette, k: &Kit) -> El {
         } else {
             icon(if pl.kind == PlaylistKind::Smart { &icons::SPARKLES } else { &icons::LIST_MUSIC }, 17.0).color(p.accent)
         };
+        let target = ui.track_drag.as_ref().and_then(|d| d.target(ui)) == Some(id);
+        let mut it = item(p, format!("sb-pl-{id}"), glyph, pl.name.clone(), active, None);
+        if target {
+            it = it.fill(p.accent.alpha(0.35)).border(1.5, p.accent);
+        }
         list = list.child(
-            item(p, format!("sb-pl-{id}"), glyph, pl.name.clone(), active, None)
+            it
                 .on_press(move |s: &mut Ui| s.navigate(Route::Playlist(id)))
                 .on_secondary_press(move |s: &mut Ui, at, _| {
                     s.menu = Some(OpenMenu { at, target: MenuTarget::Playlist(id), submenu: false });
+                })
+                // Sa place dans la fenêtre : une cible pour les morceaux qu'on y glisse.
+                .on_drawn_layout_tx(move |s: &mut Ui, r, tx| {
+                    s.playlist_rects.borrow_mut().insert(id, r);
+                    tx.live_only();
                 }),
         );
     }

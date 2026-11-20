@@ -98,7 +98,7 @@ fn toasts(ui: &Ui, p: &Palette) -> El {
                 .child(text(t.text.clone()).font(ty::BODY_MEDIUM).color(p.text)),
         );
     }
-    row().absolute(0.0, 0.0).w_full().pt(18.0).justify_center().child(c).inert()
+    row().key("toasts").absolute(0.0, 0.0).w_full().pt(18.0).justify_center().child(c).inert()
 }
 
 pub fn view(ui: &Ui, cx: &mut Cx<Ui>) -> El {
@@ -122,6 +122,13 @@ pub fn view(ui: &Ui, cx: &mut Cx<Ui>) -> El {
     let base = el()
         .key("window")
         .on_drop_files(|s: &mut Ui, files, _tx| s.drop_files(files))
+        // Position du pointeur, pour le glisser de morceaux ; sans glisser en cours, rien à redessiner.
+        .on_pointer_move_local(|s: &mut Ui, e: rune::PointerEvent, tx: &mut Tx| {
+            s.pointer.set((e.window_x, e.window_y));
+            if s.track_drag.as_ref().is_none_or(|d| !d.active) {
+                tx.live_only();
+            }
+        })
         .w_full()
         .h_full()
         .child(backdrop(ui, &p))
@@ -145,6 +152,27 @@ pub fn view(ui: &Ui, cx: &mut Cx<Ui>) -> El {
     crate::sheets::sheet(ui, &p, &k, &mut layer);
     if let Some(m) = &ui.menu {
         layer.push(menu::context_menu(ui, &p, &k, m));
+    }
+    // Le glisser de morceaux : une étiquette suit le pointeur.
+    if let Some(d) = ui.track_drag.as_ref().filter(|d| d.active) {
+        let label = if d.ids.len() > 1 { crate::i18n::tn("count.tracks", d.ids.len()) } else {
+            d.ids.first().and_then(|id| ui.cat.track(*id)).map(|t| t.title.clone()).unwrap_or_default()
+        };
+        layer.push(
+            row()
+                .key("drag-ghost")
+                .absolute(d.at.0 + 12.0, d.at.1 + 8.0)
+                .h(30.0)
+                .px(12.0)
+                .gap(6.0)
+                .items_center()
+                .radius(15.0)
+                .fill(p.accent)
+                .shadow(6.0, 18.0, rune::Color::BLACK.alpha(0.35))
+                .inert()
+                .child(icon(&icons::MUSIC_2, 14.0).color(p.on_accent))
+                .child(text(label).font(ty::SMALL_MEDIUM).color(p.on_accent)),
+        );
     }
     // Les notifications passent par-dessus tout (feuilles, « À l'écoute », récap).
     layer.push(toasts(ui, &p));
