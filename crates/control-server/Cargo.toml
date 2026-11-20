@@ -5,13 +5,50 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 
+[lib]
+name = "control_server"
+path = "src/lib.rs"
+
+[[bin]]
+name = "control-server"
+path = "src/main.rs"
+
 [dependencies]
 control-core.workspace = true
 anyhow.workspace = true
+base64.workspace = true
+hex.workspace = true
+image.workspace = true
 log.workspace = true
 parking_lot.workspace = true
+rand.workspace = true
+regex.workspace = true
+rusqlite.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+sha1.workspace = true
+sha2.workspace = true
+thiserror.workspace = true
+time.workspace = true
+unicode-normalization.workspace = true
+ureq.workspace = true
+url.workspace = true
+md-5 = "0.10"
+flate2 = "1"
+notify = "8"
+# Serveur HTTP : tokio + axum (routage fait à la main, comme l'original, dans un seul gestionnaire).
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "signal", "sync", "time", "fs", "io-util", "process"] }
+axum = { version = "0.8", default-features = false, features = ["http1", "tokio"] }
+tokio-util = { version = "0.7", features = ["io"] }
+futures-util = { version = "0.3", default-features = false, features = ["std"] }
+bytes = "1"
+# Mots de passe (mêmes paramètres et même encodage que scrypt de Node), secrets chiffrés, signatures des mises à jour.
+scrypt = { version = "0.11", default-features = false }
+aes-gcm = "0.10"
+ed25519-dalek = "2"
+
+[dev-dependencies]
+tempfile = "3"
 
 [lints]
 workspace = true
