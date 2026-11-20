@@ -764,6 +764,7 @@
  "tag.saved_one": "{n} song updated",
  "tag.saved_other": "{n} songs updated",
  "tag.undo": "Undo",
+ "tag.undoLast": "Undo last save",
  "tag.undone_one": "{n} song restored",
  "tag.undone_other": "{n} songs restored",
  "tag.undoPartial": "{n} restored, {f} failed",

@@ -162,17 +162,8 @@ pub fn on_key(s: &mut Ui, ev: &KeyEvent, tx: &mut Tx) -> bool {
     match &ev.key {
         Key::Command(',') => s.sheet = Some(crate::state::Sheet::Settings(crate::state::SettingsTab::General)),
         Key::Command('f') | Key::Command('F') => tx.focus("sb-search", true),
-        Key::Command('i') | Key::Command('I') => {
-            let ids: Vec<_> = if s.selection.ids.is_empty() {
-                s.player.current_id().into_iter().collect()
-            } else {
-                s.selection.ids.iter().copied().collect()
-            };
-            if ids.is_empty() {
-                return false;
-            }
-            crate::sheets::tag_editor::open(s, ids);
-        }
+        // Ctrl/Cmd+I : modifier les tags de la sélection (ou du morceau en cours).
+        Key::Command('i') | Key::Command('I') => return crate::sheets::tag_editor::open_selection(s),
         Key::Left if ev.mods.alt => s.go_back(),
         Key::Right if ev.mods.alt => s.go_forward(),
         Key::Escape => {

@@ -118,7 +118,29 @@ const SCENES: &[Scene] = &[
         s.settings.np_tab = "lyrics".into();
     }),
     ("immersive", |s| s.immersive = true),
+    ("tags", |s| tag_scene(s, 1, None)),
+    ("tags-many", |s| tag_scene(s, 4, None)),
+    ("tags-rename", |s| tag_scene(s, 4, Some(sheets::tag_editor::Tool::Rename))),
+    ("tags-number", |s| tag_scene(s, 4, Some(sheets::tag_editor::Tool::Number))),
+    ("smart", |s| smart_scene(s, sheets::smart::SmartScene::New)),
+    ("smart-edit", |s| smart_scene(s, sheets::smart::SmartScene::EditFirst)),
+    ("pl-edit", |s| smart_scene(s, sheets::smart::SmartScene::CustomizeFirst)),
 ];
+
+/// Scène : l'éditeur de tags s'ouvre sur les premiers morceaux dès que la bibliothèque est chargée.
+fn tag_scene(s: &mut Ui, count: usize, tool: Option<sheets::tag_editor::Tool>) {
+    s.tag_editor.scene.set(Some(sheets::tag_editor::SceneOpen { count, tool }));
+    s.sheet = Some(state::Sheet::TagEditor);
+}
+
+/// Scène : éditeur de playlist intelligente ou personnalisation, une fois la bibliothèque chargée.
+fn smart_scene(s: &mut Ui, scene: sheets::smart::SmartScene) {
+    s.smart.scene.set(Some(scene));
+    s.sheet = Some(match scene {
+        sheets::smart::SmartScene::CustomizeFirst => state::Sheet::PlaylistEdit,
+        _ => state::Sheet::Smart,
+    });
+}
 
 fn main() {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("warn")).init();

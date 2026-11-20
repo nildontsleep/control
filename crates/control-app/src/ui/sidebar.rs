@@ -139,6 +139,18 @@ pub fn sidebar(ui: &Ui, p: &Palette, k: &Kit) -> El {
             s.name_edit.focused = true;
             s.sheet = Some(Sheet::NewPlaylist { tracks: Vec::new() });
         });
+    let add_smart = row()
+        .key("sb-new-smart")
+        .size(22.0, 22.0)
+        .radius(6.0)
+        .center()
+        .cursor(Cursor::Pointer)
+        .hover(p.fill_hover)
+        .role("button")
+        .label(t("pl.newSmart"))
+        .help(t("pl.newSmart"))
+        .child(icon(&icons::SPARKLES, 14.0).color(p.text2))
+        .on_press(|s: &mut Ui| crate::sheets::smart::open_smart(s, None));
     list = list.child(
         row()
             .w_full()
@@ -146,7 +158,7 @@ pub fn sidebar(ui: &Ui, p: &Palette, k: &Kit) -> El {
             .justify_between()
             .pr(6.0)
             .child(heading(p, t("nav.playlists")))
-            .child(add.mt(8.0)),
+            .child(row().gap(2.0).mt(8.0).child(add_smart).child(add)),
     );
     if ui.cat.playlists.is_empty() && ui.ready {
         list = list.child(text(t("pl.sidebarHint")).font(ty::SMALL).color(p.text3).wrap().px(10.0).py(4.0));

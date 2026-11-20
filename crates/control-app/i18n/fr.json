@@ -764,6 +764,7 @@
  "tag.saved_one": "{n} morceau modifié",
  "tag.saved_other": "{n} morceaux modifiés",
  "tag.undo": "Annuler",
+ "tag.undoLast": "Annuler l’enregistrement",
  "tag.undone_one": "{n} morceau restauré",
  "tag.undone_other": "{n} morceaux restaurés",
  "tag.undoPartial": "{n} restaurés, {f} échecs",

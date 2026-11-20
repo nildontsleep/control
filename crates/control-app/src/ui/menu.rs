@@ -131,6 +131,11 @@ fn track_items(ui: &Ui, ids: &[TrackId], entries: &[i64], playlist: Option<Playl
             s.spawn_quiet(move |b| b.library.remove_from_playlist(&e));
         }));
     }
+    let edit = ids.to_vec();
+    let shortcut = if cfg!(target_os = "macos") { "⌘I" } else { "Ctrl+I" };
+    items.push(MenuItem::new(t("tag.menu")).icon(&icons::TAGS).shortcut(shortcut).on_select(move |s: &mut Ui| {
+        crate::sheets::tag_editor::open(s, edit.clone());
+    }));
     let del = ids.to_vec();
     items.push(MenuItem::new(t("menu.removeLibrary")).icon(&icons::TRASH_2).danger(true).on_select(move |s: &mut Ui| {
         s.menu = None;
@@ -154,6 +159,9 @@ fn playlist_items(ui: &Ui, id: PlaylistId) -> Vec<MenuItem> {
         MenuItem::new(t("menu.play")).icon(&icons::PLAY).on_select(play(ids.clone())),
         MenuItem::new(t("menu.playNext")).icon(&icons::LIST_START).on_select(play_next(ids.clone())),
         MenuItem::new(t("menu.addQueue")).icon(&icons::LIST_PLUS).on_select(enqueue(ids)),
+        MenuItem::new(t("pl.customize")).icon(&icons::PALETTE).on_select(move |s: &mut Ui| {
+            crate::sheets::smart::open_customize(s, id);
+        }),
         MenuItem::new(t("pl.rename")).icon(&icons::SQUARE_PEN).on_select(move |s: &mut Ui| {
             s.menu = None;
             let name = s.cat.playlist(id).map(|p| p.name.clone()).unwrap_or_default();
@@ -161,11 +169,16 @@ fn playlist_items(ui: &Ui, id: PlaylistId) -> Vec<MenuItem> {
             s.name_edit.focused = true;
             s.sheet = Some(Sheet::RenamePlaylist(id));
         }),
-        MenuItem::new(t("pl.export")).icon(&icons::UPLOAD).on_select_tx(move |s: &mut Ui, tx| {
-            s.menu = None;
-            s.export_playlist(id, tx);
-        }),
     ];
+    if pl.kind == control_core::model::PlaylistKind::Smart {
+        items.push(MenuItem::new(t("pl.editRules")).icon(&icons::SLIDERS_HORIZONTAL).on_select(move |s: &mut Ui| {
+            crate::sheets::smart::open_smart(s, Some(id));
+        }));
+    }
+    items.push(MenuItem::new(t("pl.export")).icon(&icons::UPLOAD).on_select_tx(move |s: &mut Ui, tx| {
+        s.menu = None;
+        s.export_playlist(id, tx);
+    }));
     items.push(MenuItem::new(t("common.delete")).icon(&icons::TRASH_2).danger(true).on_select(move |s: &mut Ui| {
         s.menu = None;
         s.spawn(move |b| b.library.delete_playlist(id), move |s: &mut Ui, (): (), _tx: &mut rune::Tx| {
