@@ -332,55 +332,53 @@ Dans une liste : `↑` `↓` pour se déplacer, `Maj` ou `Ctrl` pour sélectionn
 
 ## Développer
 
-Il faut Node.js 22.13 ou plus.
+control est écrit en **Rust**, avec une interface **[Rune](https://github.com/anomalyco/rune)** (rendue sur le GPU, sans navigateur ni Electron). La chaîne Rust est fixée par `rust-toolchain.toml` (celle de Rune) ; rustup l'installe tout seul.
 
 ```bash
-npm install
-npm start            # lance l’appli en développement
-npm run dist         # construit l’installateur et la version portable dans dist/
+cargo run -p control                 # l'application de bureau
+cargo run -p control-server          # le serveur web
+cargo test --workspace               # tous les tests
+cargo clippy --workspace --all-targets
 ```
 
-`npm run dist:portable` et `npm run dist:setup` construisent l’un ou l’autre ; `npm run dist:linux` construit l’AppImage et le paquet .deb (sous Linux). La version portable se construit aussi sous Linux ; l’installateur NSIS demande Windows (ou Wine). Le workflow GitHub Actions (`.github/workflows/build.yml`) construit sur `windows-latest` et sur `ubuntu-latest` à chaque push, dépose les fichiers en artefacts, et un dernier job publie une release avec les quatre quand la version de `package.json` n’a pas encore de release sur la branche par défaut (ou quand on pousse un tag `v*`).
+Sous Linux, il faut les en-têtes de `libxkbcommon`, `wayland` et ALSA : `sudo apt install libxkbcommon-dev libwayland-dev libasound2-dev`.
+
+**Vérifier une vue sans fenêtre** : l'application se rend aussi en PNG, avec une bibliothèque de son choix (`CONTROL_DATA` désigne un dossier de données) :
+
+```bash
+CONTROL_DATA=/tmp/essai target/debug/control --snap morceaux.png --size 1360x860 --at 2
+CONTROL_DATA=/tmp/essai target/debug/control --snap reglages.png --scene settings --size 1360x860 --at 2
+```
+
+Les scènes (`albums`, `nowplaying`, `immersive`, `tags`, `downloads`…) sont listées dans `crates/control-app/src/main.rs`. `CONTROL_NO_AUDIO=1` coupe la sortie audio ; `CONTROL_DEMO_PLAY=<titre>` lance un morceau au chargement.
+
+**Paquets** : le workflow GitHub Actions (`.github/workflows/build.yml`) teste tout, puis construit l'AppImage et le paquet .deb (`packaging/linux/`, `cargo deb`) sous Ubuntu, l'exécutable portable et l'installateur NSIS (`packaging/windows/installer.nsi`) sous Windows, et publie une release quand la version n'en a pas encore sur la branche par défaut (ou pour un tag `v*`).
 
 ### Organisation
 
 ```
-src/main/           processus principal : fenêtre, protocole app://, SQLite, scan, yt-dlp
-  db.js             schéma SQLite (module node:sqlite intégré, aucun module natif)
-  library.js        scan incrémental, tags (music-metadata), pochettes, playlists, écoutes
-  tools.js          téléchargement de yt-dlp, ffmpeg et deno au premier lancement
-  downloads.js      file de téléchargements et analyse des liens
-  tags.js           lecture et écriture des tags (node-taglib-sharp), pochettes, renommage, annulation
-  stats.js          statistiques d’écoute et de visionnage (requêtes SQL à la demande)
-  lyrics.js         paroles : .lrc voisin, tags du fichier, LRCLIB (avec nouvel essai), cache
-  discord.js        Rich Presence : canal local de Discord, mises à jour limitées, recherche de pochette
-  updater.js        mise à jour : release GitHub, téléchargement vérifié (SHA-256), installation
-  media/            films, séries, animés : TMDB, AniList, cache, progression, ma liste
-  core.js           services d’un utilisateur (réglages, base, bibliothèque, tags, stats…) et leurs commandes, partagés avec le serveur
-  platform.js       ce qui dépend d’Electron (réseau, images, corbeille) ; image-lite.js remplace nativeImage sur le serveur
-  sources.js        serveurs control affichés dans la fenêtre (vue web isolée par serveur, bascule, pause de l’autre source)
-server/             version web : HTTP, comptes et sessions, un noyau par compte, RPC, événements en direct, médias (Range)
-  launcher.js       lanceur : fait tourner le serveur, le redémarre sur sa nouvelle version, revient en arrière si elle ne démarre pas
-  updater.js        mise à jour : releases GitHub, archive vérifiée (SHA-256) et installée à côté ; tar.js : archives lues strictement ;
-                    appstate.js : versions installées ; bundle.js : construit l’archive publiée avec chaque release
-  hub.js            comptes chargés à la demande, dossiers (communs / propres à chaque compte), analyses
-  social.js         profils, partages (qui voit quoi) ; compare.js : comparaison de deux récaps
-  subsonic.js       API Subsonic / OpenSubsonic (/rest) : authentification, modèle artistes-albums, flux, favoris ; secrets.js : secrets scellés
-src/web/            côté navigateur : pont window.control, pages de connexion / installation / administration, PWA, mise en page mobile
-src/renderer/       interface (modules ES, sans framework ni bundler)
-  js/player.js      moteur de lecture : file, égaliseur, MediaSession, comptage d’écoutes
-  js/data.js        bibliothèque en mémoire, albums et artistes dérivés, playlists intelligentes
-  js/ui/            liste virtualisée, barre de lecture, « À l’écoute », menus, feuilles, éditeur de tags, paroles, récap
-  js/tags/          motifs façon mp3tag (%artist% - %title%), casse, remplacement
-  js/lyrics/        lecture du format LRC
-  js/theme/         ambiances, fonds animés (canvas), application du thème (OLED, arrondi, translucidité)
-  js/discord/       description de la lecture en cours pour la Rich Presence
-  js/update/        état de la mise à jour partagé entre notification, barre latérale et réglages
-  js/views/         Morceaux, Albums, Artistes, Vidéos, Playlist, Recherche, Téléchargements,
-                    Films & séries, Animés, fiche, lecture, Ma liste, Statistiques,
-                    Personnes, Profil, Comparer (web)
-  js/media/         accès aux catalogues, cartes et rangées, adresse du lecteur vidrift
-build/              icônes de l’application
+crates/control-core/     tout ce qui ne dépend ni d'une fenêtre ni d'un navigateur (partagé avec le serveur)
+  db.rs, store.rs        schéma SQLite et réglages (mêmes formats que la version Electron : ses données se rouvrent telles quelles)
+  library.rs, probe.rs   scan incrémental, tags et pochettes (lofty), conteneurs vidéo (MP4, Matroska), playlists, écoutes
+  catalog.rs, smart.rs   albums et artistes dérivés, recherche, playlists intelligentes ; artists.rs : noms d'artistes séparés
+  queue.rs               file de lecture (aléatoire, répétition, insertions), comptage des écoutes
+  tags.rs, tagpattern.rs éditeur de tags (écriture sans réencodage, annulation), motifs façon mp3tag
+  lyrics.rs, lrc.rs      paroles : .lrc voisin, tags, LRCLIB ; format LRC (minutage des mots compris)
+  stats.rs               statistiques d'écoute et de visionnage
+  tools.rs, downloads/   yt-dlp, ffmpeg et deno ; file de téléchargements
+  loudness.rs, automix/  niveau EBU R128 ; tempo et grille de temps pour AutoMix
+  media/                 films, séries, animés : TMDB, AniList, cache, progression, ma liste, lecteur vidrift
+  scrobble.rs, discord.rs, updater.rs   Last.fm et ListenBrainz, Rich Presence, mises à jour
+crates/control-audio/    moteur de lecture : symphonia (et ffmpeg pour Opus et le son des vidéos), cpal, deux platines,
+                         égaliseur 10 bandes, fondu enchaîné, enchaînement sans blanc, limiteur, vitesse sans changer la
+                         hauteur (WSOLA), AutoMix calé sur le tempo
+crates/control-app/      l'application de bureau (Rune) : état (state.rs), lecteur (player.rs, audio.rs, video.rs),
+                         vues (views/), barre latérale, listes, « À l'écoute », mode immersif, menus, feuilles (sheets/),
+                         réglages (settings_ui.rs), MPRIS (Linux), textes FR/EN (i18n/)
+crates/control-server/   la version web : comptes, sessions, un noyau par compte, RPC, API Subsonic, mises à jour
+src/renderer/, src/web/  l'interface web servie aux navigateurs par le serveur
+packaging/               AppImage, .desktop, installateur Windows
+docs/rust/               règles du portage et repères pour l'interface Rune
 ```
 
 Le design (jetons de couleur, contrôles, menus, info-bulles) est repris de [nil cam](https://github.com/nildontsleep/nil_cam).
