@@ -1,5 +1,6 @@
 //! control : lecteur musique et vidéo, interface Rune.
 
+mod audio;
 mod backend;
 mod format;
 mod i18n;
@@ -12,6 +13,7 @@ mod sheets;
 mod state;
 mod theme;
 mod ui;
+mod video;
 mod views;
 
 use std::sync::Arc;
@@ -32,6 +34,13 @@ fn placeholder() -> Ui {
 
 fn setup(s: &mut Ui, waker: Waker) {
     s.set_images(waker);
+    // Le vrai moteur audio, sauf si on le demande muet (essais) ; sans carte son il joue en silence.
+    if std::env::var_os("CONTROL_NO_AUDIO").is_none() {
+        match audio::EngineTransport::new(s.backend.clone()) {
+            Ok(t) => s.player.set_transport(Box::new(t)),
+            Err(err) => log::error!("Moteur audio indisponible : {err}"),
+        }
+    }
     s.reload_library();
     s.rescan();
 }
@@ -60,6 +69,12 @@ const SCENES: &[(&str, fn(&mut Ui))] = &[
     ("appearance", |s| s.sheet = Some(state::Sheet::Settings(state::SettingsTab::Appearance))),
     ("equalizer", |s| s.sheet = Some(state::Sheet::Equalizer)),
     ("light", |s| s.settings.theme = "light".into()),
+    ("nowplaying", |s| s.now_playing = true),
+    ("lyrics", |s| {
+        s.now_playing = true;
+        s.settings.np_tab = "lyrics".into();
+    }),
+    ("immersive", |s| s.immersive = true),
 ];
 
 fn main() {

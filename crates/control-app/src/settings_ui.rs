@@ -402,7 +402,7 @@ fn about(ui: &Ui, p: &Palette, _k: &Kit) -> Vec<El> {
     )]
 }
 
-fn equalizer(ui: &Ui, p: &Palette, k: &Kit) -> El {
+pub fn equalizer(ui: &Ui, p: &Palette, k: &Kit) -> El {
     let eq = &ui.settings.eq;
     let mut bands = row().gap(10.0).h(200.0).items_end().justify_center();
     for (i, f) in EQ_BANDS.iter().enumerate() {

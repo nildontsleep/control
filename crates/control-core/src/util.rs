@@ -79,15 +79,21 @@ pub fn write_atomic(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
     if let Some(dir) = path.parent() {
         std::fs::create_dir_all(dir)?;
     }
+    // Nom temporaire propre à cet appel : deux threads qui écrivent le même fichier (une pochette partagée par
+    // tout un album, lue en parallèle pendant un scan) ne se marchent pas dessus.
+    static SEQ: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+    let n = SEQ.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
     let mut tmp = path.as_os_str().to_owned();
-    tmp.push(".tmp");
+    tmp.push(format!(".{}-{n}.tmp", std::process::id()));
     let tmp = std::path::PathBuf::from(tmp);
     {
         let mut f = std::fs::File::create(&tmp)?;
         f.write_all(bytes)?;
         f.sync_all()?;
     }
-    std::fs::rename(&tmp, path)
+    std::fs::rename(&tmp, path).inspect_err(|_| {
+        let _ = std::fs::remove_file(&tmp);
+    })
 }
 
 /// Clé de comparaison d'un chemin : insensible à la casse sous Windows seulement.
@@ -134,6 +140,23 @@ mod tests {
         assert_eq!(natural_cmp("a", "b"), Ordering::Less);
         assert_eq!(natural_cmp("a01", "a1"), Ordering::Equal);
         assert_eq!(natural_cmp("", "a"), Ordering::Less);
+    }
+
+    #[test]
+    fn concurrent_atomic_writes_all_succeed() {
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path().join("same.jpg");
+        std::thread::scope(|sc| {
+            for _ in 0..8 {
+                sc.spawn(|| {
+                    for _ in 0..20 {
+                        write_atomic(&p, b"data").unwrap();
+                    }
+                });
+            }
+        });
+        assert_eq!(std::fs::read(&p).unwrap(), b"data");
+        assert_eq!(std::fs::read_dir(dir.path()).unwrap().count(), 1, "aucun fichier temporaire ne reste");
     }
 
     #[test]

@@ -111,6 +111,8 @@ pub enum Sheet {
     PlaylistEdit,
     /// Récap (état : `Ui::recap`).
     Recap,
+    /// Coller ou modifier les paroles du morceau en cours.
+    LyricsEdit,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -190,6 +192,21 @@ pub struct Ui {
     pub tag_editor: crate::sheets::tag_editor::TagEditorState,
     pub smart: crate::sheets::smart::SmartState,
     pub live: crate::ui::playerbar::LiveBits,
+    pub lyrics: crate::ui::lyrics::LyricsState,
+    pub lyric_line: Option<usize>,
+    /// Mots allumés de la ligne courante (mode immersif).
+    lit_words: usize,
+    pub lyrics_edit: TextEdit,
+    /// Mode immersif (plein écran : pochette et paroles).
+    pub immersive: bool,
+    pub video: crate::video::VideoView,
+    /// ffmpeg (relu de temps en temps : il peut être installé pendant que l'application tourne).
+    ffmpeg: Option<std::path::PathBuf>,
+    ffmpeg_checked: f64,
+    /// Présence Discord : ce qui a été envoyé, et quand recommencer.
+    presence: control_core::discord::PresenceFeed,
+    presence_due: f64,
+    presence_last: (Option<TrackId>, bool),
     /// Vignettes de vidéos : chemin une fois extraite, `None` si l'extraction a échoué.
     thumbs: RefCell<HashMap<TrackId, Option<std::path::PathBuf>>>,
     thumbs_wanted: RefCell<Vec<TrackId>>,
@@ -253,6 +270,17 @@ impl Ui {
             tag_editor: Default::default(),
             smart: Default::default(),
             live: crate::ui::playerbar::LiveBits::new(),
+            lyrics: Default::default(),
+            lyric_line: None,
+            lit_words: 0,
+            lyrics_edit: TextEdit::new(""),
+            immersive: false,
+            video: Default::default(),
+            ffmpeg: None,
+            ffmpeg_checked: f64::NEG_INFINITY,
+            presence: Default::default(),
+            presence_due: 0.0,
+            presence_last: (None, false),
             thumbs: RefCell::new(HashMap::new()),
             thumbs_wanted: RefCell::new(Vec::new()),
             waker: None,
@@ -331,6 +359,14 @@ impl Ui {
         self.player.library_changed(&cat, &self.backend);
         if first {
             self.player.restore_session(&self.settings, &cat);
+            // Rendus de démonstration : `CONTROL_DEMO_PLAY=<titre>` lance ce morceau au chargement.
+            if let Some(title) = std::env::var_os("CONTROL_DEMO_PLAY") {
+                let title = title.to_string_lossy().into_owned();
+                let ids: Vec<TrackId> = cat.audio.iter().map(|&i| cat.entries[i].track.id).collect();
+                let start = cat.audio.iter().position(|&i| cat.entries[i].track.title == title).unwrap_or(0);
+                let backend = self.backend.clone();
+                self.player.play_list(&ids, start, Some(false), &cat, &backend);
+            }
         }
         self.selection.ids.retain(|id| cat.by_id.contains_key(id));
         if !self.search.text.trim().is_empty() {
@@ -390,6 +426,14 @@ impl Ui {
         self.settings = self.backend.store.settings();
         if patch.get("language").is_some() {
             crate::i18n::set_language(&self.settings.language);
+            self.presence.invalidate();
+        }
+        if patch.get("discord").is_some() {
+            self.backend.discord.configure_from(&self.settings.discord);
+            self.presence.invalidate();
+        }
+        if patch.get("normalize").and_then(Value::as_bool) == Some(true) {
+            self.backend.loudness.kick();
         }
         self.player.apply_settings(&self.settings);
         if patch.get("libraryFolders").is_some() || patch.get("downloadDir").is_some() {
@@ -558,11 +602,86 @@ impl Ui {
         let was = (self.player.current_id(), self.player.is_playing());
         let changed = self.player.tick(clock, &cat, &backend);
         let now = (self.player.current_id(), self.player.is_playing());
-        self.live.update(self.player.position(), self.player.duration());
-        if now.1 {
-            tx.wake_after(std::time::Duration::from_millis(100));
+        let position = self.player.position();
+        self.live.update(position, self.player.duration());
+        let mut changed = changed;
+        if clock - self.ffmpeg_checked > 10.0 {
+            self.ffmpeg_checked = clock;
+            self.ffmpeg = self.backend.ffmpeg();
         }
+        // Vidéo affichée : une image toutes les 1/30 s ; sinon la position suffit à 10 images par seconde.
+        let showing_video = (self.now_playing || self.immersive) && self.player.track.as_ref().is_some_and(|t| t.is_video());
+        if showing_video {
+            if let (Some(item), Some(track)) = (self.player.queue.current(), self.player.track.clone()) {
+                changed |= self.video.update(self.ffmpeg.as_ref(), item.uid, &track, position);
+            }
+        } else {
+            self.video.stop();
+        }
+        // Paroles visibles : chargées pour le morceau en cours, ligne active suivie.
+        let lyrics_shown = self.immersive || (self.now_playing && self.settings.np_tab == "lyrics");
+        if lyrics_shown {
+            if self.lyrics.track() != self.player.current_id() {
+                crate::ui::lyrics::ensure(self, false);
+                changed = true;
+            }
+            if crate::ui::lyrics::follow(self, position) {
+                changed = true;
+                if let Some(i) = self.lyric_line
+                    && self.now_playing
+                {
+                    tx.scroll_into_view(format!("lyr-{i}"));
+                }
+            }
+            if self.immersive {
+                let lit = match (self.lyrics.lrc(), self.lyric_line) {
+                    (Some(lrc), Some(i)) => lrc.lit_words(i, position),
+                    _ => 0,
+                };
+                if lit != self.lit_words {
+                    self.lit_words = lit;
+                    changed = true;
+                }
+            }
+        }
+        if now.1 {
+            tx.wake_after(std::time::Duration::from_millis(if showing_video { 16 } else { 100 }));
+        }
+        self.feed_presence(clock, now);
         changed || was != now
+    }
+
+    /// Présence Discord : environ toutes les 1,5 s pendant la lecture, chaque minute en pause, et à chaque changement.
+    fn feed_presence(&mut self, clock: f64, now: (Option<TrackId>, bool)) {
+        let now_ms = control_core::util::now_ms();
+        let mut force = false;
+        if now.0 != self.presence_last.0 {
+            self.presence.track_changed();
+            force = true;
+        }
+        if now.1 != self.presence_last.1 || force {
+            self.presence.playback_changed(now.1, now_ms);
+            force = true;
+        }
+        self.presence_last = now;
+        if !force && clock < self.presence_due {
+            return;
+        }
+        self.presence_due = clock + if now.1 { 1.5 } else { 60.0 };
+        let np = control_core::discord::NowPlaying {
+            track: self.player.track.as_ref(),
+            playing: now.1,
+            position: self.player.position(),
+            duration: self.player.duration(),
+            streaming: None,
+            paused_since: self.presence.paused_since(),
+        };
+        let lang = if crate::i18n::current() == crate::i18n::Lang::En { "en" } else { "fr" };
+        let texts = control_core::discord::Texts::for_language(lang);
+        let activity = control_core::discord::build_activity(&np, &self.settings.discord, &texts, now_ms);
+        if self.presence.should_send(activity.as_ref(), now_ms) {
+            self.backend.discord.set_activity(activity);
+        }
     }
 
     // ─── Dialogues ───────────────────────────────────────────────────────────

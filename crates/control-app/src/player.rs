@@ -44,7 +44,7 @@ impl SoundSettings {
         }
         SoundSettings {
             // Courbe du curseur de volume de l'original : v².
-            volume: (s.volume.clamp(0.0, 1.0) as f32).powi(2),
+            volume: s.volume.clamp(0.0, 1.0) as f32,
             muted: s.muted,
             rate: (s.rate as f32).clamp(0.5, 2.0),
             eq_enabled: s.eq.enabled,
@@ -445,9 +445,13 @@ impl Player {
             {
                 let slot = Arc::new(parking_lot::Mutex::new(None));
                 self.play_id = Some(slot.clone());
-                let (lib, id) = (backend.library.clone(), t.id);
+                let (b, id) = (backend.clone(), t.id);
                 std::thread::spawn(move || {
-                    *slot.lock() = lib.play_start(id, dur);
+                    let play = b.library.play_start(id, dur);
+                    if let Some(play) = play {
+                        b.scrobbler.started(play, id);
+                    }
+                    *slot.lock() = play;
                 });
             }
             if clock - self.saved_at > 15.0 {
@@ -464,12 +468,13 @@ impl Player {
     fn finish_listen(&mut self, backend: &Arc<Backend>, completed: bool) {
         if let Some(slot) = self.play_id.take() {
             let seconds = self.listen.listened.round();
-            let lib = backend.library.clone();
+            let b = backend.clone();
             std::thread::spawn(move || {
                 // L'enregistrement du début peut être encore en cours : on l'attend un peu.
                 for _ in 0..50 {
                     if let Some(id) = *slot.lock() {
-                        lib.play_end(id, seconds, completed);
+                        b.library.play_end(id, seconds, completed);
+                        b.scrobbler.ended(id, seconds);
                         return;
                     }
                     std::thread::sleep(std::time::Duration::from_millis(20));

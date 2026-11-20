@@ -387,6 +387,13 @@ impl Worker {
     /// Cherche la pochette de l'activité en cours si elle a changé (ou si on l'a oubliée pour réessayer).
     fn sync_cover(&mut self) {
         let r = self.activity.as_ref().and_then(|a| a.cover.clone());
+        // Rien n'est envoyé à un hébergeur tant que Discord n'est pas là pour l'afficher : la recherche reprend à la
+        // connexion (écart volontaire avec l'original, qui envoyait la pochette même sans Discord ouvert).
+        if r.is_some() && self.state() != "connected" {
+            self.cover_key.clear();
+            self.cover = None;
+            return;
+        }
         let key = r.as_ref().map(CoverRef::key).unwrap_or_default();
         if key == self.cover_key {
             return;
@@ -475,6 +482,7 @@ impl Worker {
                             self.last_base = None;
                             self.poll_at = Some(Instant::now() + POLL);
                             self.set("connected", &user);
+                            self.sync_cover();
                             self.flush();
                             return;
                         }

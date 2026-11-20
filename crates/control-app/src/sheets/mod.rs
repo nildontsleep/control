@@ -129,6 +129,37 @@ pub fn sheet(ui: &Ui, p: &Palette, k: &Kit, layer: &mut Vec<El>) {
         Sheet::TagEditor => tag_editor::sheet(ui, p, k, layer),
         Sheet::Smart | Sheet::PlaylistEdit => smart::sheet(ui, p, k, layer),
         Sheet::Recap => crate::views::recap::sheet(ui, p, k, layer),
+        Sheet::LyricsEdit => {
+            let save = |s: &mut Ui| {
+                let Some(id) = s.player.current_id() else { return };
+                let text = s.lyrics_edit.text.clone();
+                s.sheet = None;
+                s.spawn(
+                    move |b| b.lyrics.set(id, &text).map_err(|e| e.to_string()),
+                    move |s, r, _| match r {
+                        Ok(result) => {
+                            let lrc = result.parsed();
+                            s.lyrics = crate::ui::lyrics::LyricsState::Ready { track: id, result, lrc };
+                            s.lyric_line = None;
+                            s.toast(t("toast.saved"), "check");
+                        }
+                        Err(e) => s.toast(e, "triangle-alert"),
+                    },
+                );
+            };
+            let area = rune_kit::TextArea::new(&ui.lyrics_edit)
+                .placeholder(t("lyr.placeholder"))
+                .on_edit(|s: &mut Ui| &mut s.lyrics_edit)
+                .build(k)
+                .h(320.0);
+            let body = col()
+                .w_full()
+                .gap(10.0)
+                .child(text(t("lyr.editHint")).font(ty::SMALL).color(p.text2).wrap())
+                .child(area)
+                .child(footer(k, &t("common.cancel"), &t("common.save"), false, move |s, _| save(s)));
+            layer.push(panel(p, "sheet-lyrics", t("lyr.editTitle"), 580.0, 560.0, None, body));
+        }
     }
     let _ = col();
 }

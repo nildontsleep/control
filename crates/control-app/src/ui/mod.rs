@@ -2,7 +2,10 @@
 
 pub mod common;
 pub mod grid;
+pub mod immersive;
+pub mod lyrics;
 pub mod menu;
+pub mod nowplaying;
 pub mod playerbar;
 pub mod sidebar;
 pub mod tracklist;
@@ -133,6 +136,12 @@ pub fn view(ui: &Ui, cx: &mut Cx<Ui>) -> El {
         )
         .child(toasts(ui, &p));
 
+    if ui.now_playing {
+        layer.push(nowplaying::view(ui, &p, &k, cx));
+    }
+    if ui.immersive {
+        layer.push(immersive::view(ui, &p, cx));
+    }
     crate::sheets::sheet(ui, &p, &k, &mut layer);
     if let Some(m) = &ui.menu {
         layer.push(menu::context_menu(ui, &p, &k, m));
@@ -151,6 +160,8 @@ pub fn on_key(s: &mut Ui, ev: &KeyEvent, tx: &mut Tx) -> bool {
         Key::Escape => {
             if s.menu.is_some() {
                 s.menu = None;
+            } else if s.immersive {
+                s.immersive = false;
             } else if s.sheet.is_some() {
                 s.sheet = None;
             } else if s.now_playing {
@@ -168,6 +179,22 @@ pub fn on_key(s: &mut Ui, ev: &KeyEvent, tx: &mut Tx) -> bool {
         Key::Left => {
             let pos = s.player.position();
             s.player.seek(pos - 10.0);
+        }
+        Key::Text(t) if t == "i" || t == "I" => {
+            s.immersive = !s.immersive;
+            if s.immersive {
+                crate::ui::lyrics::ensure(s, false);
+            }
+        }
+        Key::Text(t) if t == "l" || t == "L" => {
+            if s.immersive {
+                let on = !s.settings.immersive_lyrics;
+                s.set(serde_json::json!({ "immersiveLyrics": on }));
+            } else {
+                s.now_playing = true;
+                s.set(serde_json::json!({ "npTab": "lyrics" }));
+                crate::ui::lyrics::ensure(s, false);
+            }
         }
         Key::Text(t) if t == "a" || t == "A" => {
             let on = !s.settings.automix;
