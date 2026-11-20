@@ -14,31 +14,67 @@ concurrency:
   group: build-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: '0'
+
 jobs:
+  # Tests de tout l'espace de travail (noyau, moteur audio, application, serveur) et clippy.
+  test:
+    name: Tests et clippy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Dépendances système
+        run: sudo apt-get update && sudo apt-get install -y libxkbcommon-dev libwayland-dev libasound2-dev ffmpeg
+
+      - name: Chaîne Rust (rust-toolchain.toml)
+        run: rustup show active-toolchain || rustup toolchain install
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Tests
+        run: cargo test --workspace
+
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+      # Démarrage de l'application sans fenêtre : la bibliothèque, les vues et les réglages se construisent.
+      - name: Rendu de démarrage
+        run: |
+          mkdir -p "$RUNNER_TEMP/smoke"
+          CONTROL_NO_AUDIO=1 CONTROL_DATA="$RUNNER_TEMP/smoke" target/debug/control --snap "$RUNNER_TEMP/smoke.png" --size 1360x860 --at 1 --scale 1
+          for scene in albums settings nowplaying; do
+            CONTROL_NO_AUDIO=1 CONTROL_DATA="$RUNNER_TEMP/smoke" target/debug/control --snap "$RUNNER_TEMP/$scene.png" --scene $scene --size 1360x860 --at 1 --scale 1
+          done
+
   windows:
     name: Windows — portable + installateur
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
 
-      - uses: actions/setup-node@v6
-        with:
-          node-version: 22
-          cache: npm
+      - name: Chaîne Rust (rust-toolchain.toml)
+        run: rustup show active-toolchain; if ($LASTEXITCODE -ne 0) { rustup toolchain install }
 
-      - name: Installer les dépendances
-        run: npm ci
+      - uses: Swatinem/rust-cache@v2
 
-      - name: Construire l’exécutable portable et l’installateur
-        run: npm run dist
-        env:
-          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      - name: Construire
+        run: cargo build --release -p control
 
-      - name: Fichiers générés
-        shell: pwsh
-        run: Get-ChildItem dist -File | Format-Table Name, @{ n = 'Taille (Mo)'; e = { [math]::Round($_.Length / 1MB, 1) } }
+      - name: Version
+        id: version
+        shell: bash
+        run: echo "version=$(cargo metadata --no-deps --format-version 1 | python -c 'import json,sys; print(next(p["version"] for p in json.load(sys.stdin)["packages"] if p["name"]=="control"))')" >> "$GITHUB_OUTPUT"
+
+      - name: Portable et installateur
+        shell: bash
+        run: |
+          mkdir -p dist
+          cp target/release/control.exe "dist/control-${{ steps.version.outputs.version }}-portable.exe"
+          cd packaging/windows
+          makensis -DVERSION=${{ steps.version.outputs.version }} -DEXE="$GITHUB_WORKSPACE\\target\\release\\control.exe" -DOUT="$GITHUB_WORKSPACE\\dist\\control-${{ steps.version.outputs.version }}-setup.exe" installer.nsi
 
       - name: Envoyer la version portable
         uses: actions/upload-artifact@v6
@@ -54,85 +90,41 @@ jobs:
           path: dist/*-setup.exe
           if-no-files-found: error
 
-  # Tests du serveur web (comptes, droits, médias, événements) sur une installation de production.
-  web:
-    name: Serveur web — tests
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-
-      - uses: actions/setup-node@v6
-        with:
-          node-version: 22
-          cache: npm
-
-      - name: Installer les dépendances
-        run: npm ci --omit=dev --ignore-scripts
-
-      - name: Tests
-        run: npm run test:web
-
-  # Image Docker du serveur web, publiée sur la branche par défaut (ghcr.io/<propriétaire>/control).
-  docker:
-    name: Serveur web — image Docker
-    needs: [web]
-    runs-on: ubuntu-latest
-    continue-on-error: true
-    if: github.event_name == 'push' && github.ref_name == github.event.repository.default_branch
-    permissions:
-      contents: read
-      packages: write
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Lire la version
-        id: version
-        run: echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
-
-      - uses: docker/setup-buildx-action@v3
-
-      - uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Construire et publier
-        uses: docker/build-push-action@v6
-        env:
-          DOCKER_BUILD_RECORD_UPLOAD: 'false' # sinon un artefact « .dockerbuild » s’ajoute à ceux de la release
-        with:
-          context: .
-          push: true
-          tags: |
-            ghcr.io/${{ github.repository_owner }}/control:latest
-            ghcr.io/${{ github.repository_owner }}/control:${{ steps.version.outputs.version }}
-
   linux:
     name: Linux — AppImage + deb
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
 
-      - uses: actions/setup-node@v6
-        with:
-          node-version: 22
-          cache: npm
+      - name: Dépendances système
+        run: sudo apt-get update && sudo apt-get install -y libxkbcommon-dev libwayland-dev libasound2-dev libfuse2
 
-      - name: Installer les dépendances
-        run: npm ci
+      - name: Chaîne Rust (rust-toolchain.toml)
+        run: rustup show active-toolchain || rustup toolchain install
 
-      # Test de démarrage : l'application se lance, l'interface se construit sans erreur, les réglages s'ouvrent (src/main/smoke.js).
-      - name: Tester le démarrage de l’application
-        run: xvfb-run -a -s "-screen 0 1360x860x24" npx electron . --no-sandbox --user-data-dir="$RUNNER_TEMP/smoke"
-        env:
-          CONTROL_SMOKE: '1'
+      - uses: Swatinem/rust-cache@v2
 
-      - name: Construire l’AppImage et le paquet deb
-        run: npm run dist:linux
+      - name: Construire
+        run: cargo build --release -p control
+
+      - name: Version
+        id: version
+        run: echo "version=$(cargo metadata --no-deps --format-version 1 | jq -r '.packages[] | select(.name=="control") | .version')" >> "$GITHUB_OUTPUT"
+
+      - name: Paquet deb
+        run: |
+          cargo install cargo-deb --locked
+          mkdir -p dist
+          cargo deb -p control --no-build --output "dist/control-${{ steps.version.outputs.version }}-amd64.deb"
+
+      - name: AppImage
+        run: |
+          curl -fsSL -o /usr/local/bin/appimagetool https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage
+          sudo chmod +x /usr/local/bin/appimagetool
+          packaging/linux/appimage.sh "${{ steps.version.outputs.version }}" target/release/control dist
 
       - name: Fichiers générés
-        run: ls -lh dist/*.AppImage dist/*.deb
+        run: ls -lh dist/
 
       - name: Envoyer l’AppImage
         uses: actions/upload-artifact@v6
@@ -148,11 +140,10 @@ jobs:
           path: dist/*.deb
           if-no-files-found: error
 
-  # Une release est publiée pour chaque tag v*, et sur la branche par défaut
-  # dès que la version de package.json n’a pas encore de release.
+  # Une release est publiée pour chaque tag v*, et sur la branche par défaut dès que la version n’a pas encore de release.
   release:
     name: Publier la release
-    needs: [windows, linux]
+    needs: [test, windows, linux]
     runs-on: ubuntu-latest
     if: >-
       startsWith(github.ref, 'refs/tags/v') ||
@@ -165,7 +156,7 @@ jobs:
       - name: Lire la version
         id: version
         run: |
-          version=$(node -p "require('./package.json').version")
+          version=$(cargo metadata --no-deps --format-version 1 | jq -r '.packages[] | select(.name=="control") | .version')
           echo "version=$version" >> "$GITHUB_OUTPUT"
           if git rev-parse -q --verify "refs/tags/v$version" >/dev/null; then
             echo "tagged=true" >> "$GITHUB_OUTPUT"
@@ -181,23 +172,6 @@ jobs:
           pattern: control-*
           merge-multiple: true
 
-      # Archive du serveur web : c'est elle que la mise à jour automatique des serveurs télécharge (et vérifie par son SHA-256).
-      - name: Construire l’archive du serveur web
-        if: startsWith(github.ref, 'refs/tags/v') || steps.version.outputs.tagged == 'false'
-        run: node server/bundle.js dist
-
-      # Signature Ed25519 de l'archive (clé privée dans le secret WEB_SIGNING_KEY ; voir « Signer les mises à jour » dans le README).
-      - name: Signer l’archive du serveur web
-        if: startsWith(github.ref, 'refs/tags/v') || steps.version.outputs.tagged == 'false'
-        run: |
-          if [ -n "$WEB_SIGNING_KEY" ]; then
-            node server/sign.js sign "dist/control-web-${{ steps.version.outputs.version }}.tgz"
-          else
-            echo "Pas de clé de signature (secret WEB_SIGNING_KEY) : archive non signée."
-          fi
-        env:
-          WEB_SIGNING_KEY: ${{ secrets.WEB_SIGNING_KEY }}
-
       - name: Publier la release
         if: startsWith(github.ref, 'refs/tags/v') || steps.version.outputs.tagged == 'false'
         uses: softprops/action-gh-release@v2
@@ -211,8 +185,6 @@ jobs:
             dist/*-setup.exe
             dist/*.AppImage
             dist/*.deb
-            dist/control-web-*.tgz
-            dist/control-web-*.tgz.sig
           body: |
             ## Télécharger
 
@@ -221,9 +193,7 @@ jobs:
             - **`control-${{ steps.version.outputs.version }}-portable.exe`** : version portable, rien à installer ; les réglages, la bibliothèque et les outils sont rangés dans un dossier `control data` à côté du fichier.
 
             **Linux (64 bits)**
-            - **`control-${{ steps.version.outputs.version }}-x86_64.AppImage`** : un seul fichier, à rendre exécutable (`chmod +x`) puis à lancer ; il se met à jour tout seul. Demande FUSE 2 (`libfuse2`) sur Ubuntu récent, sinon : `./control-….AppImage --appimage-extract-and-run`.
-            - **`control-${{ steps.version.outputs.version }}-amd64.deb`** : paquet pour Debian, Ubuntu et dérivés (`sudo apt install ./control-….deb`) ; une nouvelle version est signalée dans l’application, à télécharger à la main.
-
-            **Serveur web** : image Docker `ghcr.io/nildontsleep/control`, ou `npm run web`. **`control-web-${{ steps.version.outputs.version }}.tgz`** est l’archive que la mise à jour automatique du serveur télécharge : il n’y a rien à en faire à la main.
+            - **`control-${{ steps.version.outputs.version }}-x86_64.AppImage`** : un seul fichier, à rendre exécutable (`chmod +x`) puis à lancer ; il se met à jour tout seul.
+            - **`control-${{ steps.version.outputs.version }}-amd64.deb`** : paquet pour Debian, Ubuntu et dérivés (`sudo apt install ./control-….deb`) ; une nouvelle version est signalée dans l’application.
 
             L’application n’est pas signée : au premier lancement, Windows SmartScreen peut afficher « Windows a protégé votre ordinateur ». Cliquez sur **Informations complémentaires**, puis **Exécuter quand même**.

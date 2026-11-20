@@ -5,6 +5,8 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 
+build = "build.rs"
+
 [[bin]]
 name = "control"
 path = "src/main.rs"
@@ -31,3 +33,23 @@ workspace = true
 # Touches multimédia et panneau du bureau (MPRIS) : la même version de zbus que Rune.
 [target.'cfg(target_os = "linux")'.dependencies]
 zbus = { version = "5.19", default-features = false, features = ["async-io", "blocking-api"] }
+
+[target.'cfg(windows)'.build-dependencies]
+winresource = "0.1"
+
+# Paquet Debian (`cargo deb -p control`).
+[package.metadata.deb]
+name = "control"
+maintainer = "nildontsleep <132806671+nildontsleep@users.noreply.github.com>"
+copyright = "2026, nildontsleep"
+section = "sound"
+priority = "optional"
+extended-description = "Lecteur musique et vidéo : bibliothèque, téléchargements yt-dlp, éditeur de tags, paroles synchronisées, statistiques, films, séries et animés."
+depends = "$auto"
+recommends = "ffmpeg"
+assets = [
+    ["target/release/control", "usr/bin/control", "755"],
+    ["../../packaging/linux/control.desktop", "usr/share/applications/control.desktop", "644"],
+    ["../../build/icon.png", "usr/share/icons/hicolor/512x512/apps/control.png", "644"],
+    ["../../THIRD-PARTY.md", "usr/share/doc/control/THIRD-PARTY.md", "644"],
+]

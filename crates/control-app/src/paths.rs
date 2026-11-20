@@ -20,10 +20,15 @@ pub fn data_dir() -> PathBuf {
     dirs::config_dir().unwrap_or_else(|| PathBuf::from(".")).join("control")
 }
 
+/// Édition portable : l'exécutable s'appelle `control-<version>-portable.exe` (comme le reconnaît la mise à jour),
+/// ou un fichier `portable` est posé à côté, ou `CONTROL_PORTABLE` est défini.
 fn portable_dir() -> Option<PathBuf> {
     let exe = std::env::current_exe().ok()?;
     let dir = exe.parent()?.to_path_buf();
-    let flagged = std::env::var_os("CONTROL_PORTABLE").is_some() || dir.join("portable").is_file();
+    let name = exe.file_name().map(|n| n.to_string_lossy().to_lowercase()).unwrap_or_default();
+    let flagged = std::env::var_os("CONTROL_PORTABLE").is_some()
+        || dir.join("portable").is_file()
+        || (cfg!(windows) && name.contains("portable"));
     flagged.then_some(dir)
 }
 

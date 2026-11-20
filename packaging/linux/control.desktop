@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=control
+GenericName=Lecteur multimédia
+Comment=Lecteur musique et vidéo
+Exec=control %F
+Icon=control
+Terminal=false
+Categories=AudioVideo;Audio;Player;
+Keywords=music;video;player;yt-dlp;musique;vidéo;
+MimeType=audio/mpeg;audio/flac;audio/mp4;audio/ogg;audio/x-wav;audio/opus;video/mp4;video/x-matroska;video/webm;
+StartupWMClass=control
