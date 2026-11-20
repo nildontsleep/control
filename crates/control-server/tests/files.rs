@@ -29,6 +29,22 @@ fn upload(
     c.raw("POST", &url, Some((body, "application/octet-stream")), extra, csrf)
 }
 
+/// Un envoi trop gros, écrit à la main : le serveur répond (et ferme) sans lire le reste, le client continue
+/// d'écrire sans s'en soucier. Renvoie le statut.
+fn oversized_upload(base: &str, cookie: &str, len: usize) -> u16 {
+    use std::io::{Read as _, Write as _};
+    let addr = base.trim_start_matches("http://");
+    let mut s = std::net::TcpStream::connect(addr).unwrap();
+    let head = format!(
+        "POST /api/upload?name=gros.wav HTTP/1.1\r\nHost: {addr}\r\nCookie: {cookie}\r\nx-control: 1\r\ncontent-type: application/octet-stream\r\ncontent-length: {len}\r\n\r\n"
+    );
+    s.write_all(head.as_bytes()).unwrap();
+    let _ = s.write_all(&vec![0u8; len]);
+    let mut out = Vec::new();
+    let _ = s.read_to_end(&mut out);
+    String::from_utf8_lossy(&out).split(' ').nth(1).and_then(|c| c.parse().ok()).unwrap_or(0)
+}
+
 #[test]
 fn upload_lands_in_the_account_folder_and_library() {
     let s = boot(Boot { no_common: true, ..Boot::default() });
@@ -70,7 +86,7 @@ fn upload_lands_in_the_account_folder_and_library() {
     assert!(!envois.join("faux.mp3").exists(), "le faux fichier est supprimé");
     assert_eq!(upload(&admin, "vide.wav", None, Vec::new(), &[], true).status, 400);
     admin.rpc("srv:settings", vec![json!({ "uploadMaxMb": 1 })]).unwrap();
-    assert_eq!(upload(&admin, "gros.wav", None, vec![0u8; 2 * 1048576], &[], true).status, 413);
+    assert_eq!(oversized_upload(&s.base(), &admin.cookie(), 2 * 1048576), 413);
     assert!(!std::fs::read_dir(&envois).unwrap().flatten().any(|e| e.file_name().to_string_lossy().contains("gros")));
 }
 

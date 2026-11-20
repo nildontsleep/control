@@ -151,11 +151,23 @@ pub async fn handle(
     };
     let gz = req.gz;
     let (method, path) = (req.method.clone(), req.path.clone());
-    let mut res = match route(&hub, req, body).await {
+    // Le corps est lu en entier avant de répondre (sauf pour un envoi de fichier, lu en flux) : une réponse partie
+    // avant la fin du corps obligerait à fermer la connexion, et le navigateur pourrait la réutiliser entre-temps.
+    let body = if path == "/api/upload" { Ok(body) } else { read_body(body, 40 * 1024 * 1024).await.map(Body::from) };
+    let routed = match body {
+        Ok(body) => route(&hub, req, body).await,
+        Err(err) => Err(err),
+    };
+    let mut res = match routed {
         Ok(r) => r,
         Err(err) => error_response(&err, gz, &method, &path),
     };
+    let refused_upload = path == "/api/upload" && !res.status().is_success();
     let h = res.headers_mut();
+    if refused_upload {
+        // Refus en cours d'envoi : le reste du fichier n'est pas lu, la connexion se ferme après la réponse.
+        h.insert("connection", HeaderValue::from_static("close"));
+    }
     h.insert("referrer-policy", HeaderValue::from_static("same-origin"));
     h.insert("x-frame-options", HeaderValue::from_static("DENY"));
     h.insert("x-content-type-options", HeaderValue::from_static("nosniff"));
