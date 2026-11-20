@@ -67,11 +67,8 @@ fn setup(s: &mut Ui, waker: Waker) {
     let store = s.backend.store.clone();
     s.backend.updater.spawn_checks(move || store.settings().update.auto);
     s.backend.updater.cleanup();
-    // Outils : mise à jour quotidienne de yt-dlp (en arrière-plan).
-    s.spawn_quiet(|b| {
-        b.tools.announce();
-        b.tools.auto_update(&b.store);
-    });
+    // Outils et téléchargements : état des outils, liste des téléchargements, mise à jour quotidienne de yt-dlp.
+    views::downloads::on_open(s);
     #[cfg(target_os = "linux")]
     if let Some(h) = s.handle.clone() {
         s.mpris = mpris::Mpris::start(h);
@@ -90,17 +87,27 @@ fn poll(s: &mut Ui, clock: f64, tx: &mut Tx) -> bool {
     changed
 }
 
-/// Scènes des rendus sans fenêtre (`--scene`) : chaque vue principale.
-/// Une scène : son nom et la façon de mettre l'état dans cette situation.
+/// Une scène : son nom et ce qu'elle change à l'état de départ.
 type Scene = (&'static str, fn(&mut Ui));
 
+/// Scènes des rendus sans fenêtre (`--scene`) : chaque vue principale.
 const SCENES: &[Scene] = &[
     ("songs", |s| s.route = state::Route::Songs),
     ("albums", |s| s.route = state::Route::Albums),
     ("artists", |s| s.route = state::Route::Artists),
     ("videos", |s| s.route = state::Route::Videos),
     ("stats", |s| s.route = state::Route::Stats),
-    ("downloads", |s| s.route = state::Route::Downloads),
+    ("downloads", |s| s.navigate(state::Route::Downloads)),
+    ("downloads-queue", |s| views::downloads::scene(s, "queue")),
+    ("downloads-playlist", |s| views::downloads::scene(s, "playlist")),
+    ("downloads-search", |s| views::downloads::scene(s, "search")),
+    ("downloads-install", |s| views::downloads::scene(s, "install")),
+    ("downloads-missing", |s| views::downloads::scene(s, "missing")),
+    ("settings-downloads", |s| s.sheet = Some(state::Sheet::Settings(state::SettingsTab::Downloads))),
+    ("settings-cookies", |s| {
+        s.sheet = Some(state::Sheet::Settings(state::SettingsTab::Downloads));
+        s.downloads.popup = Some("set-cookies");
+    }),
     ("settings", |s| s.sheet = Some(state::Sheet::Settings(state::SettingsTab::General))),
     ("appearance", |s| s.sheet = Some(state::Sheet::Settings(state::SettingsTab::Appearance))),
     ("equalizer", |s| s.sheet = Some(state::Sheet::Equalizer)),

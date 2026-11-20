@@ -1080,5 +1080,8 @@
  "set.downloadDir": "Dossier des téléchargements",
  "about.license": "Licences",
  "set.tmdbKey": "Clé API TMDB",
- "common.loading": "Recherche…"
+ "common.loading": "Recherche…",
+ "dl.errNoFiles": "yt-dlp n’a produit aucun fichier.",
+ "dl.errExit": "yt-dlp s’est arrêté (code {code}).",
+ "set.allFiles": "Tous les fichiers"
 }

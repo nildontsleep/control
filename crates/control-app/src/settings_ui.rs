@@ -370,23 +370,99 @@ fn streaming(ui: &Ui, p: &Palette, k: &Kit) -> Vec<El> {
 fn downloads(ui: &Ui, p: &Palette, k: &Kit) -> Vec<El> {
     let d = &ui.settings.dl;
     let conc = format!("{}", d.concurrency());
-    vec![group(
-        p,
-        t("set.tab.downloads"),
-        vec![
-            line(
-                p,
-                t("set.concurrency"),
-                None,
-                segmented(p, "set-conc", (1..=4).map(|n| (n.to_string(), n.to_string())).collect(), &conc, |s, v| {
-                    s.set(json!({ "dl": { "concurrency": v.parse::<i64>().unwrap_or(2) } }))
-                }),
-            ),
-            line(p, t("set.autoUpdate"), Some(t("set.autoUpdateHint")), toggle(k, d.auto_update, |v| json!({ "dl": { "autoUpdate": v } }))),
-            line(p, t("dl.createPlaylist"), None, toggle(k, d.create_playlist, |v| json!({ "dl": { "createPlaylist": v } }))),
-        ],
-        None,
-    )]
+    // Cookies d'un navigateur : la liste ouverte suit son bouton (son calque est posé après les groupes).
+    let mut layer = Vec::new();
+    let browsers = ["firefox", "chrome", "edge", "brave", "opera", "vivaldi", "chromium"];
+    let mut options: Vec<(&'static str, String)> = vec![("", t("cookies.none"))];
+    options.extend(browsers.iter().map(|b| (*b, format!("{}{}", b[..1].to_uppercase(), &b[1..]))));
+    let browser = crate::views::downloads::popup(ui, p, k, &mut layer, "set-cookies", options, d.cookies.trim(), |s, v| {
+        s.set(json!({ "dl": { "cookies": v } }))
+    });
+    // Fichier cookies.txt : contourne le chiffrement des cookies de Chrome, Edge et Brave sous Windows.
+    let file = d.cookies_file.trim();
+    let name = if file.is_empty() {
+        t("set.cookiesFileNone")
+    } else {
+        std::path::Path::new(file).file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_else(|| file.to_string())
+    };
+    let mut file_buttons = row()
+        .gap(8.0)
+        .items_center()
+        .child(text(name).font(ty::SMALL).color(p.text2).truncate_middle().max_w(160.0))
+        .child(
+            rune_kit::Button::new(t("set.cookiesFilePick"))
+                .icon(&icons::FOLDER_OPEN)
+                .on_press_tx(|_s: &mut Ui, tx| {
+                    let options = rune::FileDialogOptions { title: t("set.cookiesFile"), ..Default::default() }
+                        .filter("cookies.txt", &["txt"])
+                        .filter(t("set.allFiles"), &["*"]);
+                    tx.open_file(options, |s: &mut Ui, r, _| {
+                        if let Ok(Some(path)) = r {
+                            s.set(json!({ "dl": { "cookiesFile": path.to_string_lossy() } }));
+                        }
+                    });
+                })
+                .build(k),
+        );
+    if !file.is_empty() {
+        file_buttons = file_buttons.child(
+            rune_kit::Button::new(t("common.remove"))
+                .icon(&icons::X)
+                .on_press(|s: &mut Ui| s.set(json!({ "dl": { "cookiesFile": "" } })))
+                .build(k),
+        );
+    }
+    // Outils : version de chacun (connue dès que la page Téléchargements a demandé l'état des outils).
+    let mut tool_rows: Vec<El> = Vec::new();
+    if let Some(st) = &ui.downloads.tools {
+        for (name, item, note) in
+            [("yt-dlp", &st.ytdlp, None), ("ffmpeg", &st.ffmpeg, None), ("deno", &st.deno, Some(t("tools.denoNote")))]
+        {
+            let state = if !item.installed {
+                t("tools.missing")
+            } else {
+                item.version.as_ref().map(|v| format!("v{v}")).unwrap_or_else(|| t("tools.installedShort"))
+            };
+            let control = match note {
+                Some(n) => text(n).font(ty::SMALL).color(p.text3),
+                None => el(),
+            };
+            tool_rows.push(line(p, name.to_string(), Some(state), control));
+        }
+    }
+    tool_rows.push(
+        row().w_full().px(14.0).py(10.0).child(
+            rune_kit::Button::new(t("tools.update"))
+                .icon(&icons::REFRESH_CW)
+                .on_press(crate::views::downloads::update_tools)
+                .build(k),
+        ),
+    );
+    let mut groups = vec![
+        group(
+            p,
+            t("set.dlBehavior"),
+            vec![
+                line(
+                    p,
+                    t("set.concurrency"),
+                    None,
+                    segmented(p, "set-conc", (1..=4).map(|n| (n.to_string(), n.to_string())).collect(), &conc, |s, v| {
+                        s.set(json!({ "dl": { "concurrency": v.parse::<i64>().unwrap_or(2) } }))
+                    }),
+                ),
+                line(p, t("set.cookies"), Some(t("set.cookiesHint")), browser),
+                line(p, t("set.cookiesFile"), Some(t("set.cookiesFileHint")), file_buttons),
+                line(p, t("set.autoUpdate"), Some(t("set.autoUpdateHint")), toggle(k, d.auto_update, |v| json!({ "dl": { "autoUpdate": v } }))),
+                line(p, t("dl.createPlaylist"), None, toggle(k, d.create_playlist, |v| json!({ "dl": { "createPlaylist": v } }))),
+            ],
+            None,
+        ),
+        group(p, t("set.tools"), tool_rows, None),
+    ];
+    // Après les groupes : la liste ouverte passe par-dessus eux (un parent qui découpe la couperait).
+    groups.extend(layer);
+    groups
 }
 
 /// État des mises à jour (`update:state`, forme d'origine) en une ligne et un bouton.

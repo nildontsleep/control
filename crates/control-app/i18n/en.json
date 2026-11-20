@@ -1080,5 +1080,8 @@
  "set.downloadDir": "Downloads folder",
  "about.license": "Licenses",
  "set.tmdbKey": "TMDB API key",
- "common.loading": "Checking…"
+ "common.loading": "Checking…",
+ "dl.errNoFiles": "yt-dlp produced no file.",
+ "dl.errExit": "yt-dlp stopped (code {code}).",
+ "set.allFiles": "All files"
 }
