@@ -1,5 +1,6 @@
 //! control, version web : `control-server` sert la bibliothèque et l'application à des navigateurs ;
-//! `control-server --launcher` le fait tourner sous un lanceur qui permet la mise à jour automatique.
+//! `control-server --launcher` le fait tourner sous un lanceur qui permet la mise à jour automatique ;
+//! `--bundle`, `--sign` et `--backup` sont des commandes d'outillage (voir `cli.rs`).
 //! Configuration : variables d'environnement (README, section « Version web »).
 
 use std::sync::Arc;
@@ -93,6 +94,9 @@ async fn run() -> anyhow::Result<()> {
 fn main() {
     let _ = log::set_logger(&LOGGER).map(|()| log::set_max_level(log::LevelFilter::Warn));
     let args: Vec<String> = std::env::args().skip(1).collect();
+    if let Some(code) = control_server::cli::run(&args) {
+        std::process::exit(code);
+    }
     let runtime = match tokio::runtime::Builder::new_multi_thread().enable_all().build() {
         Ok(r) => r,
         Err(err) => {

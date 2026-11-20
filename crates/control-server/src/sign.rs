@@ -81,6 +81,13 @@ mod tests {
         assert!(!verify("1.2.3", b"archive", &sig, &[stranger]));
         assert!(!verify("1.2.3", b"archive", "AAAA", &[public]));
         assert_eq!(trusted_keys(), Vec::<String>::new());
+
+        // Clés et signature produites par server/sign.js : mêmes formats, même signature (Ed25519 est déterministe).
+        let node_public = "HO1EJ10dCAaDtRazaFCjIBw7aAY0k3OyX7qgT7Xbmuw=".to_string();
+        let node_private = "MC4CAQAwBQYDK2VwBCIEIGK1I20+/xHZg+ypitpyi3qcgms82hcHSDApktKOx+Bh";
+        let node_sig = "JhEfRPGiHuVnVwIprGV5FF9bIuMdUEymq3amqc9m8sUJKzPnmJQvy/ODmD8cvIE1k2O1NC1wV7uSmL53lKdkBA==";
+        assert!(verify("1.2.3", b"archive", node_sig, std::slice::from_ref(&node_public)));
+        assert_eq!(sign("1.2.3", b"archive", node_private).as_deref(), Some(node_sig));
         assert_eq!(parse_keys(r#"{ "publicKeys": [" abc ", "", 3] }"#), ["abc"]);
     }
 }

@@ -5,6 +5,7 @@ pub mod app;
 pub mod appstate;
 pub mod auth;
 pub mod backup;
+pub mod cli;
 pub mod compare;
 pub mod config;
 pub mod http;
