@@ -203,6 +203,8 @@ pub struct Ui {
     folder_watch: Option<crate::watch::FolderWatch>,
     /// Morceaux à jouer dès que le catalogue les connaît (fichiers ouverts avec control).
     pub pending_play: Vec<TrackId>,
+    /// Entrée de la file en cours de déplacement (indice, décalage vertical).
+    pub queue_drag: Option<(usize, f32)>,
     #[cfg(target_os = "linux")]
     pub mpris: Option<crate::mpris::Mpris>,
     /// ffmpeg (relu de temps en temps : il peut être installé pendant que l'application tourne).
@@ -283,6 +285,7 @@ impl Ui {
             video: Default::default(),
             folder_watch: None,
             pending_play: Vec::new(),
+            queue_drag: None,
             #[cfg(target_os = "linux")]
             mpris: None,
             ffmpeg: None,

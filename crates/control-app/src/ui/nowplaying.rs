@@ -14,6 +14,9 @@ use crate::theme::Palette;
 use crate::ui::common::{CoverKind, cover, icon_button, ty};
 use crate::ui::playerbar::{seek_bar, slider};
 
+/// Hauteur d'une ligne de la file, espace compris (pour le glisser-déposer).
+const QUEUE_ROW: f32 = 58.0;
+
 const RATES: &[f64] = &[0.5, 0.75, 0.9, 1.0, 1.1, 1.25, 1.5, 2.0];
 
 fn tab_button(p: &Palette, key: &'static str, glyph: &'static rune::Icon, label: String, on: bool) -> El {
@@ -79,6 +82,28 @@ fn queue_panel(ui: &Ui, p: &Palette) -> El {
                     .child(text(e.artist_label.clone()).font(ty::SMALL).color(p.text2).truncate()),
             )
             .child(text(format::time(tr.duration)).font(ty::NUMBERS).color(p.text2));
+        // Glisser une entrée la déplace dans la file (sauf le morceau en cours).
+        if let Some((from, dy)) = ui.queue_drag
+            && from == i
+        {
+            r = r.offset(0.0, dy).raise().fill(p.fill_strong).instant_changes();
+        }
+        if !playing {
+            r = r.on_drag(move |s: &mut Ui, d: &mut rune::Drag, _tx| match d.phase {
+                rune::Phase::Down => s.queue_drag = Some((i, 0.0)),
+                rune::Phase::Move => s.queue_drag = Some((i, d.dy)),
+                rune::Phase::Up => {
+                    s.queue_drag = None;
+                    let steps = (d.dy / QUEUE_ROW).round() as i64;
+                    if !d.cancelled() && steps != 0 {
+                        let len = s.player.queue.len() as i64;
+                        let to = (i as i64 + steps).clamp(0, len - 1) as usize;
+                        let cat = s.cat.clone();
+                        s.player.move_item(i, to, &cat);
+                    }
+                }
+            });
+        }
         r = r
             .on_double_press(move |s: &mut Ui| {
                 let (cat, b) = (s.cat.clone(), s.backend.clone());
