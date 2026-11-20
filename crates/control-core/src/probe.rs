@@ -255,18 +255,14 @@ pub mod mp4 {
                             }
                         }
                     }
-                    match &handler {
-                        Some(h) if h == b"vide" => {
+                    match handler.as_ref() {
+                        Some(b"vide") => {
                             out.video.get_or_insert(size.unwrap_or((0, 0)));
                             if codec.is_some() {
                                 out.codec = codec;
                             }
                         }
-                        Some(h) if h == b"soun" => {
-                            if out.codec.is_none() {
-                                out.codec = codec;
-                            }
-                        }
+                        Some(b"soun") if out.codec.is_none() => out.codec = codec,
                         _ => {}
                     }
                 }

@@ -4,6 +4,7 @@
 //! L'application de bureau crée un seul noyau ; le serveur web, un par compte.
 
 pub mod artists;
+pub mod catalog;
 pub mod automix;
 pub mod covers;
 pub mod db;
@@ -19,6 +20,8 @@ pub mod probe;
 pub mod process;
 pub mod scrobble;
 pub mod settings;
+pub mod smart;
+pub mod stats;
 pub mod source_url;
 pub mod store;
 pub mod tagpattern;

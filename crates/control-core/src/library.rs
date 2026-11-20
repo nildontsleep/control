@@ -325,7 +325,7 @@ impl Library {
                 if let Some(st) = stat(file) {
                     found.insert(path_key(&st.path), st);
                     n += 1;
-                    if found.len() % 250 == 0 {
+                    if found.len().is_multiple_of(250) {
                         self.progress(ScanProgress {
                             phase: "discover",
                             found: found.len(),
@@ -417,7 +417,7 @@ impl Library {
                         }
                         let d = done.fetch_add(1, Ordering::SeqCst) + 1;
                         flush(false);
-                        if d % 20 == 0 {
+                        if d.is_multiple_of(20) {
                             self.progress(ScanProgress {
                                 phase: "read",
                                 done: d,
@@ -777,7 +777,7 @@ impl Library {
         let now = now_ms();
         let mut db = self.db.lock();
         let res = crate::db::transaction(&mut db, |tx| {
-            let mut next: i64 = tx.query_row(
+            let next: i64 = tx.query_row(
                 "SELECT COALESCE(MAX(position), -1) + 1 FROM playlist_tracks WHERE playlist_id = ?",
                 [playlist],
                 |r| r.get(0),
@@ -785,9 +785,8 @@ impl Library {
             let mut stmt = tx.prepare_cached(
                 "INSERT INTO playlist_tracks (playlist_id, track_id, position, added_at) VALUES (?, ?, ?, ?)",
             )?;
-            for t in tracks {
-                stmt.execute(params![playlist, t, next, now])?;
-                next += 1;
+            for (offset, t) in tracks.iter().enumerate() {
+                stmt.execute(params![playlist, t, next + offset as i64, now])?;
             }
             tx.execute("UPDATE playlists SET updated_at = ? WHERE id = ?", params![now, playlist])?;
             Ok(())
