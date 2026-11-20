@@ -201,6 +201,8 @@ pub struct Ui {
     pub immersive: bool,
     pub video: crate::video::VideoView,
     folder_watch: Option<crate::watch::FolderWatch>,
+    /// Morceaux à jouer dès que le catalogue les connaît (fichiers ouverts avec control).
+    pub pending_play: Vec<TrackId>,
     #[cfg(target_os = "linux")]
     pub mpris: Option<crate::mpris::Mpris>,
     /// ffmpeg (relu de temps en temps : il peut être installé pendant que l'application tourne).
@@ -280,6 +282,7 @@ impl Ui {
             immersive: false,
             video: Default::default(),
             folder_watch: None,
+            pending_play: Vec::new(),
             #[cfg(target_os = "linux")]
             mpris: None,
             ffmpeg: None,
@@ -375,6 +378,12 @@ impl Ui {
             }
         }
         self.selection.ids.retain(|id| cat.by_id.contains_key(id));
+        if !self.pending_play.is_empty() && self.pending_play.iter().all(|id| cat.by_id.contains_key(id)) {
+            let ids = std::mem::take(&mut self.pending_play);
+            let backend = self.backend.clone();
+            self.player.play_list(&ids, 0, Some(false), &cat, &backend);
+            self.now_playing = ids.iter().any(|id| cat.track(*id).is_some_and(|t| t.is_video()));
+        }
         if !self.search.text.trim().is_empty() {
             self.results = cat.search(&self.search.text);
         }

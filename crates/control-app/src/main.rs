@@ -47,6 +47,21 @@ fn setup(s: &mut Ui, waker: Waker) {
     }
     s.reload_library();
     s.rescan();
+    // Fichiers passés au lancement (« Ouvrir avec control ») : ajoutés à la bibliothèque, puis joués.
+    let files: Vec<String> = std::env::args()
+        .skip(1)
+        .filter(|a| !a.starts_with('-'))
+        .filter(|a| control_core::probe::is_media_file(std::path::Path::new(a)) && std::path::Path::new(a).is_file())
+        .collect();
+    if !files.is_empty() {
+        s.spawn(
+            move |b| b.library.add_paths(&files, None),
+            |s, ids, _| {
+                s.pending_play = ids;
+                s.reload_library();
+            },
+        );
+    }
     s.watch_folders();
     // Mises à jour : au lancement puis toutes les 6 heures, si le réglage le permet.
     let store = s.backend.store.clone();
