@@ -30,6 +30,7 @@ const TABS: &[(SettingsTab, &str, &rune::Icon)] = &[
     (SettingsTab::General, "general", &icons::SETTINGS),
     (SettingsTab::Appearance, "appearance", &icons::PALETTE),
     (SettingsTab::Library, "library", &icons::HARD_DRIVE),
+    (SettingsTab::Servers, "servers", &icons::GLOBE),
     (SettingsTab::Streaming, "streaming", &icons::CLAPPERBOARD),
     (SettingsTab::Downloads, "downloads", &icons::CLOUD_DOWNLOAD),
     (SettingsTab::About, "about", &icons::INFO),
@@ -330,6 +331,97 @@ fn library(ui: &Ui, p: &Palette, k: &Kit) -> Vec<El> {
             None,
         ),
     ]
+}
+
+/// Serveurs control (la version web) : la liste de la version Electron est reprise. Rune n'a pas de vue web : un
+/// serveur s'ouvre dans le navigateur, où ses comptes et sa bibliothèque restent les siens.
+fn servers(ui: &Ui, p: &Palette, k: &Kit) -> Vec<El> {
+    let list = ui.backend.store.servers();
+    let mut rows: Vec<El> = Vec::new();
+    for srv in list.as_array().cloned().unwrap_or_default() {
+        let name = srv["name"].as_str().unwrap_or("").to_string();
+        let url = srv["url"].as_str().unwrap_or("").to_string();
+        let id = srv["id"].as_str().unwrap_or("").to_string();
+        let open_url = url.clone();
+        let remove_id = id.clone();
+        rows.push(line(
+            p,
+            name,
+            Some(url),
+            row()
+                .gap(6.0)
+                .child(rune_kit::Button::new(t("src.open")).on_press(move |_s: &mut Ui| crate::os::open_url(&open_url)).build(k))
+                .child(
+                    rune_kit::Button::new(t("common.remove"))
+                        .on_press(move |s: &mut Ui| {
+                            let mut list = s.backend.store.servers();
+                            if let Some(a) = list.as_array_mut() {
+                                a.retain(|x| x["id"].as_str() != Some(remove_id.as_str()));
+                            }
+                            s.backend.store.set_servers(list);
+                        })
+                        .build(k),
+                ),
+        ));
+    }
+    if rows.is_empty() {
+        rows.push(line(p, t("src.none"), None, el()));
+    }
+    let input = TextInput::new(&ui.field_edit)
+        .placeholder(t("src.urlPlaceholder"))
+        .on_edit(|s: &mut Ui| &mut s.field_edit)
+        .on_submit(|s: &mut Ui, _| add_server(s))
+        .build(k)
+        .w(280.0);
+    rows.push(line(
+        p,
+        t("src.addTitle"),
+        Some(t("src.addHint")),
+        row().gap(6.0).items_center().child(input).child(rune_kit::Button::new(t("src.add")).on_press(add_server).build(k)),
+    ));
+    vec![group(p, t("src.title"), rows, Some(t("src.intro")))]
+}
+
+/// Vérifie l'adresse saisie (essaie chaque origine possible) puis l'ajoute à la liste.
+fn add_server(s: &mut Ui) {
+    let text = s.field_edit.text.trim().to_string();
+    if text.is_empty() {
+        return;
+    }
+    s.toast(t("src.checking"), "globe");
+    s.spawn(
+        move |b| {
+            let origins = control_core::source_url::candidates(&text).map_err(|e| e.to_string())?;
+            let mut last = String::new();
+            for origin in origins {
+                match control_core::source_url::probe(&origin) {
+                    Ok(()) => {
+                        let mut list = b.store.servers();
+                        let list_arr = list.as_array().cloned().unwrap_or_default();
+                        if list_arr.iter().any(|x| x["url"].as_str() == Some(origin.as_str())) {
+                            return Err("Ce serveur est déjà dans la liste.".to_string());
+                        }
+                        let host = url::Url::parse(&origin).ok().and_then(|u| u.host_str().map(str::to_string)).unwrap_or_default();
+                        let id = format!("s{:010x}", rand::random::<u64>() & 0xff_ffff_ffff);
+                        if let Some(a) = list.as_array_mut() {
+                            a.push(json!({ "id": id, "name": host, "url": origin }));
+                        }
+                        b.store.set_servers(list);
+                        return Ok(host);
+                    }
+                    Err(e) => last = e,
+                }
+            }
+            Err(last)
+        },
+        |s, res, _| match res {
+            Ok(name) => {
+                s.field_edit = rune::TextEdit::new("");
+                s.toast(crate::i18n::tv("src.added", &[("name", &name)]), "check");
+            }
+            Err(e) => s.toast(e, "triangle-alert"),
+        },
+    );
 }
 
 fn streaming(ui: &Ui, p: &Palette, k: &Kit) -> Vec<El> {
@@ -646,6 +738,8 @@ pub fn sheet(ui: &Ui, p: &Palette, k: &Kit, layer: &mut Vec<El>) {
                 .on_press(move |s: &mut Ui| {
                     if target == SettingsTab::Streaming {
                         s.field_edit = rune::TextEdit::new(s.settings.media.tmdb_key.clone());
+                    } else if target == SettingsTab::Servers {
+                        s.field_edit = rune::TextEdit::new("");
                     }
                     s.sheet = Some(Sheet::Settings(target));
                 }),
@@ -655,6 +749,7 @@ pub fn sheet(ui: &Ui, p: &Palette, k: &Kit, layer: &mut Vec<El>) {
         SettingsTab::General => general(ui, p, k),
         SettingsTab::Appearance => appearance(ui, p, k),
         SettingsTab::Library => library(ui, p, k),
+        SettingsTab::Servers => servers(ui, p, k),
         SettingsTab::Streaming => streaming(ui, p, k),
         SettingsTab::Downloads => downloads(ui, p, k),
         SettingsTab::About => about(ui, p, k),

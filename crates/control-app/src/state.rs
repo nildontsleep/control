@@ -120,6 +120,7 @@ pub enum SettingsTab {
     General,
     Appearance,
     Library,
+    Servers,
     Downloads,
     Streaming,
     About,

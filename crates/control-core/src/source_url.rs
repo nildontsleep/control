@@ -51,6 +51,35 @@ pub fn candidates(input: &str) -> Result<Vec<String>, SourceUrlError> {
     schemes.iter().map(|scheme| origin(&format!("{scheme}://{raw}"))).collect()
 }
 
+/// Vérifie qu'une origine est bien un serveur control (`/api/health` répond `{ ok: true, name: "control" }`).
+pub fn probe(origin: &str) -> Result<(), String> {
+    let agent: ureq::Agent = ureq::Agent::config_builder()
+        .timeout_global(Some(std::time::Duration::from_secs(6)))
+        .http_status_as_error(false)
+        .build()
+        .into();
+    let mut res = agent.get(&format!("{origin}/api/health")).call().map_err(|e| {
+        let text = e.to_string();
+        if text.to_lowercase().contains("certificate") || text.contains("tls") {
+            "Le certificat du serveur n’est pas accepté.".to_string()
+        } else {
+            "Impossible de joindre le serveur.".to_string()
+        }
+    })?;
+    let body: serde_json::Value = res.body_mut().read_json().unwrap_or(serde_json::Value::Null);
+    if res.status().is_success() && is_control_health(&body) {
+        Ok(())
+    } else {
+        Err("Ce n’est pas un serveur control.".into())
+    }
+}
+
+/// La réponse de `/api/health` est-elle celle d'un serveur control ?
+pub fn is_control_health(body: &serde_json::Value) -> bool {
+    body.get("ok").and_then(serde_json::Value::as_bool) == Some(true)
+        && body.get("name").and_then(serde_json::Value::as_str) == Some("control")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -87,5 +116,12 @@ mod tests {
         assert_eq!(candidates("file:///etc/passwd"), Err(SourceUrlError::Scheme));
         assert_eq!(candidates("exa mple.com"), Err(SourceUrlError::Invalid));
         assert!(SourceUrlError::Scheme.to_string().contains("http"));
+    }
+
+    #[test]
+    fn health_body_is_recognised() {
+        assert!(is_control_health(&serde_json::json!({"ok": true, "name": "control", "version": "1.0.0"})));
+        assert!(!is_control_health(&serde_json::json!({"ok": true, "name": "other"})));
+        assert!(!is_control_health(&serde_json::Value::Null));
     }
 }
