@@ -105,12 +105,17 @@ pub fn tn(key: &str, n: impl std::fmt::Display) -> String {
     tv(key, &[("n", &n)])
 }
 
+/// Les tests qui changent la langue (globale) passent un par un.
+#[cfg(test)]
+pub static TEST_LANG: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn dictionaries_load_and_plurals_work() {
+        let _guard = TEST_LANG.lock().unwrap_or_else(|e| e.into_inner());
         assert!(FR.len() > 1000 && EN.len() == FR.len());
         set_language("fr");
         assert_eq!(tn("count.tracks", 1), "1 morceau");

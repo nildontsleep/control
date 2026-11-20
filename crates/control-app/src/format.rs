@@ -73,6 +73,7 @@ mod tests {
 
     #[test]
     fn sizes_and_counts() {
+        let _guard = crate::i18n::TEST_LANG.lock().unwrap_or_else(|e| e.into_inner());
         crate::i18n::set_language("fr");
         assert_eq!(bytes(512.0), "512 o");
         assert_eq!(bytes(3.4 * 1024.0 * 1024.0), "3,4 Mo");
